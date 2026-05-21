@@ -1,20 +1,29 @@
 from app.schemas.m8_payload import M8Payload
 from app.services.risk_engine import risk_engine_instance
-from app.services.ai_kimi import ai_review_instance
 from app.services.broker import SimulationBroker
 from app.services.journal_logger import journal_logger_instance
+from app.core.config import AI_PROVIDER
 
 # Single broker instance for the MVP
 broker_instance = SimulationBroker()
 
+def get_ai_reviewer():
+    if AI_PROVIDER.lower() == "gemini":
+        from app.services.ai_gemini import ai_gemini_instance
+        return ai_gemini_instance
+    else:
+        from app.services.ai_kimi import ai_review_instance
+        return ai_review_instance
+
 async def process_signal(payload: M8Payload):
     """
     Main orchestration loop integrating AI Review -> Risk Engine -> Simulation Broker -> Journaling.
-    Now uses asynchronous calls for the real Kimi Swarm API.
+    Now uses asynchronous calls for the selected AI Swarm Provider (Kimi or Gemini).
     """
 
-    # 1. AI Context Review (Non-execution, Kimi Swarm via async API)
-    ai_review = await ai_review_instance.review_signal(payload)
+    # 1. AI Context Review (Non-execution, AI Swarm via async API)
+    reviewer = get_ai_reviewer()
+    ai_review = await reviewer.review_signal(payload)
 
     # 2. Deterministic Decision
     decision_result = risk_engine_instance.evaluate(payload, ai_review)

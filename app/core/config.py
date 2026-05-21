@@ -1,9 +1,14 @@
 import os
 
 # API configuration
+AI_PROVIDER = os.getenv("AI_PROVIDER", "kimi") # "kimi" or "gemini"
+
 MOONSHOT_API_KEY = os.getenv("MOONSHOT_API_KEY", "")
 MOONSHOT_BASE_URL = "https://api.moonshot.cn/v1"
 MOONSHOT_MODEL = "moonshot-v1-auto"
+
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GEMINI_MODEL = "gemini-1.5-pro"
 
 # core config placeholder
 MIN_RR_RATIO = 2.0
