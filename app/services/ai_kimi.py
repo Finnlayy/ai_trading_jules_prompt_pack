@@ -1,23 +1,79 @@
 import json
 import asyncio
+from dataclasses import dataclass
 from openai import AsyncOpenAI
-from typing import Dict, Any
+from typing import Any
 
 from app.schemas.m8_payload import M8Payload
 from app.schemas.ai_review import SignalReview, DecisionEnum
-from app.core.config import MOONSHOT_API_KEY, MOONSHOT_BASE_URL, MOONSHOT_MODEL
-
-# Instantiate Async Client pointing to Moonshot API
-client = AsyncOpenAI(
-    api_key=MOONSHOT_API_KEY or "dummy_key_for_tests", 
-    base_url=MOONSHOT_BASE_URL
+from app.core.config import (
+    AI_PROVIDER,
+    GEMINI_API_KEY,
+    GEMINI_BASE_URL,
+    GEMINI_MODEL,
+    MOONSHOT_API_KEY,
+    MOONSHOT_BASE_URL,
+    MOONSHOT_MODEL,
+    OPENAI_API_KEY,
+    OPENAI_BASE_URL,
+    OPENAI_MODEL,
 )
+
+
+@dataclass(frozen=True)
+class AIProviderConfig:
+    provider: str
+    api_key: str
+    api_key_env: str
+    base_url: str
+    model: str
+    unavailable_flag: str
+
+
+def get_ai_provider_config(provider: str | None = None) -> AIProviderConfig:
+    selected = (provider or AI_PROVIDER or "moonshot").strip().lower()
+
+    if selected in {"moonshot", "kimi", "kimi-k2.6"}:
+        return AIProviderConfig(
+            provider="moonshot",
+            api_key=MOONSHOT_API_KEY,
+            api_key_env="MOONSHOT_API_KEY",
+            base_url=MOONSHOT_BASE_URL,
+            model=MOONSHOT_MODEL,
+            unavailable_flag="KIMI_UNAVAILABLE",
+        )
+
+    if selected in {"openai", "chatgpt", "gpt"}:
+        return AIProviderConfig(
+            provider="openai",
+            api_key=OPENAI_API_KEY,
+            api_key_env="OPENAI_API_KEY",
+            base_url=OPENAI_BASE_URL,
+            model=OPENAI_MODEL,
+            unavailable_flag="OPENAI_UNAVAILABLE",
+        )
+
+    if selected in {"gemini", "google", "google-gemini"}:
+        return AIProviderConfig(
+            provider="gemini",
+            api_key=GEMINI_API_KEY,
+            api_key_env="GEMINI_API_KEY",
+            base_url=GEMINI_BASE_URL,
+            model=GEMINI_MODEL,
+            unavailable_flag="GEMINI_UNAVAILABLE",
+        )
+
+    raise ValueError(
+        f"Unsupported AI_PROVIDER '{selected}'. Use one of: moonshot, openai, gemini."
+    )
 
 class KimiSwarmService:
     """
-    Implements a multi-agent swarm using Kimi K2.6 models to review the signal payload.
+    Implements a multi-agent review swarm using the configured LLM provider.
     It fires multiple scout agents concurrently and synthesizes their results into a strict Pydantic JSON structure.
     """
+    def __init__(self, provider: str | None = None) -> None:
+        self.provider = provider
     
     async def review_signal(self, payload: M8Payload) -> SignalReview:
         try:
@@ -34,7 +90,8 @@ class KimiSwarmService:
             return await self._run_orchestrator(payload, sentiment_analysis, technical_analysis, risk_analysis)
             
         except Exception as e:
-            print(f"Kimi API Error: {e}")
+            provider_config = get_ai_provider_config(self.provider)
+            print(f"AI provider error ({provider_config.provider}): {e}")
             # Fallback pattern if API fails: proceed to deterministic risk engine but log warning
             return SignalReview(
                 schema_version="1.0",
@@ -42,7 +99,7 @@ class KimiSwarmService:
                 decision=DecisionEnum.PROCEED_TO_SIMULATION,
                 confidence=0.5,
                 reason_codes=["API_FALLBACK"],
-                risk_flags=["KIMI_UNAVAILABLE"],
+                risk_flags=[provider_config.unavailable_flag],
                 reject_reason=None,
                 requires_human_review=False
             )
@@ -100,24 +157,54 @@ class KimiSwarmService:
             data['schema_version'] = "1.0"
             return SignalReview(**data)
         except Exception as e:
-            print(f"Failed to parse JSON from Kimi: {e}")
+            print(f"Failed to parse JSON from AI provider: {e}")
             raise e
 
     async def _call_kimi(self, prompt: str, system: str = "You are a helpful assistant", response_format: Any = None) -> str:
+        return await self._call_llm(prompt, system=system, response_format=response_format)
+
+    async def _call_llm(self, prompt: str, system: str = "You are a helpful assistant", response_format: Any = None) -> str:
+        provider_config = get_ai_provider_config(self.provider)
+
+        if not provider_config.api_key:
+            raise RuntimeError(f"{provider_config.api_key_env} is not configured")
+
+        client = AsyncOpenAI(
+            api_key=provider_config.api_key,
+            base_url=provider_config.base_url
+        )
+
         kwargs = {
-            "model": MOONSHOT_MODEL,
+            "model": provider_config.model,
             "messages": [
                 {"role": "system", "content": system},
                 {"role": "user", "content": prompt}
-            ],
-            "temperature": 0.2
+            ]
         }
         
-        # moonshot-v1 doesn't consistently support response_format strict json yet, but we try
+        # Some OpenAI-compatible providers reject response_format; retry below keeps the pipeline available.
         if response_format:
             kwargs["response_format"] = response_format
             
-        response = await client.chat.completions.create(**kwargs)
+        try:
+            response = await client.chat.completions.create(**kwargs)
+        except Exception as e:
+            if response_format and self._should_retry_without_response_format(e):
+                kwargs.pop("response_format", None)
+                response = await client.chat.completions.create(**kwargs)
+            else:
+                raise
+
         return response.choices[0].message.content
+
+    @staticmethod
+    def _should_retry_without_response_format(error: Exception) -> bool:
+        message = str(error).lower()
+        return "response_format" in message and (
+            "unsupported" in message
+            or "not support" in message
+            or "invalid" in message
+            or "unknown field" in message
+        )
 
 ai_review_instance = KimiSwarmService()

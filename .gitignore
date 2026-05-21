@@ -5,3 +5,7 @@ __pycache__/
 # Pytest
 .pytest_cache/
 trade_journal.jsonl
+
+# Local secrets
+.env*
+!.env.example

@@ -24,7 +24,7 @@ def create_valid_payload() -> M8Payload:
 
 @pytest.mark.asyncio
 async def test_kimi_swarm_success():
-    service = KimiSwarmService()
+    service = KimiSwarmService(provider="moonshot")
     payload = create_valid_payload()
     
     # Mock the underlying _call_kimi method to avoid real API calls
@@ -55,7 +55,7 @@ async def test_kimi_swarm_success():
 
 @pytest.mark.asyncio
 async def test_kimi_swarm_api_failure_fallback():
-    service = KimiSwarmService()
+    service = KimiSwarmService(provider="moonshot")
     payload = create_valid_payload()
     
     async def mock_fail(*args, **kwargs):

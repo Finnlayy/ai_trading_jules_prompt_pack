@@ -1,9 +1,35 @@
 import os
+from pathlib import Path
+
+try:
+    from dotenv import load_dotenv
+except ImportError:  # Keeps tests/imports working before dependencies are installed.
+    load_dotenv = None
+
+if load_dotenv:
+    load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 # API configuration
+AI_PROVIDER = os.getenv("AI_PROVIDER", os.getenv("LLM_PROVIDER", "moonshot")).strip().lower()
+
 MOONSHOT_API_KEY = os.getenv("MOONSHOT_API_KEY", "")
-MOONSHOT_BASE_URL = "https://api.moonshot.cn/v1"
-MOONSHOT_MODEL = "moonshot-v1-auto"
+MOONSHOT_BASE_URL = os.getenv("MOONSHOT_BASE_URL", "https://api.moonshot.ai/v1")
+MOONSHOT_MODEL = os.getenv("MOONSHOT_MODEL", "kimi-k2.6")
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5.2")
+
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GEMINI_BASE_URL = os.getenv("GEMINI_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai/")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-pro")
+
+BROKER_MODE = os.getenv("BROKER_MODE", "simulation").strip().lower()
+PIONEX_RELAY_URL = os.getenv("PIONEX_RELAY_URL", "http://127.0.0.1:5000/webhook")
+PIONEX_RELAY_ENABLED = os.getenv("PIONEX_RELAY_ENABLED", "false").strip().lower() == "true"
+PIONEX_SIGNAL_BOT_UUID = os.getenv("PIONEX_SIGNAL_BOT_UUID", "")
+PIONEX_RELAY_CONTRACTS = os.getenv("PIONEX_RELAY_CONTRACTS", "1")
+PIONEX_RELAY_TIMEOUT_SECONDS = float(os.getenv("PIONEX_RELAY_TIMEOUT_SECONDS", "10"))
 
 # core config placeholder
 MIN_RR_RATIO = 2.0

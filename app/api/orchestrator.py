@@ -2,10 +2,31 @@ from app.schemas.m8_payload import M8Payload
 from app.services.risk_engine import risk_engine_instance
 from app.services.ai_kimi import ai_review_instance
 from app.services.broker import SimulationBroker
+from app.services.paper_broker import PaperBroker
+from app.services.pionex_relay_broker import PionexRelayBroker
 from app.services.journal_logger import journal_logger_instance
+from app.core.config import BROKER_MODE
+
+def _build_broker():
+    if BROKER_MODE in {"pionex_relay", "pionex", "relay"}:
+        return PionexRelayBroker()
+    if BROKER_MODE == "paper":
+        return PaperBroker()
+    return SimulationBroker()
+
 
 # Single broker instance for the MVP
-broker_instance = SimulationBroker()
+broker_instance = _build_broker()
+
+
+def _get_broker():
+    return broker_instance
+
+
+def reset_broker():
+    global broker_instance
+    broker_instance = _build_broker()
+    return broker_instance
 
 async def process_signal(payload: M8Payload):
     """

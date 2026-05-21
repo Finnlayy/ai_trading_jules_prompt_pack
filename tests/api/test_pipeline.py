@@ -6,12 +6,17 @@ from unittest.mock import AsyncMock, patch
 from app.main import app
 from app.services.risk_engine import risk_engine_instance
 from app.services.ai_kimi import ai_review_instance
+from app.services.journal_logger import journal_logger_instance
 
 @pytest.fixture(autouse=True)
-def reset_state():
+def reset_state(tmp_path):
     risk_engine_instance.trades_today = 0
     risk_engine_instance.last_trade_bar = -1
     risk_engine_instance.current_bar = 0
+    previous_journal_path = journal_logger_instance.filepath
+    journal_logger_instance.filepath = str(tmp_path / "trade_journal.jsonl")
+    yield
+    journal_logger_instance.filepath = previous_journal_path
 
 @pytest.fixture
 def mock_kimi_api():

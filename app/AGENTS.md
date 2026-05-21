@@ -54,6 +54,14 @@ app/
 ## Configuration (core/config.py)
 | Constant | Default | Description |
 |----------|---------|-------------|
+| `AI_PROVIDER` | `moonshot` | AI provider for the review swarm: `moonshot`, `openai`, or `gemini` |
+| `MOONSHOT_API_KEY` | `""` | Moonshot/Kimi API key for `kimi-k2.6` |
+| `OPENAI_API_KEY` | `""` | OpenAI API key for ChatGPT/GPT models |
+| `GEMINI_API_KEY` | `""` | Gemini API key for Google Gemini models |
+| `BROKER_MODE` | `simulation` | Broker adapter: `simulation`, `paper`, or `pionex_relay` |
+| `PIONEX_RELAY_ENABLED` | `false` | Safety switch for live relay forwarding |
+| `PIONEX_RELAY_URL` | `http://127.0.0.1:5000/webhook` | Local Pionex relay webhook endpoint |
+| `PIONEX_SIGNAL_BOT_UUID` | `""` | Pionex Signal Bot UUID used by the relay payload |
 | `MIN_RR_RATIO` | 2.0 | Minimum reward/risk ratio |
 | `MAX_SPREAD` | 15.0 | Max allowed spread |
 | `MIN_CONFLUENCE_SCORE` | 70.0 | Minimum M8 confluence |
@@ -67,7 +75,8 @@ app/
 - **Keep schemas strict**: All payloads use Pydantic `BaseModel` with `Field` constraints.
 - **Deterministic gating**: The Risk Engine uses exception-based short-circuiting (`RiskGateException`). Each gate has a unique `reason_code` string.
 - **State management**: `RiskEngine` holds mutable state (`trades_today`, `last_trade_bar`, `current_bar`) — be careful with thread safety if scaling beyond single-instance.
-- **Mock AI**: `MockAIReviewLayer` is a placeholder. Replacing it with a real LLM call should preserve the `SignalReview` return type.
+- **AI provider**: `KimiSwarmService` is provider-configurable. It must always preserve the `SignalReview` return type and must not place orders directly.
+- **Pionex relay**: `PionexRelayBroker` must stay dry-run unless `PIONEX_RELAY_ENABLED=true`. Never bypass deterministic risk gates.
 - **Broker simulation**: `SimulationBroker` uses static slippage (2 bps) and fees (5 bps). It does NOT close trades — results stay `"status": "OPEN"`.
 - **Journal format**: `trade_journal.jsonl` is append-only NDJSON. Do not overwrite; append.
 

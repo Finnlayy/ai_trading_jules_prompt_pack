@@ -62,7 +62,7 @@ async def run_backtest(
         # Run each payload through the full pipeline
         results = []
         for payload in payloads:
-            result = process_signal(payload)
+            result = await process_signal(payload)
             results.append({
                 "signal_id": payload.signal_id,
                 "direction": payload.direction,
