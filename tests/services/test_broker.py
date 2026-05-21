@@ -26,11 +26,11 @@ def test_broker_execution_proceeds():
 
     assert entry.final_decision == FinalDecisionEnum.EXECUTED_SIM
     assert entry.result["status"] == "OPEN"
-
+    
     # Check slippage simulation (2 bps on LONG increases price)
     expected_fill_price = 50000.0 * (1 + 2.0 / 10000.0)
     assert entry.simulated_fill["fill_price"] == expected_fill_price
-
+    
     # Check fees
     expected_fee = expected_fill_price * (5.0 / 10000.0)
     assert entry.simulated_fill["fee"] == expected_fee

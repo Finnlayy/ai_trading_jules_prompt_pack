@@ -42,11 +42,11 @@ class RiskEngine:
     def _gate_invalid_payload(self, payload: M8Payload):
         if payload.m8_reject_reason:
             raise RiskGateException(f"M8 explicitly rejected: {payload.m8_reject_reason}", "M8_EXPLICIT_REJECT")
-
+            
     def _gate_m8_score(self, payload: M8Payload):
         if payload.confluence_score < MIN_CONFLUENCE_SCORE:
             raise RiskGateException("Confluence score below minimum", "LOW_CONFLUENCE")
-
+            
     def _gate_crisis_score(self, payload: M8Payload):
         if payload.crisis_score > MAX_CRISIS_SCORE:
             raise RiskGateException("Crisis score too high", "HIGH_CRISIS")
@@ -69,7 +69,7 @@ class RiskEngine:
 
         if risk <= 0:
             raise RiskGateException("Invalid risk (stop loss above entry for LONG or below entry for SHORT)", "INVALID_RISK")
-
+            
         rr = reward / risk
         if rr < MIN_RR_RATIO:
             raise RiskGateException("Reward/Risk ratio too low", "LOW_RR")

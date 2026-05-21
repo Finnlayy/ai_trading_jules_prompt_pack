@@ -10,15 +10,15 @@ class SimulationBroker:
         self.slippage_bps = slippage_bps
         self.journal: list[TradeJournalEntry] = []
 
-    def execute_trade(self,
-                      payload: M8Payload,
-                      decision: DecisionEnum,
+    def execute_trade(self, 
+                      payload: M8Payload, 
+                      decision: DecisionEnum, 
                       reject_reason: Optional[str] = None,
                       ai_decision: AIDecisionEnum = AIDecisionEnum.PROCEED_TO_SIMULATION) -> TradeJournalEntry:
         """
         Simulates execution. Applies mock fills if proceeded, otherwise logs rejection.
         """
-
+        
         simulated_fill = {}
         result = None
         final_decision = FinalDecisionEnum.SKIPPED
@@ -35,19 +35,19 @@ class SimulationBroker:
 
         if decision == DecisionEnum.PROCEED_TO_SIMULATION:
             final_decision = FinalDecisionEnum.EXECUTED_SIM
-
+            
             # Apply static slippage to entry
             entry_price_with_slippage = payload.entry_price * (1 + self.slippage_bps / 10000.0) if payload.direction == "LONG" else payload.entry_price * (1 - self.slippage_bps / 10000.0)
-
+            
             # Simulated fee
             fee = entry_price_with_slippage * (self.fee_bps / 10000.0)
-
+            
             simulated_fill = {
                 "fill_price": entry_price_with_slippage,
                 "fee": fee,
                 "slippage": abs(entry_price_with_slippage - payload.entry_price)
             }
-
+            
             # For MVP, mock result as open (unrealized). Real backtest would scan future bars.
             result = {"status": "OPEN", "reject_reason": None}
         else:

@@ -1,9 +1,11 @@
 import pytest
-from fastapi.testclient import TestClient
+import json
+from httpx import AsyncClient, ASGITransport
+from unittest.mock import AsyncMock, patch
+
 from app.main import app
 from app.services.risk_engine import risk_engine_instance
-
-client = TestClient(app)
+from app.services.ai_kimi import ai_review_instance
 
 @pytest.fixture(autouse=True)
 def reset_state():
@@ -11,12 +13,35 @@ def reset_state():
     risk_engine_instance.last_trade_bar = -1
     risk_engine_instance.current_bar = 0
 
-def test_health_check():
-    response = client.get("/health")
+@pytest.fixture
+def mock_kimi_api():
+    async def mock_call_kimi(prompt: str, system: str = "", response_format=None):
+        if response_format:
+            return json.dumps({
+                "schema_version": "1.0",
+                "signal_id": "sig-123",
+                "decision": "PROCEED_TO_SIMULATION",
+                "confidence": 0.95,
+                "reason_codes": [],
+                "risk_flags": [],
+                "reject_reason": None,
+                "requires_human_review": False
+            })
+        return "mocked scout response"
+        
+    with patch.object(ai_review_instance, '_call_kimi', new_callable=AsyncMock) as mock_method:
+        mock_method.side_effect = mock_call_kimi
+        yield mock_method
+
+@pytest.mark.asyncio
+async def test_health_check():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        response = await ac.get("/health")
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
 
-def test_m8_webhook_valid_payload():
+@pytest.mark.asyncio
+async def test_m8_webhook_valid_payload(mock_kimi_api):
     payload = {
         "signal_id": "sig-123",
         "symbol": "BTCUSD",
@@ -31,18 +56,22 @@ def test_m8_webhook_valid_payload():
         "mc_dispersion": 1.5,
         "spread": 10.0
     }
-    response = client.post("/webhook/m8", json=payload)
+    
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        response = await ac.post("/webhook/m8", json=payload)
+        
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
     assert data["result"]["signal_id"] == "sig-123"
     assert data["result"]["final_decision"] == "EXECUTED_SIM"
 
-def test_m8_webhook_invalid_payload():
+@pytest.mark.asyncio
+async def test_m8_webhook_invalid_payload():
     payload = {
         "signal_id": "sig-123",
-        # missing required fields like symbol, timeframe, etc
         "direction": "INVALID"
     }
-    response = client.post("/webhook/m8", json=payload)
-    assert response.status_code == 422 # Pydantic validation error code
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        response = await ac.post("/webhook/m8", json=payload)
+    assert response.status_code == 422

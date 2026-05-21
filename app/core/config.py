@@ -1,3 +1,10 @@
+import os
+
+# API configuration
+MOONSHOT_API_KEY = os.getenv("MOONSHOT_API_KEY", "")
+MOONSHOT_BASE_URL = "https://api.moonshot.cn/v1"
+MOONSHOT_MODEL = "moonshot-v1-auto"
+
 # core config placeholder
 MIN_RR_RATIO = 2.0
 MAX_SPREAD = 15.0

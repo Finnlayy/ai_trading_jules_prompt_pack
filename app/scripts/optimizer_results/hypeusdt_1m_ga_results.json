@@ -1,0 +1,554 @@
+{
+  "config": {
+    "population_size": 30,
+    "n_generations": 50,
+    "elite_count": 3,
+    "mutation_rate": 0.05,
+    "mutation_strength": 0.4,
+    "crossover_threshold": 0.2,
+    "random_seed": 42
+  },
+  "symbol": "HYPEUSDT",
+  "candles": 10000,
+  "top3": [
+    {
+      "genes": {
+        "min_conf": 10,
+        "sl_atr_mul": 0.549,
+        "tp_atr_mul": 3.494,
+        "ob_atr_mul": 1.383,
+        "ob_pivot": 5,
+        "w_align_full": 5,
+        "w_align_part": 1,
+        "w_cisd": 2,
+        "w_ob_touch": 2,
+        "w_fvg_touch": 2,
+        "w_vol_score": 2,
+        "w_body_score": 4,
+        "body_atr_mul": 0.206,
+        "trail_atr": 1.82,
+        "vol_mult": 1.045,
+        "max_dd_pct": 14.492,
+        "risk_per_trade": 5.0
+      },
+      "fitness": 67.6389,
+      "net_profit": 141.5273,
+      "max_drawdown": 9.5782,
+      "win_rate": 40.0,
+      "n_trades": 10,
+      "return_pct": 141.5273,
+      "profit_factor": 3.534,
+      "generation": 49
+    },
+    {
+      "genes": {
+        "min_conf": 10,
+        "sl_atr_mul": 0.549,
+        "tp_atr_mul": 3.494,
+        "ob_atr_mul": 1.383,
+        "ob_pivot": 5,
+        "w_align_full": 5,
+        "w_align_part": 1,
+        "w_cisd": 2,
+        "w_ob_touch": 2,
+        "w_fvg_touch": 2,
+        "w_vol_score": 2,
+        "w_body_score": 4,
+        "body_atr_mul": 0.206,
+        "trail_atr": 1.82,
+        "vol_mult": 1.045,
+        "max_dd_pct": 14.492,
+        "risk_per_trade": 5.0
+      },
+      "fitness": 67.6389,
+      "net_profit": 141.5273,
+      "max_drawdown": 9.5782,
+      "win_rate": 40.0,
+      "n_trades": 10,
+      "return_pct": 141.5273,
+      "profit_factor": 3.534,
+      "generation": 50
+    },
+    {
+      "genes": {
+        "min_conf": 10,
+        "sl_atr_mul": 0.549,
+        "tp_atr_mul": 3.494,
+        "ob_atr_mul": 1.383,
+        "ob_pivot": 3,
+        "w_align_full": 5,
+        "w_align_part": 1,
+        "w_cisd": 2,
+        "w_ob_touch": 2,
+        "w_fvg_touch": 2,
+        "w_vol_score": 2,
+        "w_body_score": 4,
+        "body_atr_mul": 0.206,
+        "trail_atr": 1.82,
+        "vol_mult": 1.045,
+        "max_dd_pct": 14.492,
+        "risk_per_trade": 5.0
+      },
+      "fitness": 67.6389,
+      "net_profit": 141.5273,
+      "max_drawdown": 9.5782,
+      "win_rate": 40.0,
+      "n_trades": 10,
+      "return_pct": 141.5273,
+      "profit_factor": 3.534,
+      "generation": 50
+    }
+  ],
+  "generation_stats": [
+    {
+      "generation": 1,
+      "best_fitness": 7.3699,
+      "best_return": 31.4918,
+      "best_dd": 11.56,
+      "best_wr": 40.0,
+      "best_trades": 10,
+      "avg_fitness": -18.0379
+    },
+    {
+      "generation": 2,
+      "best_fitness": 7.3699,
+      "best_return": 31.4918,
+      "best_dd": 11.56,
+      "best_wr": 40.0,
+      "best_trades": 10,
+      "avg_fitness": -7.0627
+    },
+    {
+      "generation": 3,
+      "best_fitness": 23.7738,
+      "best_return": 67.5357,
+      "best_dd": 10.07,
+      "best_wr": 40.0,
+      "best_trades": 10,
+      "avg_fitness": -2.5797
+    },
+    {
+      "generation": 4,
+      "best_fitness": 24.6261,
+      "best_return": 72.1656,
+      "best_dd": 10.64,
+      "best_wr": 40.0,
+      "best_trades": 10,
+      "avg_fitness": 4.0614
+    },
+    {
+      "generation": 5,
+      "best_fitness": 24.6261,
+      "best_return": 72.1656,
+      "best_dd": 10.64,
+      "best_wr": 40.0,
+      "best_trades": 10,
+      "avg_fitness": 8.6113
+    },
+    {
+      "generation": 6,
+      "best_fitness": 24.9982,
+      "best_return": 74.2818,
+      "best_dd": 10.89,
+      "best_wr": 40.0,
+      "best_trades": 10,
+      "avg_fitness": 18.6555
+    },
+    {
+      "generation": 7,
+      "best_fitness": 24.9982,
+      "best_return": 74.2818,
+      "best_dd": 10.89,
+      "best_wr": 40.0,
+      "best_trades": 10,
+      "avg_fitness": 21.5108
+    },
+    {
+      "generation": 8,
+      "best_fitness": 38.7184,
+      "best_return": 103.5287,
+      "best_dd": 12.71,
+      "best_wr": 40.0,
+      "best_trades": 10,
+      "avg_fitness": 24.4595
+    },
+    {
+      "generation": 9,
+      "best_fitness": 38.7184,
+      "best_return": 103.5287,
+      "best_dd": 12.71,
+      "best_wr": 40.0,
+      "best_trades": 10,
+      "avg_fitness": 24.2256
+    },
+    {
+      "generation": 10,
+      "best_fitness": 39.307,
+      "best_return": 106.765,
+      "best_dd": 13.0,
+      "best_wr": 40.0,
+      "best_trades": 10,
+      "avg_fitness": 25.8962
+    },
+    {
+      "generation": 11,
+      "best_fitness": 49.0099,
+      "best_return": 117.5115,
+      "best_dd": 13.0,
+      "best_wr": 44.4,
+      "best_trades": 9,
+      "avg_fitness": 30.3224
+    },
+    {
+      "generation": 12,
+      "best_fitness": 49.0099,
+      "best_return": 117.5115,
+      "best_dd": 13.0,
+      "best_wr": 44.4,
+      "best_trades": 9,
+      "avg_fitness": 35.7808
+    },
+    {
+      "generation": 13,
+      "best_fitness": 49.0425,
+      "best_return": 117.6772,
+      "best_dd": 13.02,
+      "best_wr": 44.4,
+      "best_trades": 9,
+      "avg_fitness": 42.8214
+    },
+    {
+      "generation": 14,
+      "best_fitness": 49.0425,
+      "best_return": 117.6772,
+      "best_dd": 13.02,
+      "best_wr": 44.4,
+      "best_trades": 9,
+      "avg_fitness": 41.937
+    },
+    {
+      "generation": 15,
+      "best_fitness": 49.0425,
+      "best_return": 117.6772,
+      "best_dd": 13.02,
+      "best_wr": 44.4,
+      "best_trades": 9,
+      "avg_fitness": 46.1689
+    },
+    {
+      "generation": 16,
+      "best_fitness": 49.0425,
+      "best_return": 117.6772,
+      "best_dd": 13.02,
+      "best_wr": 44.4,
+      "best_trades": 9,
+      "avg_fitness": 45.1329
+    },
+    {
+      "generation": 17,
+      "best_fitness": 49.0425,
+      "best_return": 117.6772,
+      "best_dd": 13.02,
+      "best_wr": 44.4,
+      "best_trades": 9,
+      "avg_fitness": 44.5228
+    },
+    {
+      "generation": 18,
+      "best_fitness": 49.0425,
+      "best_return": 117.6772,
+      "best_dd": 13.02,
+      "best_wr": 44.4,
+      "best_trades": 9,
+      "avg_fitness": 44.8217
+    },
+    {
+      "generation": 19,
+      "best_fitness": 49.0425,
+      "best_return": 117.6772,
+      "best_dd": 13.02,
+      "best_wr": 44.4,
+      "best_trades": 9,
+      "avg_fitness": 42.1381
+    },
+    {
+      "generation": 20,
+      "best_fitness": 49.0425,
+      "best_return": 117.6772,
+      "best_dd": 13.02,
+      "best_wr": 44.4,
+      "best_trades": 9,
+      "avg_fitness": 44.7005
+    },
+    {
+      "generation": 21,
+      "best_fitness": 49.0425,
+      "best_return": 117.6772,
+      "best_dd": 13.02,
+      "best_wr": 44.4,
+      "best_trades": 9,
+      "avg_fitness": 42.3129
+    },
+    {
+      "generation": 22,
+      "best_fitness": 49.0425,
+      "best_return": 117.6772,
+      "best_dd": 13.02,
+      "best_wr": 44.4,
+      "best_trades": 9,
+      "avg_fitness": 43.5352
+    },
+    {
+      "generation": 23,
+      "best_fitness": 50.1921,
+      "best_return": 114.3441,
+      "best_dd": 9.58,
+      "best_wr": 40.0,
+      "best_trades": 10,
+      "avg_fitness": 42.7011
+    },
+    {
+      "generation": 24,
+      "best_fitness": 50.1921,
+      "best_return": 114.3441,
+      "best_dd": 9.58,
+      "best_wr": 40.0,
+      "best_trades": 10,
+      "avg_fitness": 45.0657
+    },
+    {
+      "generation": 25,
+      "best_fitness": 50.1921,
+      "best_return": 114.3441,
+      "best_dd": 9.58,
+      "best_wr": 40.0,
+      "best_trades": 10,
+      "avg_fitness": 46.2924
+    },
+    {
+      "generation": 26,
+      "best_fitness": 50.1921,
+      "best_return": 114.3441,
+      "best_dd": 9.58,
+      "best_wr": 40.0,
+      "best_trades": 10,
+      "avg_fitness": 43.488
+    },
+    {
+      "generation": 27,
+      "best_fitness": 50.1921,
+      "best_return": 114.3441,
+      "best_dd": 9.58,
+      "best_wr": 40.0,
+      "best_trades": 10,
+      "avg_fitness": 39.2541
+    },
+    {
+      "generation": 28,
+      "best_fitness": 50.1921,
+      "best_return": 114.3441,
+      "best_dd": 9.58,
+      "best_wr": 40.0,
+      "best_trades": 10,
+      "avg_fitness": 43.2963
+    },
+    {
+      "generation": 29,
+      "best_fitness": 65.4041,
+      "best_return": 138.149,
+      "best_dd": 9.58,
+      "best_wr": 40.0,
+      "best_trades": 10,
+      "avg_fitness": 39.9162
+    },
+    {
+      "generation": 30,
+      "best_fitness": 65.4041,
+      "best_return": 138.149,
+      "best_dd": 9.58,
+      "best_wr": 40.0,
+      "best_trades": 10,
+      "avg_fitness": 47.791
+    },
+    {
+      "generation": 31,
+      "best_fitness": 65.4041,
+      "best_return": 138.149,
+      "best_dd": 9.58,
+      "best_wr": 40.0,
+      "best_trades": 10,
+      "avg_fitness": 54.8224
+    },
+    {
+      "generation": 32,
+      "best_fitness": 65.4041,
+      "best_return": 138.149,
+      "best_dd": 9.58,
+      "best_wr": 40.0,
+      "best_trades": 10,
+      "avg_fitness": 55.2603
+    },
+    {
+      "generation": 33,
+      "best_fitness": 65.4041,
+      "best_return": 138.149,
+      "best_dd": 9.58,
+      "best_wr": 40.0,
+      "best_trades": 10,
+      "avg_fitness": 56.4682
+    },
+    {
+      "generation": 34,
+      "best_fitness": 65.4041,
+      "best_return": 138.149,
+      "best_dd": 9.58,
+      "best_wr": 40.0,
+      "best_trades": 10,
+      "avg_fitness": 58.8671
+    },
+    {
+      "generation": 35,
+      "best_fitness": 65.4041,
+      "best_return": 138.149,
+      "best_dd": 9.58,
+      "best_wr": 40.0,
+      "best_trades": 10,
+      "avg_fitness": 62.0901
+    },
+    {
+      "generation": 36,
+      "best_fitness": 65.4041,
+      "best_return": 138.149,
+      "best_dd": 9.58,
+      "best_wr": 40.0,
+      "best_trades": 10,
+      "avg_fitness": 62.0672
+    },
+    {
+      "generation": 37,
+      "best_fitness": 65.4041,
+      "best_return": 138.149,
+      "best_dd": 9.58,
+      "best_wr": 40.0,
+      "best_trades": 10,
+      "avg_fitness": 58.0911
+    },
+    {
+      "generation": 38,
+      "best_fitness": 65.4041,
+      "best_return": 138.149,
+      "best_dd": 9.58,
+      "best_wr": 40.0,
+      "best_trades": 10,
+      "avg_fitness": 56.4356
+    },
+    {
+      "generation": 39,
+      "best_fitness": 65.4041,
+      "best_return": 138.149,
+      "best_dd": 9.58,
+      "best_wr": 40.0,
+      "best_trades": 10,
+      "avg_fitness": 59.2993
+    },
+    {
+      "generation": 40,
+      "best_fitness": 65.4041,
+      "best_return": 138.149,
+      "best_dd": 9.58,
+      "best_wr": 40.0,
+      "best_trades": 10,
+      "avg_fitness": 56.8831
+    },
+    {
+      "generation": 41,
+      "best_fitness": 65.4041,
+      "best_return": 138.149,
+      "best_dd": 9.58,
+      "best_wr": 40.0,
+      "best_trades": 10,
+      "avg_fitness": 60.7539
+    },
+    {
+      "generation": 42,
+      "best_fitness": 65.4041,
+      "best_return": 138.149,
+      "best_dd": 9.58,
+      "best_wr": 40.0,
+      "best_trades": 10,
+      "avg_fitness": 60.8161
+    },
+    {
+      "generation": 43,
+      "best_fitness": 65.4041,
+      "best_return": 138.149,
+      "best_dd": 9.58,
+      "best_wr": 40.0,
+      "best_trades": 10,
+      "avg_fitness": 63.0766
+    },
+    {
+      "generation": 44,
+      "best_fitness": 65.4041,
+      "best_return": 138.149,
+      "best_dd": 9.58,
+      "best_wr": 40.0,
+      "best_trades": 10,
+      "avg_fitness": 58.1323
+    },
+    {
+      "generation": 45,
+      "best_fitness": 65.4041,
+      "best_return": 138.149,
+      "best_dd": 9.58,
+      "best_wr": 40.0,
+      "best_trades": 10,
+      "avg_fitness": 61.5856
+    },
+    {
+      "generation": 46,
+      "best_fitness": 65.4041,
+      "best_return": 138.149,
+      "best_dd": 9.58,
+      "best_wr": 40.0,
+      "best_trades": 10,
+      "avg_fitness": 62.789
+    },
+    {
+      "generation": 47,
+      "best_fitness": 65.4041,
+      "best_return": 138.149,
+      "best_dd": 9.58,
+      "best_wr": 40.0,
+      "best_trades": 10,
+      "avg_fitness": 59.323
+    },
+    {
+      "generation": 48,
+      "best_fitness": 65.4041,
+      "best_return": 138.149,
+      "best_dd": 9.58,
+      "best_wr": 40.0,
+      "best_trades": 10,
+      "avg_fitness": 55.126
+    },
+    {
+      "generation": 49,
+      "best_fitness": 67.6389,
+      "best_return": 141.5273,
+      "best_dd": 9.58,
+      "best_wr": 40.0,
+      "best_trades": 10,
+      "avg_fitness": 61.6854
+    },
+    {
+      "generation": 50,
+      "best_fitness": 67.6389,
+      "best_return": 141.5273,
+      "best_dd": 9.58,
+      "best_wr": 40.0,
+      "best_trades": 10,
+      "avg_fitness": 56.5176
+    }
+  ]
+}
