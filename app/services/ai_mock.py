@@ -20,14 +20,14 @@ class MockAIReviewLayer:
             confidence = 0.60
             reason_codes.append("WEAK_CONFLUENCE_WARNING")
 
-        if 20.0 < payload.crisis_score <= 30.0:
+        if 15.0 < payload.crisis_score <= 20.0:
             # Elevated risk: don't auto-reject, but flag for human review
             decision = DecisionEnum.PROCEED_TO_SIMULATION
             confidence = 0.55
             reason_codes = ["MACRO_RISK_ELEVATED"]
             requires_human_review = True
 
-        if payload.crisis_score > 30.0:
+        if payload.crisis_score > 20.0:
             decision = DecisionEnum.REJECT
             confidence = 0.95
             reason_codes = ["MACRO_RISK_HIGH"]

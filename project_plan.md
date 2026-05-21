@@ -1,225 +1,89 @@
-# AI-Agentic Simulated Trading Ecosystem: Project Plan
+# PINE SCRIPT STUDIO & THE GAUNTLET: Master Architecture Document
 
 ## 1. Executive Summary
 
-This document details the engineering blueprint for an AI-assisted simulated trading ecosystem. The core principle is absolute separation between probabilistic AI agents and deterministic execution: **LLMs must never directly place live orders**. AI agents (GPT-5.5, Kimi Swarm, Manus) are strictly constrained to research, context review, pattern recognition, and hypothesis generation. All execution decisions, risk enforcement, and journaling are handled by a deterministic Python/FastAPI backend validating against the Sigma System's M8 Execution Quality Gate outputs. The primary deliverable is an agent-reflex hybrid trader MVP optimized for 1h/4h timeframes in a simulation-first environment.
+This document serves as the Single Source of Truth for the "Pine Script Studio" ecosystem and "The Drawdown Survival Gauntlet" (Season 1). The core philosophy is **"The High-Performance Constructor's Garage"**—a clinical, engineering-focused platform devoid of casino-like gamification.
 
-## 2. Recommended System Architecture
+The architecture enforces an iron-clad separation of concerns:
+- **The Judge (Deterministic Python Backend):** The execution engine that processes ticks, enforces the rules of the Gauntlet, and calculates the Battle-Royale formula. It is immune to AI hallucinations.
+- **The Swarm (AI Analysts):** A read-only analytical layer that consumes strictly validated JSON logs from The Judge to generate esports commentary and insights, driven by the narrative of loss-aversion and survival.
 
-The architecture relies on a deterministic core augmented by isolated AI services.
+## 2. Core Architecture: The Iron Separation
 
-| Layer | Component | Description |
-|---|---|---|
-| **Signal Source** | Sigma PineScript & M8 Gate | Generates baseline signals and structured M8 alerts (confluence, dispersion, etc.). |
-| **Ingestion** | FastAPI Endpoint | Receives webhook payloads; parses and validates raw M8 JSON. |
-| **Schema Validation** | Pydantic Models | Enforces strict type and field constraints for all incoming data and AI outputs. |
-| **AI Review** | Non-execution AI Layer | Consumes signal context to output a schema-validated `SignalReview` JSON. |
-| **Risk Engine** | Deterministic Python Module | Evaluates M8 gates, AI enums/flags, and internal rules. Final arbiter of `PROCEED` or `REJECT`. |
-| **Execution** | Simulation Broker | Handles mock fills, fee/slippage modeling, and deterministic replay. |
-| **Data Store** | PostgreSQL / Time-Series DB | Stores market data, trade journals, risk logs, and backtest results. |
-| **Orchestration** | Agentic Control Plane | GPT-5.5 acts as orchestrator for Kimi workers and Manus tasks. |
+### The Judge (Deterministic Python Backend)
+- **Role:** Execution Engine, Tick Processor, and Rule Enforcer.
+- **Inputs:** Tick data, webhook signals (from Pine Script Studio), OHLCV data.
+- **Responsibilities:**
+  - Execute trades deterministically based on incoming signals.
+  - Apply realistic slippage, spread, and fee models (Freq-Penalty).
+  - Enforce the "Guillotine" (instant termination if Max Drawdown reaches -25%).
+  - Maintain the strict separation of In-Sample (IS) and Out-of-Sample (OOS) data pipelines.
+  - Calculate the Gauntlet Scoring Formula.
+  - Export state and trade logs strictly via the Data Handoff JSON Schema.
 
-## 3. Agent Role Design
+### The Swarm (AI Analysts)
+- **Role:** Commentators and Post-Trade Analysts.
+- **Inputs:** Data Handoff JSON Schema (provided by The Judge).
+- **Responsibilities:**
+  - Parse the deterministic logs to understand *why* a strategy survived or was liquidated.
+  - Generate esports-style commentary focusing on robust engineering vs. curve-fitting.
+  - Provide analytical context for the audience (e.g., explaining a death by Freq-Penalty due to lack of ATR-trailing).
+- **Restrictions:** Absolutely no execution capability. Cannot alter The Judge's state or the scoring formula.
 
-### Kimi Swarm
-- **Inputs:** Historical OHLCV, market news, macro data, trade journals.
-- **Outputs:** JSON-formatted hypotheses, risk flags, sentiment classifications.
-- **Allowed:** Bulk research, sentiment clustering, strategy mutation, proposing parameters.
-- **Forbidden:** Final trade decisions, direct execution, self-approval of hypotheses.
-- **Validation:** JSON schema validation; swarm claims rejected if contradictory to deterministic data.
-- **Fallback:** Skip AI context if swarm latency/failure occurs; rely purely on deterministic M8 gate.
+## 3. Gauntlet Scoring & Mechanics (Season 1)
 
-### GPT-5.5
-- **Inputs:** Kimi/Manus outputs, codebase diffs, test logs.
-- **Outputs:** Architecture reviews, code drafts, tool-use plans, final syntheses.
-- **Allowed:** Task breakdown, test writing, output comparison.
-- **Forbidden:** Direct execution approval, bypassing schemas, changing risk gates autonomously.
-- **Validation:** Code outputs require CI test passing; architecture changes require human review.
-- **Fallback:** Human intervention on orchestration failure.
+The Gauntlet is a public survival tournament designed to test algorithmic robustness.
 
-### Manus
-- **Inputs:** Repository state, task definitions, backtest data.
-- **Outputs:** Markdown reports, repository patches.
-- **Allowed:** Autonomous research workflows, backtest report generation, documentation.
-- **Forbidden:** Deploying live trading changes, overwriting strategies without review.
-- **Validation:** Human approval checkpoints for all structural/code changes.
-- **Fallback:** Halts workflow and alerts human.
+### Data Segregation Pipeline
+- **In-Sample (IS) Qualifiers:** 48 hours. Competitors tune their algorithms on known historical datasets (e.g., specific market crashes).
+- **Out-of-Sample (OOS) Finale:** The live event runs on completely unseen, cryptographically locked datasets to instantly destroy curve-fitted strategies.
 
-## 4. Kimi Swarm Plan
+### The Battle-Royale Formula
+The ultimate metric for survival and victory:
+`Total Score = (Sortino Ratio * Regime Resilience Bonus) - (Drawdown Penalty + Over-Trading Penalty)`
 
-Kimi Swarm will be utilized for parallelized research and post-trade analysis.
-- **Agents:** 10-50 parallel instances.
-- **Roles:** Sentiment Scout, Macro Scout, Technical-Pattern Scout, Strategy Mutator, Journal Reviewer.
-- **Deduplication:** A central registry of processed topics/timeframes prevents redundant work.
-- **Ranking:** Outputs are scored based on confidence, evidence availability, and historical accuracy.
-- **Rejection:** Bad hypotheses are dropped if they fail to specify an invalidation level or fail schema validation.
-- **Merge Strategy:** The GPT-5.5 Orchestrator ingests all JSON outputs and synthesizes a single, weighted `ResearchReport`.
+- **Sortino Ratio:** Primary metric. Penalizes downside volatility while rewarding protective upside. Must be > 2.0 to be competitive.
+- **Regime Resilience Bonus:** Rewards strategies that maintain a consistent Profit Factor across different market regimes (e.g., High Volatility Trend, Low Volatility Chop).
+- **Drawdown Penalty:** Incremental deductions as drawdown increases.
+- **Over-Trading Penalty (Freq-Penalty):** Deductions for excessive trades, simulating realistic transaction costs and slippage. Kills high-frequency "noise" bots.
 
-## 5. GPT-5.5 Plan
+### The Guillotine
+- A deterministic kill-switch hardcoded into The Judge.
+- If a strategy's real-time equity exceeds a Maximum Drawdown of **-25%**, it is instantly "Liquidated" and removed from the Gauntlet.
 
-GPT-5.5 serves as the cognitive orchestrator and lead engineer.
-- **Orchestration:** Evaluates Kimi Swarm hypotheses, schedules Manus backtests.
-- **Code/Debug:** Reviews code generated by Manus or human developers; ensures deterministic boundaries.
-- **Testing:** Writes unit tests for new risk engine gates.
-- **Approval Checkpoints:** Must explicitly request human approval before authorizing testnet execution or structural risk parameter changes.
-- **Validation:** Validates all sub-agent tool outputs against the defined Pydantic schemas.
+## 4. Sub-Agent Directives
 
-## 6. Manus Plan
+### Agent 1: The Quant Architect (Algo & Logic)
+- **Focus:** Develop the reference strategy "Neo-Quantum SMC v6 (Apex Edition)".
+- **Environment:** Pine Script v6.
+- **Rules:** No repainting, no future leaks, only confirmed bars (`barstate.isconfirmed`), explicit booleans.
+- **Logic:**
+  - Maker-Logic (Shadow Orders in Breaker Blocks).
+  - Displacement-Filter (Breakout candle > 1 ATR + Volume).
+  - Regime-Filter (Standby mode when CHOP > 61.8).
+  - Session-Routing (Trade only in liquidity killzones; avoid toxic sessions).
+- **Risk Management:** Volume-scaled time-decay, dynamic breakeven, Kelly-Warmup (first 15 trades at 1% base risk).
 
-Manus handles long-running, autonomous repo and research workflows.
-- **Tasks:** Scrapes new data, structures datasets, runs local Python backtest scripts, generates Markdown summaries.
-- **Limits:** Cannot commit directly to `main`; cannot deploy.
-- **Checkpoints:** Human approval is strictly required before changing PineScript files, modifying risk thresholds, or promoting strategies.
+### Agent 2: Backend Systems Engineer (The Judge)
+- **Focus:** Build the Python backend.
+- **Logic:** Tick processing engine with zero data leakage.
+- **State Management:** Implement the Guillotine and IS/OOS segregation.
+- **Integration:** Design and implement the JSON schema for Data Handoff to The Swarm.
 
-## 7. End-to-End Workflow
+### Agent 3: UI/UX Engineer (Frontend & Desktop App)
+- **Focus:** Design "Pine Script Studio" with the "Neural Flow" interface.
+- **Aesthetic:** Anti-Casino. Dark terminal design (gray, black, matte mint). No neon red/green. Industrial, tactile audio feedback (relay clicks).
+- **Psychology:** The engine must communicate in the *Subjunctive Mood* (e.g., "The simulated win rate would have been...") to prevent overconfidence.
+- **Features:** "The Disbelief Gauntlet" – visual stress tests showing naked KPIs (Sharpe, Sortino, Hurst, DER) alongside a Slippage-Injector and Liquidity Vacuum.
 
-1. **Market Data Ingestion:** Sigma PineScript monitors 1h/4h charts.
-2. **Signal Generation:** Setup triggered; M8 Quality Gate computes confluence and scores.
-3. **Webhook Dispatch:** M8 sends structured JSON payload to FastAPI.
-4. **AI Context Review:** Payload passed to AI layer. AI returns `SignalReview` JSON (no free text execution).
-5. **Deterministic Decision:** Risk Engine evaluates M8 score, AI enum, and internal gates (drawdown, cooldown).
-6. **Simulated Execution:** If passed, Simulation Broker applies slippage/fees and records mock fill. If rejected, maps `reject_reason`.
-7. **Journaling:** Detailed JSON record of the trade/rejection is saved.
-8. **Post-Trade Review:** Kimi Swarm analyzes the journal for pattern refinement.
+### Agent 4: AI Swarm & Community Architect
+- **Focus:** esports commentary and community management.
+- **Logic:** Validate JSON to prevent crashes. Explain deterministic deaths clearly based on the logs.
+- **Narrative:** Focus on "Loss Aversion." Build tension around surviving extreme chaos simulations rather than chasing profit.
 
-## 8. JSON Schema Contracts
+## 5. Execution Roadmap
 
-*Note: These schemas must be strictly enforced via Pydantic in the ingestion layer.*
-
-### AI Signal Review
-```json
-{
-  "type": "object",
-  "required": ["schema_version", "signal_id", "decision", "confidence", "reason_codes", "risk_flags", "requires_human_review"],
-  "properties": {
-    "schema_version": { "type": "string" },
-    "signal_id": { "type": "string" },
-    "decision": { "enum": ["PROCEED_TO_SIMULATION", "REJECT", "HUMAN_REVIEW"] },
-    "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
-    "reason_codes": { "type": "array", "items": { "type": "string" } },
-    "risk_flags": { "type": "array", "items": { "type": "string" } },
-    "reject_reason": { "type": ["string", "null"] },
-    "requires_human_review": { "type": "boolean" }
-  }
-}
-```
-
-### Risk Flag
-```json
-{
-  "type": "object",
-  "required": ["flag_code", "severity", "source", "evidence", "action"],
-  "properties": {
-    "flag_code": { "type": "string" },
-    "severity": { "enum": ["INFO", "WARNING", "CRITICAL"] },
-    "source": { "enum": ["M8", "RISK_ENGINE", "AI_REVIEW", "BROKER_SIM", "DATA_PIPELINE"] },
-    "evidence": { "type": "string" },
-    "action": { "enum": ["LOG_ONLY", "REDUCE_SIZE", "REJECT", "HALT_SIMULATION", "HUMAN_REVIEW"] }
-  }
-}
-```
-
-### Trade Journal Entry
-```json
-{
-  "type": "object",
-  "required": ["trade_id", "timestamp", "symbol", "timeframe", "direction", "entry_price", "stop_price", "target_price", "risk_reward", "m8_score", "ai_decision", "final_decision", "simulated_fill"],
-  "properties": {
-    "trade_id": { "type": "string" },
-    "timestamp": { "type": "string" },
-    "symbol": { "type": "string" },
-    "timeframe": { "type": "string" },
-    "direction": { "enum": ["LONG", "SHORT"] },
-    "entry_price": { "type": "number" },
-    "stop_price": { "type": "number" },
-    "target_price": { "type": "number" },
-    "risk_reward": { "type": "number" },
-    "m8_score": { "type": "number" },
-    "ai_decision": { "enum": ["PROCEED_TO_SIMULATION", "REJECT", "HUMAN_REVIEW"] },
-    "final_decision": { "enum": ["EXECUTED_SIM", "REJECTED", "SKIPPED"] },
-    "simulated_fill": { "type": "object" },
-    "result": { "type": ["object", "null"] }
-  }
-}
-```
-
-## 9. MVP Build Plan
-
-**Name:** Agent-Reflex Hybrid Trader
-**Scope:** 1h/4h timeframe, simulation-first.
-**Components:**
-1. **API Layer:** FastAPI endpoint for M8 PineScript webhooks.
-2. **Schema Engine:** Pydantic validation for all schemas.
-3. **Risk Engine:** Deterministic rule enforcer (duplicate check, spread, R/R > 2.0).
-4. **Broker:** Mock execution with static fee/slippage modeling.
-5. **AI Review:** Mocked or simple GPT call returning `SignalReview` JSON.
-6. **Journal:** Local JSON/CSV logger.
-
-## 10. 30/60/90-Day Roadmap
-
-### Day 1-30: Deterministic Foundation (MVP)
-- Implement FastAPI ingestion and Pydantic schemas.
-- Build deterministic Risk Engine with all M8 gates.
-- Build Simulation Broker (fees, slippage).
-- Establish test suite (unit tests for rejection logic).
-- **Acceptance:** 100% of invalid payloads rejected; simulated trades journaled correctly.
-
-### Day 31-60: AI Integration & Swarm Slicing
-- Integrate AI Review Layer (non-execution).
-- Deploy Kimi Swarm instances for initial post-trade journal analysis.
-- Implement GPT-5.5 orchestrator to manage Kimi workflows.
-- **Acceptance:** AI JSON outputs strictly validated; AI context successfully merges into Risk Engine without overriding deterministic decisions.
-
-### Day 61-90: Autonomous Research & Scale
-- Introduce Manus for repo tasks and automated backtest report generation.
-- Implement out-of-sample and walk-forward testing pipelines.
-- Build dashboard reporting layer.
-- **Acceptance:** End-to-end pipeline operates smoothly in simulation with human approval gates functioning as designed.
-
-## 11. Validation and Simulation Plan
-
-The system requires rigorous, deterministic validation:
-- **Testing Modes:** Must support out-of-sample and walk-forward testing natively.
-- **Baselines:** Every backtest must compare against buy-and-hold and benchmark momentum models.
-- **Models:** Mandatory fee, slippage, and spread models for all simulations.
-- **Checks:** Programmatic checks for data leakage and lookahead-bias in historical OHLCV.
-- **Thresholds:** Minimum trade count enforced for statistical significance.
-
-## 12. Risk Gates and Rejection Rules
-
-Every risk must be a programmatic gate in the Risk Engine.
-
-| Gate | Condition | Action |
-|---|---|---|
-| **Invalidation Gate** | No invalidation level (stop loss) provided. | REJECT |
-| **R/R Gate** | Reward/Risk ratio < 2.0. | REJECT |
-| **Spread Gate** | Current spread > configured threshold. | REJECT |
-| **Schema Gate** | AI output fails Pydantic validation. | REJECT |
-| **Consensus Gate** | AI output contradicts deterministic M8 state. | REJECT (Log `AI_M8_CONFLICT`) |
-| **M8 Gate** | M8 confluence score < threshold. | REJECT |
-| **Dispersion Gate** | Monte Carlo path dispersion > threshold. | REJECT |
-| **Drawdown Gate** | Simulated daily drawdown > limit. | HALT SIMULATION for day |
-| **Cooldown Gate** | Entry signal within N bars of last trade. | REJECT |
-
-## 13. Decision Matrix
-
-| Option | Realism | Cost | Complexity | Reliability | Debug Burden | Sim Value | Prod Readiness |
-|---|---|---|---|---|---|---|---|
-| **A. Kimi Swarm Only** | Medium | High | Medium | Low | High | Medium | Low |
-| **B. GPT-5.5 + Kimi** | High | High | High | High | Medium | High | High |
-| **C. Manus + GPT/Kimi** | Very High | Very High| Very High| Medium | Very High| High | Medium |
-
-**Recommendation:** Option B (GPT-5.5 Orchestrator + Kimi Workers) for core operations, leveraging Manus strictly for isolated autonomous research tasks with human checkpoints.
-
-## 14. Concrete Next Actions
-
-1. Scaffold the Python repository.
-2. Implement Pydantic definitions for JSON schemas.
-3. Build the FastAPI ingestion endpoint and M8 payload parser.
-4. Write unit tests for the schema validation layer.
-
-## 15. Open Questions
-
-1. Which specific market data provider will supply the historical OHLCV for backtesting?
-2. What are the exact fee and slippage models (e.g., basis points) for the Simulation Broker?
-3. What is the predefined format for the M8 webhook alert payload sent from TradingView/PineScript?
+1. **Establish Master Architecture (Completed):** Finalize `project_plan.md`.
+2. **Backend Structure:** Outline `08_backend_judge_outline.py` detailing tick processing, the Guillotine, and the scoring formula.
+3. **UI/UX Design:** Draft `09_ui_ux_disbelief_gauntlet.md` for the Neural Flow interface and subjunctive mood rules.
+4. **Data Handoff:** Define `10_data_handoff_schema.json` to safely bridge The Judge and The Swarm.
