@@ -90,3 +90,29 @@ async def test_m8_webhook_invalid_payload():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         response = await ac.post("/webhook/m8", json=payload)
     assert response.status_code == 422
+
+@pytest.mark.asyncio
+async def test_m8_webhook_process_signal_exception():
+    payload = {
+        "signal_id": "sig-123",
+        "symbol": "BTCUSD",
+        "timeframe": "1h",
+        "direction": "LONG",
+        "timestamp": "2026-05-20T10:00:00Z",
+        "entry_price": 50000.0,
+        "stop_price": 48000.0,
+        "target_price": 54000.0,
+        "confluence_score": 85.5,
+        "crisis_score": 10.0,
+        "mc_dispersion": 1.5,
+        "spread": 10.0
+    }
+
+    with patch("app.api.endpoints.process_signal", new_callable=AsyncMock) as mock_process_signal:
+        mock_process_signal.side_effect = Exception("Simulated processing error")
+
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+            response = await ac.post("/webhook/m8", json=payload)
+
+        assert response.status_code == 400
+        assert response.json() == {"detail": "Simulated processing error"}
