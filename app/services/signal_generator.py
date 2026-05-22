@@ -13,6 +13,7 @@ from typing import List, Optional, Dict
 
 import requests
 
+from app.core.config import SIGNAL_MIN_CONFLUENCE_OVERRIDE
 from app.schemas.m8_payload import M8Payload
 from app.services.cisd_scorer import CISDScorer, Candle as CISDScorerCandle
 from app.services.asset_calibrator import get_calibration
@@ -109,6 +110,7 @@ class SignalGenerator:
             vol_period=20,
         )
         self.feed = BybitDataFeed()
+        self.last_generation_summary: Dict = {}
 
     def _ohlcv_to_cisd_candles(self, bars: List[OHLCV]) -> List[CISDScorerCandle]:
         return [CISDScorerCandle(ts=b.ts, o=b.o, h=b.h, l=b.l, c=b.c, v=b.v) for b in bars]
@@ -118,6 +120,7 @@ class SignalGenerator:
         symbol: str = "HYPEUSDT",
         timeframe: str = "1m",
         bars: int = 200,
+        min_confluence: Optional[float] = None,
     ) -> List[M8Payload]:
         """
         Fetch historical data, score every bar, and emit M8Payloads
@@ -126,16 +129,35 @@ class SignalGenerator:
         # Get asset calibration for thresholds
         cal = get_calibration(symbol)
         cal_params = cal.get("calibration", {})
-        min_conf = cal_params.get("min_conf", 11)
+        min_conf = (
+            min_confluence
+            if min_confluence is not None
+            else SIGNAL_MIN_CONFLUENCE_OVERRIDE
+            if SIGNAL_MIN_CONFLUENCE_OVERRIDE is not None
+            else cal_params.get("min_conf", 11)
+        )
         sl_atr_mul = cal_params.get("sl_atr_mul", 1.4)
         tp_atr_mul = cal_params.get("tp_atr_mul", 2.8)
 
         raw_bars = self.feed.fetch(symbol, bars)
         if len(raw_bars) < 50:
+            self.last_generation_summary = {
+                "symbol": symbol,
+                "bars_requested": bars,
+                "bars_loaded": len(raw_bars),
+                "min_confluence": min_conf,
+                "scores_count": 0,
+                "max_confluence_score": None,
+                "directional_scores": 0,
+                "payloads_generated": 0,
+                "message": "Insufficient bars for CISD scoring",
+            }
             return []
 
         cisd_candles = self._ohlcv_to_cisd_candles(raw_bars)
         scores = self.scorer.score_series(cisd_candles)
+        max_score = max((float(score["confluence_score"]) for score in scores), default=0.0)
+        directional_scores = sum(1 for score in scores if score["direction_hint"] != "NEUTRAL")
 
         payloads = []
         for i, (bar, score) in enumerate(zip(raw_bars, scores)):
@@ -183,6 +205,17 @@ class SignalGenerator:
             )
             payloads.append(payload)
 
+        self.last_generation_summary = {
+            "symbol": symbol,
+            "asset_class": str(cal.get("asset_class")),
+            "bars_requested": bars,
+            "bars_loaded": len(raw_bars),
+            "min_confluence": min_conf,
+            "scores_count": len(scores),
+            "max_confluence_score": round(max_score, 2),
+            "directional_scores": directional_scores,
+            "payloads_generated": len(payloads),
+        }
         return payloads
 
     def _simple_atr(self, candles: List[CISDScorerCandle]) -> float:

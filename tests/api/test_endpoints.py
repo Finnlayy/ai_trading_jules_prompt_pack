@@ -49,6 +49,13 @@ async def test_health_check():
     assert response.json() == {"status": "ok"}
 
 @pytest.mark.asyncio
+async def test_root_redirects_to_docs():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test", follow_redirects=False) as ac:
+        response = await ac.get("/")
+    assert response.status_code == 307
+    assert response.headers["location"] == "/docs"
+
+@pytest.mark.asyncio
 async def test_m8_webhook_valid_payload(mock_kimi_api):
     payload = {
         "signal_id": "sig-123",

@@ -92,7 +92,7 @@ PIONEX_DIRECT_ENABLED=true
 PIONEX_DIRECT_LIVE_TRADING_ENABLED=false
 PIONEX_API_KEY=dein_pionex_api_key
 PIONEX_API_SECRET=dein_pionex_api_secret
-PIONEX_ALLOWED_SYMBOLS=BTC_USDT,BTC_USDT_PERP,ETH_USDT,ETH_USDT_PERP
+PIONEX_ALLOWED_SYMBOLS=BTC_USDT,BTC_USDT_PERP,ETH_USDT,ETH_USDT_PERP,XAG_USDT_PERP
 PIONEX_DIRECT_FUTURES_MODE=mode1
 AI_FAILURE_POLICY=reject_live
 ```
@@ -100,6 +100,7 @@ AI_FAILURE_POLICY=reject_live
 Wichtig:
 - `PIONEX_DIRECT_LIVE_TRADING_ENABLED=false` bedeutet Dry-Run, auch wenn API-Keys gesetzt sind.
 - `intent` ist optional im Payload (`ENTRY`/`CLOSE`). Wenn nicht gesetzt, gilt `ENTRY`.
+- TradingView-Perp-Symbole wie `XAGUSDT.P` werden fuer Direct Mode zu `XAG_USDT_PERP` normalisiert.
 - `AI_FAILURE_POLICY=reject_live` blockiert live-faehige Orders, falls die AI-Layer als unavailable markiert wird.
 - Kelly-Sizing ist standardmaessig Half-Kelly (`KELLY_DEPLOY_MODE=half`) mit Min/Max-Risiko-Caps aus `.env`.
 
@@ -174,3 +175,19 @@ python -m app.research.binance_futures_data \
 Die MTF/CISD-Auswertung resampled echte OHLCV-Buckets und nutzt fuer
 Lower-Timeframe-Zeilen nur den vorherigen abgeschlossenen Higher-Timeframe-State.
 Damit bleibt die Research-Schicht lookahead-sicher und getrennt vom Pionex Direct Broker.
+
+Wenn `/backtest/run` keine Signale erzeugt, pruefe `generation_summary`.
+Fuer Simulationen kannst du den Generator-Threshold temporaer senken:
+
+```text
+POST /backtest/run?symbol=HYPEUSDT&bars=500&max_signals=5&min_confluence=6
+```
+
+Oder per `.env`:
+
+```env
+SIGNAL_MIN_CONFLUENCE_OVERRIDE=6
+```
+
+Das aendert nur die Offline-/Backtest-Signalerzeugung. Die RiskEngine-Grenze
+`MIN_CONFLUENCE_SCORE` fuer eingehende M8-Payloads bleibt davon getrennt.
