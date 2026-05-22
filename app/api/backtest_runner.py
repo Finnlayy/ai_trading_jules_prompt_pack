@@ -22,6 +22,7 @@ async def run_backtest(
     timeframe: str = "1m",
     bars: int = 500,
     max_signals: Optional[int] = 50,
+    min_confluence: Optional[float] = None,
 ):
     """
     Run a full backtest through the M8 pipeline on historical data.
@@ -45,7 +46,9 @@ async def run_backtest(
             symbol=symbol,
             timeframe=timeframe,
             bars=bars,
+            min_confluence=min_confluence,
         )
+        generation_summary = getattr(signal_generator_instance, "last_generation_summary", {})
 
         if not payloads:
             return {
@@ -53,6 +56,7 @@ async def run_backtest(
                 "symbol": symbol,
                 "timeframe": timeframe,
                 "signals_generated": 0,
+                "generation_summary": generation_summary,
                 "message": "No signals generated — confluence threshold not met",
             }
 
@@ -90,6 +94,7 @@ async def run_backtest(
             "rejected": rejected,
             "longs": longs,
             "shorts": shorts,
+            "generation_summary": generation_summary,
             "results": results,
         }
 
@@ -107,6 +112,8 @@ async def backtest_status():
     }
     if hasattr(broker, "is_ready"):
         broker_info["connected"] = broker.is_ready()
+    if hasattr(broker, "is_live_capable"):
+        broker_info["live_capable"] = broker.is_live_capable()
     if hasattr(broker, "get_balance") and broker.is_ready():
         try:
             balance = broker.get_balance()

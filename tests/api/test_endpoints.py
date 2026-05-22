@@ -7,6 +7,7 @@ from app.main import app
 from app.services.risk_engine import risk_engine_instance
 from app.services.ai_kimi import ai_review_instance
 from app.services.journal_logger import journal_logger_instance
+from app.api.orchestrator import reset_broker
 
 @pytest.fixture(autouse=True)
 def reset_state(tmp_path):
@@ -15,8 +16,10 @@ def reset_state(tmp_path):
     risk_engine_instance.current_bar = 0
     previous_journal_path = journal_logger_instance.filepath
     journal_logger_instance.filepath = str(tmp_path / "trade_journal.jsonl")
+    reset_broker()
     yield
     journal_logger_instance.filepath = previous_journal_path
+    reset_broker()
 
 @pytest.fixture
 def mock_kimi_api():
@@ -44,6 +47,13 @@ async def test_health_check():
         response = await ac.get("/health")
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
+
+@pytest.mark.asyncio
+async def test_root_redirects_to_docs():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test", follow_redirects=False) as ac:
+        response = await ac.get("/")
+    assert response.status_code == 307
+    assert response.headers["location"] == "/docs"
 
 @pytest.mark.asyncio
 async def test_m8_webhook_valid_payload(mock_kimi_api):
@@ -80,3 +90,29 @@ async def test_m8_webhook_invalid_payload():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         response = await ac.post("/webhook/m8", json=payload)
     assert response.status_code == 422
+
+@pytest.mark.asyncio
+async def test_m8_webhook_process_signal_exception():
+    payload = {
+        "signal_id": "sig-123",
+        "symbol": "BTCUSD",
+        "timeframe": "1h",
+        "direction": "LONG",
+        "timestamp": "2026-05-20T10:00:00Z",
+        "entry_price": 50000.0,
+        "stop_price": 48000.0,
+        "target_price": 54000.0,
+        "confluence_score": 85.5,
+        "crisis_score": 10.0,
+        "mc_dispersion": 1.5,
+        "spread": 10.0
+    }
+
+    with patch("app.api.endpoints.process_signal", new_callable=AsyncMock) as mock_process_signal:
+        mock_process_signal.side_effect = Exception("Simulated processing error")
+
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+            response = await ac.post("/webhook/m8", json=payload)
+
+        assert response.status_code == 400
+        assert response.json() == {"detail": "Simulated processing error"}

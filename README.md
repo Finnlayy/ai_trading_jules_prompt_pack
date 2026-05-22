@@ -84,6 +84,46 @@ PIONEX_RELAY_CONTRACTS=1
 
 Solange `PIONEX_RELAY_ENABLED=false` bleibt, erzeugt der Broker nur einen Dry-Run-Payload und sendet nichts an den Relay. Echte Weiterleitung an Pionex erst mit `PIONEX_RELAY_ENABLED=true`.
 
+Fuer native Pionex REST-Ausfuehrung (ohne externen Relay) nutze:
+
+```env
+BROKER_MODE=pionex_direct
+PIONEX_DIRECT_ENABLED=true
+PIONEX_DIRECT_LIVE_TRADING_ENABLED=false
+PIONEX_API_KEY=dein_pionex_api_key
+PIONEX_API_SECRET=dein_pionex_api_secret
+PIONEX_ALLOWED_SYMBOLS=BTC_USDT,BTC_USDT_PERP,ETH_USDT,ETH_USDT_PERP,XAG_USDT_PERP
+PIONEX_DIRECT_FUTURES_MODE=mode1
+AI_FAILURE_POLICY=reject_live
+```
+
+Wichtig:
+- `PIONEX_DIRECT_LIVE_TRADING_ENABLED=false` bedeutet Dry-Run, auch wenn API-Keys gesetzt sind.
+- `intent` ist optional im Payload (`ENTRY`/`CLOSE`). Wenn nicht gesetzt, gilt `ENTRY`.
+- TradingView-Perp-Symbole wie `XAGUSDT.P` werden fuer Direct Mode zu `XAG_USDT_PERP` normalisiert.
+- `AI_FAILURE_POLICY=reject_live` blockiert live-faehige Orders, falls die AI-Layer als unavailable markiert wird.
+- Kelly-Sizing ist standardmaessig Half-Kelly (`KELLY_DEPLOY_MODE=half`) mit Min/Max-Risiko-Caps aus `.env`.
+
+## Deterministischer War Room
+
+Die Order-Engine arbeitet wie ein War Room: AI darf Informationen markieren,
+aber der deterministische Judge entscheidet ueber `GO`, `HOLD` oder `KILL`.
+
+Payload-Felder fuer Order-Management:
+- `order_command`: `GO`, `HOLD` oder `KILL`; `HOLD` und `KILL` blockieren neue Entries.
+- `market_regime`: optionales Farblabel `GREEN`, `YELLOW`, `ORANGE` oder `RED`.
+- `bar_confirmed`: muss fuer neue Entries `true` sein.
+- `chop_index`: Werte ueber `WAR_ROOM_CHOP_STANDBY_THRESHOLD` fuehren zu Standby.
+- `hurst_exponent` und `macro_event_risk`: markieren Orange-Risk und deckeln Risk auf `WAR_ROOM_ORANGE_MAX_RISK_PCT`.
+- `drawdown_pct`: ab `WAR_ROOM_HARD_KILL_DRAWDOWN_PCT` werden neue Entries hart blockiert.
+- `pending_order_age_seconds`: zu alte Shadow-/Pending-Orders werden als expired geblockt.
+
+AI-Regeln:
+- AI darf keine Risk-Gates umgehen, keine Live-Order erzwingen und keine direkte Execution anfordern.
+- AI mit Confidence unter `WAR_ROOM_AI_MIN_CONFIDENCE` blockiert live-faehige Entry-Pfade.
+- `CLOSE` bleibt priorisiert, damit Risikoabbau nicht durch Entry-Gates blockiert wird.
+- Full-Kelly aus Research-/War-Room-Metaphern ist kein Live-Default; produktiv bleibt Half-Kelly capped.
+
 ## Harte Leitlinie
 
 Keine AI darf direkt Live-Orders platzieren.
@@ -104,3 +144,50 @@ Deterministische Systeme muessen:
 - ablehnen
 - loggen
 - ausfuehren
+
+## Offline Research Layer
+
+Die zusaetzlichen Fundstuecke werden als kuratierter Research- und Test-Korpus
+gefuehrt, nicht als direkte Produktionsabhaengigkeit.
+
+Konkret gilt:
+- `app/research/reference_corpus.py` dokumentiert pro Quelle, ob sie uebernommen,
+  offline adaptiert oder ausgeschlossen wird.
+- `app/research/binance_futures_data.py` bereitet Binance USD-M Futures-Klines
+  fuer Offline-Experimente vor. Der Live-Broker importiert dieses Modul nicht.
+- Quellen mit synthetischen Daten, leeren Inhalten oder Wallet-/Private-Key-Material
+  werden aus Training, Logs und Produktionspfaden ausgeschlossen.
+- Invarianten aus alten Pionex/Pine-Testideen werden als secret-freie pytest-Tests
+  gepflegt, ohne harte lokale Pfade, UUIDs oder echte Credentials.
+
+Offline-Download mit optionalem MTF/CISD-Report:
+
+```bash
+python -m app.research.binance_futures_data \
+  --symbol ETHUSDT \
+  --interval 5m \
+  --bars 1000 \
+  --out app/scripts/data_cache/ETHUSDT_5m_research.csv \
+  --mtf-report app/scripts/optimizer_results/ETHUSDT_5m_mtf_cisd.json \
+  --mtf-timeframes 15,60,240
+```
+
+Die MTF/CISD-Auswertung resampled echte OHLCV-Buckets und nutzt fuer
+Lower-Timeframe-Zeilen nur den vorherigen abgeschlossenen Higher-Timeframe-State.
+Damit bleibt die Research-Schicht lookahead-sicher und getrennt vom Pionex Direct Broker.
+
+Wenn `/backtest/run` keine Signale erzeugt, pruefe `generation_summary`.
+Fuer Simulationen kannst du den Generator-Threshold temporaer senken:
+
+```text
+POST /backtest/run?symbol=HYPEUSDT&bars=500&max_signals=5&min_confluence=6
+```
+
+Oder per `.env`:
+
+```env
+SIGNAL_MIN_CONFLUENCE_OVERRIDE=6
+```
+
+Das aendert nur die Offline-/Backtest-Signalerzeugung. Die RiskEngine-Grenze
+`MIN_CONFLUENCE_SCORE` fuer eingehende M8-Payloads bleibt davon getrennt.
