@@ -283,10 +283,17 @@
             };
 
             return (
-                <div className="flex h-screen w-full bg-terminalBlack selection:bg-matteMint selection:text-black">
-                    <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-                    <div className="flex-1 overflow-y-auto">
-                        {renderContent()}
+                <div className="flex flex-col h-screen w-full bg-terminalBlack selection:bg-matteMint selection:text-black">
+                    <div role="alert" aria-live="assertive" className="w-full bg-mutedRust text-white text-center py-2 text-sm font-bold uppercase tracking-wider flex items-center justify-center gap-2 border-b border-red-900">
+                        <span aria-hidden="true">⚠️</span>
+                        Operator Notice: This is a static UI mockup. Live execution is disabled. Data shown is simulated.
+                        <span aria-hidden="true">⚠️</span>
+                    </div>
+                    <div className="flex flex-1 overflow-hidden">
+                        <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+                        <div className="flex-1 overflow-y-auto">
+                            {renderContent()}
+                        </div>
                     </div>
                 </div>
             );
