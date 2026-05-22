@@ -19,6 +19,11 @@ class RiskEngine:
         """
         try:
             self._gate_invalid_payload(payload)
+            if payload.intent == "CLOSE":
+                return {
+                    "decision": DecisionEnum.PROCEED_TO_SIMULATION,
+                    "reject_reason": None,
+                }
             self._gate_m8_score(payload)
             self._gate_crisis_score(payload)
             self._gate_dispersion(payload)

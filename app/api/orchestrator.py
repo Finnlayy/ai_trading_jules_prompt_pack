@@ -4,10 +4,14 @@ from app.services.ai_kimi import ai_review_instance
 from app.services.broker import SimulationBroker
 from app.services.paper_broker import PaperBroker
 from app.services.pionex_relay_broker import PionexRelayBroker
+from app.services.pionex_direct_broker import PionexDirectBroker
 from app.services.journal_logger import journal_logger_instance
-from app.core.config import BROKER_MODE
+from app.schemas.journal import DecisionEnum
+from app.core.config import AI_FAILURE_POLICY, BROKER_MODE
 
 def _build_broker():
+    if BROKER_MODE in {"pionex_direct", "direct", "pionex_api"}:
+        return PionexDirectBroker(journal_path=journal_logger_instance.filepath)
     if BROKER_MODE in {"pionex_relay", "pionex", "relay"}:
         return PionexRelayBroker()
     if BROKER_MODE == "paper":
@@ -28,6 +32,25 @@ def reset_broker():
     broker_instance = _build_broker()
     return broker_instance
 
+
+def _is_ai_provider_unavailable(ai_review) -> bool:
+    risk_flags = [str(flag).upper() for flag in (ai_review.risk_flags or [])]
+    return any("UNAVAILABLE" in flag for flag in risk_flags)
+
+
+def _is_live_capable_broker(broker) -> bool:
+    if hasattr(broker, "is_live_capable"):
+        try:
+            return bool(broker.is_live_capable())
+        except Exception:
+            return False
+    if BROKER_MODE in {"pionex_relay", "relay", "pionex"} and hasattr(broker, "is_ready"):
+        try:
+            return bool(broker.is_ready())
+        except Exception:
+            return False
+    return False
+
 async def process_signal(payload: M8Payload):
     """
     Main orchestration loop integrating AI Review -> Risk Engine -> Simulation Broker -> Journaling.
@@ -38,7 +61,18 @@ async def process_signal(payload: M8Payload):
     ai_review = await ai_review_instance.review_signal(payload)
     
     # 2. Deterministic Decision
-    decision_result = risk_engine_instance.evaluate(payload, ai_review)
+    if (
+        AI_FAILURE_POLICY == "reject_live"
+        and _is_ai_provider_unavailable(ai_review)
+        and _is_live_capable_broker(broker_instance)
+        and payload.intent != "CLOSE"
+    ):
+        decision_result = {
+            "decision": DecisionEnum.REJECT,
+            "reject_reason": "AI_PROVIDER_UNAVAILABLE_LIVE_BLOCK",
+        }
+    else:
+        decision_result = risk_engine_instance.evaluate(payload, ai_review)
     
     # 3. Execution via Simulation Broker
     journal_entry = broker_instance.execute_trade(
@@ -52,7 +86,7 @@ async def process_signal(payload: M8Payload):
     journal_logger_instance.log(journal_entry)
     
     # Update Risk Engine state if trade executed
-    if decision_result["decision"] == "PROCEED_TO_SIMULATION":
+    if decision_result["decision"] == DecisionEnum.PROCEED_TO_SIMULATION:
         risk_engine_instance.last_trade_bar = risk_engine_instance.current_bar
         risk_engine_instance.trades_today += 1
         

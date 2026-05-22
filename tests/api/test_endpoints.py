@@ -7,6 +7,7 @@ from app.main import app
 from app.services.risk_engine import risk_engine_instance
 from app.services.ai_kimi import ai_review_instance
 from app.services.journal_logger import journal_logger_instance
+from app.api.orchestrator import reset_broker
 
 @pytest.fixture(autouse=True)
 def reset_state(tmp_path):
@@ -15,8 +16,10 @@ def reset_state(tmp_path):
     risk_engine_instance.current_bar = 0
     previous_journal_path = journal_logger_instance.filepath
     journal_logger_instance.filepath = str(tmp_path / "trade_journal.jsonl")
+    reset_broker()
     yield
     journal_logger_instance.filepath = previous_journal_path
+    reset_broker()
 
 @pytest.fixture
 def mock_kimi_api():
