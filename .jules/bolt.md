@@ -1,0 +1,3 @@
+## 2026-05-22 - Vectorizing Statistical Battery
+**Learning:** Python loops over large numpy arrays inside the `app/services/statistical_battery.py` calculation logic were found to be very slow (over 100x slower) than pure vectorization. The `variance_ratio` method used a python list comprehension spanning a numpy array over multiple lookback windows, and `runs_test` looped element-wise to compute differences.
+**Action:** When computing statistical indicators on large time-series arrays, prefer using native numpy methods such as `.reshape(-1, k).sum(axis=1)` to simulate sliding windows, and `np.diff` paired with `np.count_nonzero` to eliminate Python-level loops.

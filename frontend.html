@@ -60,6 +60,7 @@
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab)}
+                                aria-label={`Navigate to ${tab}`}
                                 className={`text-left px-4 py-3 text-sm uppercase tracking-wider ${activeTab === tab ? 'bg-gray-800 text-matteMint border-l-4 border-matteMint' : 'text-gray-400 hover:text-white hover:bg-gray-800 border-l-4 border-transparent'} transition-colors`}
                             >
                                 {tab}
@@ -157,17 +158,18 @@
                     <div className="grid grid-cols-2 gap-8">
                         <div className="bg-slateGray p-6 border border-gray-800 space-y-8">
                             <div>
-                                <label className="flex justify-between text-sm text-gray-300 uppercase mb-4 font-bold tracking-wider">
+                                <label htmlFor="slippage-injector" className="flex justify-between text-sm text-gray-300 uppercase mb-4 font-bold tracking-wider">
                                     <span>Slippage Injector</span>
                                     <span className="text-matteMint">{slippage} bps</span>
                                 </label>
                                 <input
+                                    id="slippage-injector"
                                     type="range"
                                     min="0"
                                     max="50"
                                     value={slippage}
                                     onChange={(e) => setSlippage(e.target.value)}
-                                    className="w-full accent-matteMint cursor-pointer mb-2"
+                                    className="w-full accent-matteMint cursor-pointer mb-2 focus-visible:ring-2 focus-visible:ring-matteMint focus:outline-none"
                                 />
                                 <p className="text-xs text-gray-500">Inject worst-case fill slippage to simulate toxic market conditions.</p>
                             </div>
@@ -179,7 +181,7 @@
                                 </div>
                                 <button
                                     onClick={() => setLiquidityVacuum(!liquidityVacuum)}
-                                    className={`px-6 py-2 text-xs uppercase font-bold tracking-wider border ${liquidityVacuum ? 'bg-mutedRust text-white border-mutedRust' : 'bg-terminalBlack text-gray-400 border-gray-700'} transition-colors`}
+                                    className={`px-6 py-2 text-xs uppercase font-bold tracking-wider border ${liquidityVacuum ? 'bg-mutedRust text-white border-mutedRust' : 'bg-terminalBlack text-gray-400 border-gray-700'} hover:border-gray-500 focus-visible:ring-2 focus-visible:ring-matteMint focus:outline-none transition-colors`}
                                 >
                                     {liquidityVacuum ? 'Active' : 'Inactive'}
                                 </button>
@@ -192,7 +194,7 @@
                                 </div>
                                 <button
                                     onClick={() => setToxicMonday(!toxicMonday)}
-                                    className={`px-6 py-2 text-xs uppercase font-bold tracking-wider border ${toxicMonday ? 'bg-matteMint text-black border-matteMint' : 'bg-terminalBlack text-gray-400 border-gray-700'} transition-colors`}
+                                    className={`px-6 py-2 text-xs uppercase font-bold tracking-wider border ${toxicMonday ? 'bg-matteMint text-black border-matteMint' : 'bg-terminalBlack text-gray-400 border-gray-700'} hover:border-gray-500 focus-visible:ring-2 focus-visible:ring-matteMint focus:outline-none transition-colors`}
                                 >
                                     {toxicMonday ? 'Active' : 'Inactive'}
                                 </button>
