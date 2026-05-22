@@ -5,6 +5,7 @@ from app.services.pionex_direct_broker import PionexDirectBroker, PionexDirectCo
 
 def _payload(
     signal_id: str,
+    symbol: str = "BTCUSDT",
     direction: str = "LONG",
     intent: str = "ENTRY",
     account_mode: str = "SPOT",
@@ -12,7 +13,7 @@ def _payload(
 ) -> M8Payload:
     return M8Payload(
         signal_id=signal_id,
-        symbol="BTCUSDT",
+        symbol=symbol,
         timeframe="1m",
         direction=direction,
         intent=intent,
@@ -65,6 +66,28 @@ def test_pionex_direct_broker_rejects_symbol_not_allowed(tmp_path):
 
     assert entry.final_decision == FinalDecisionEnum.REJECTED
     assert "SYMBOL_NOT_ALLOWED" in entry.result["reject_reason"]
+
+
+def test_pionex_direct_broker_accepts_tradingview_perp_suffix(tmp_path):
+    broker = PionexDirectBroker(
+        config=PionexDirectConfig(
+            enabled=True,
+            live_trading_enabled=False,
+            allowed_symbols=("XAG_USDT_PERP",),
+        ),
+        journal_path=str(tmp_path / "journal.jsonl"),
+    )
+
+    entry = broker.execute_trade(
+        payload=_payload("direct-xag-1", symbol="xagusdt.p"),
+        decision=DecisionEnum.PROCEED_TO_SIMULATION,
+    )
+
+    assert entry.final_decision == FinalDecisionEnum.EXECUTED_SIM
+    assert entry.result["status"] == "DRY_RUN_DIRECT"
+    assert entry.result["ledger_delta"]["symbol"] == "XAG_USDT_PERP"
+    assert entry.result["ledger_delta"]["account_mode"] == "FUTURES"
+    assert entry.simulated_fill["account_mode"] == "FUTURES"
 
 
 def test_pionex_direct_broker_entry_then_close_uses_ledger(tmp_path):

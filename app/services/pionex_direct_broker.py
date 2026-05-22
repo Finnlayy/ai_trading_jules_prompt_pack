@@ -134,6 +134,17 @@ class PionexDirectBroker:
         except PionexAPIError as exc:
             return {"error": exc.message, "retryable": exc.retryable}
 
+    @staticmethod
+    def _is_perp_symbol(symbol: str) -> bool:
+        value = (symbol or "").strip().upper()
+        return value.endswith(".P") or value.endswith("_PERP")
+
+    def _normalized_account_mode(self, payload: M8Payload) -> str:
+        account_mode = payload.account_mode.upper()
+        if account_mode == "SPOT" and self._is_perp_symbol(payload.symbol):
+            return "FUTURES"
+        return account_mode
+
     def _normalized_symbol(self, symbol: str, account_mode: str) -> str:
         value = (symbol or "").strip().upper()
         if not value:
@@ -142,6 +153,8 @@ class PionexDirectBroker:
                 if account_mode == "FUTURES"
                 else self.config.default_spot_symbol
             )
+        if value.endswith(".P"):
+            value = value[:-2]
         if "_" not in value and value.endswith("USDT"):
             value = value.replace("USDT", "_USDT")
         if account_mode == "FUTURES" and not value.endswith("_PERP"):
@@ -226,7 +239,7 @@ class PionexDirectBroker:
                 result={"status": "DRY_RUN_DIRECT_DISABLED", "reject_reason": None},
             )
 
-        account_mode = payload.account_mode.upper()
+        account_mode = self._normalized_account_mode(payload)
         if account_mode == "FUTURES" and not self.config.futures_enabled:
             self.notifier.send_reject(payload.symbol, "FUTURES_DISABLED", f"pionex-direct-{payload.signal_id}", payload.intent)
             return self._build_entry(
