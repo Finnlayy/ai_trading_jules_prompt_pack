@@ -98,7 +98,7 @@ class KellySizer:
         kelly = win_rate - ((1.0 - win_rate) / payoff_ratio)
         return max(kelly, 0.0), trade_count, win_rate, avg_win_r, avg_loss_r
 
-    def _deployed_risk_pct(self, kelly_fraction: float) -> float:
+    def _deployed_risk_pct(self, kelly_fraction: float, risk_cap_pct: float | None = None) -> float:
         mode = self.config.deploy_mode
         if mode == "fixed":
             risk_pct = self.config.fixed_risk_pct
@@ -107,16 +107,24 @@ class KellySizer:
         else:  # default half-kelly
             risk_pct = (kelly_fraction * 0.5) * 100.0
 
-        return min(max(risk_pct, self.config.min_risk_pct), self.config.max_risk_pct)
+        max_risk = self.config.max_risk_pct
+        if risk_cap_pct is not None:
+            max_risk = min(max_risk, risk_cap_pct)
+        return min(max(risk_pct, self.config.min_risk_pct), max_risk)
 
     def _stop_distance(self, payload: M8Payload) -> float:
         if payload.direction == "LONG":
             return payload.entry_price - payload.stop_price
         return payload.stop_price - payload.entry_price
 
-    def size_trade(self, payload: M8Payload, balance: float) -> KellySizingResult:
+    def size_trade(
+        self,
+        payload: M8Payload,
+        balance: float,
+        risk_cap_pct: float | None = None,
+    ) -> KellySizingResult:
         kelly_fraction, history_trades, win_rate, avg_win_r, avg_loss_r = self._kelly_fraction()
-        risk_pct = self._deployed_risk_pct(kelly_fraction)
+        risk_pct = self._deployed_risk_pct(kelly_fraction, risk_cap_pct=risk_cap_pct)
         risk_amount = max(balance * (risk_pct / 100.0), 0.0)
 
         stop_distance = self._stop_distance(payload)

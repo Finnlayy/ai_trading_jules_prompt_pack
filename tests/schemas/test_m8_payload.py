@@ -57,3 +57,44 @@ def test_invalid_confluence_score():
     }
     with pytest.raises(ValidationError):
         M8Payload(**payload_data)
+
+
+def test_war_room_payload_fields_default_to_safe_go():
+    payload = M8Payload(
+        signal_id="sig-war-room",
+        symbol="BTCUSD",
+        timeframe="1h",
+        direction="LONG",
+        timestamp="2026-05-20T10:00:00Z",
+        entry_price=50000.0,
+        stop_price=48000.0,
+        target_price=54000.0,
+        confluence_score=85.5,
+        crisis_score=10.0,
+        mc_dispersion=1.5,
+        spread=10.0,
+    )
+
+    assert payload.order_command == "GO"
+    assert payload.bar_confirmed is True
+    assert payload.market_regime is None
+
+
+def test_war_room_payload_rejects_unknown_order_command():
+    payload_data = {
+        "signal_id": "sig-war-room-invalid",
+        "symbol": "BTCUSD",
+        "timeframe": "1h",
+        "direction": "LONG",
+        "timestamp": "2026-05-20T10:00:00Z",
+        "entry_price": 50000.0,
+        "stop_price": 48000.0,
+        "target_price": 54000.0,
+        "confluence_score": 85.5,
+        "crisis_score": 10.0,
+        "mc_dispersion": 1.5,
+        "spread": 10.0,
+        "order_command": "SEND_IT",
+    }
+    with pytest.raises(ValidationError):
+        M8Payload(**payload_data)

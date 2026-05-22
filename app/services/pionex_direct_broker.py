@@ -39,6 +39,7 @@ from app.services.pionex_api import PionexAPIError, PionexClient, PionexCredenti
 from app.services.pionex_kelly_sizer import KellyConfig, KellySizer
 from app.services.pionex_position_ledger import PositionLedger
 from app.services.telegram_notifier import TelegramConfig, TelegramNotifier
+from app.services.war_room_rules import classify_order
 
 
 @dataclass(frozen=True)
@@ -257,6 +258,23 @@ class PionexDirectBroker:
         return self._open_position(payload, symbol, account_mode, ai_decision)
 
     def _open_position(self, payload: M8Payload, symbol: str, account_mode: str, ai_decision: AIDecisionEnum) -> TradeJournalEntry:
+        war_room = classify_order(payload)
+        if war_room.reject_reason:
+            self.notifier.send_reject(symbol, war_room.reject_reason, f"pionex-direct-{payload.signal_id}", payload.intent)
+            return self._build_entry(
+                payload=payload,
+                decision=DecisionEnum.PROCEED_TO_SIMULATION,
+                reject_reason=war_room.reject_reason,
+                ai_decision=ai_decision,
+                final_decision=FinalDecisionEnum.REJECTED,
+                simulated_fill={},
+                result={
+                    "status": "REJECTED",
+                    "reject_reason": war_room.reject_reason,
+                    "war_room": war_room.to_dict(),
+                },
+            )
+
         if account_mode == "SPOT" and payload.direction == "SHORT":
             reason = "SPOT_SHORT_NOT_SUPPORTED"
             self.notifier.send_reject(symbol, reason, f"pionex-direct-{payload.signal_id}", payload.intent)
@@ -282,7 +300,11 @@ class PionexDirectBroker:
             # Keep deterministic minimum sizing in dry/limited environments.
             balance = 100.0
 
-        sizing = self.sizer.size_trade(payload, balance=balance)
+        sizing = self.sizer.size_trade(
+            payload,
+            balance=balance,
+            risk_cap_pct=war_room.risk_cap_pct,
+        )
         entry_side = payload.direction.upper()
         live_mode = self.config.live_trading_enabled and self.client is not None
         trade_id = f"pionex-direct-{payload.signal_id}"
@@ -297,6 +319,7 @@ class PionexDirectBroker:
             "order_value_usdt": sizing.order_value_usdt,
             "risk_pct": sizing.risk_pct,
             "kelly_fraction": sizing.kelly_fraction,
+            "war_room": war_room.to_dict(),
         }
 
         result: dict[str, Any] = {
@@ -304,6 +327,7 @@ class PionexDirectBroker:
             "reject_reason": None,
             "balance": balance,
             "risk_amount": sizing.risk_amount,
+            "war_room": war_room.to_dict(),
             "ledger_delta": {
                 "action": "ENTRY",
                 "symbol": symbol,
