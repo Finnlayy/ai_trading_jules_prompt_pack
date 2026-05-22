@@ -435,6 +435,7 @@ class PionexDirectBroker:
         entry_side = payload.direction.upper()
         live_mode = self.config.live_trading_enabled and self.client is not None
         trade_id = f"pionex-direct-{payload.signal_id}"
+        client_order_id = f"{payload.signal_id}_{symbol}_{account_mode}_{entry_side}_{payload.intent}"
 
         simulated_fill: dict[str, Any] = {
             "mode": "PIONEX_DIRECT",
@@ -447,6 +448,7 @@ class PionexDirectBroker:
             "risk_pct": sizing.risk_pct,
             "kelly_fraction": sizing.kelly_fraction,
             "war_room": war_room.to_dict(),
+            "client_order_id": client_order_id,
         }
 
         result: dict[str, Any] = {
@@ -463,6 +465,7 @@ class PionexDirectBroker:
                 "size_base": sizing.size_base,
                 "entry_price": payload.entry_price,
                 "risk_amount": sizing.risk_amount,
+                "client_order_id": client_order_id,
             },
         }
 
@@ -474,6 +477,7 @@ class PionexDirectBroker:
                     account_mode=account_mode,
                     size_base=sizing.size_base,
                     order_value_usdt=sizing.order_value_usdt,
+                    client_order_id=client_order_id,
                 )
                 result["status"] = "SENT_TO_PIONEX_DIRECT"
                 result["order"] = order_data
@@ -523,11 +527,12 @@ class PionexDirectBroker:
         account_mode: str,
         size_base: float,
         order_value_usdt: float,
+        client_order_id: Optional[str] = None,
     ) -> dict[str, Any]:
         assert self.client is not None
         if account_mode == "SPOT":
             if payload.direction == "LONG":
-                return self.client.place_spot_market_buy(symbol=symbol, amount_usdt=order_value_usdt)
+                return self.client.place_spot_market_buy(symbol=symbol, amount_usdt=order_value_usdt, client_order_id=client_order_id)
             if payload.direction == "SHORT":
                 raise PionexAPIError("SPOT_SHORT_NOT_SUPPORTED", retryable=False)
             raise PionexAPIError("UNKNOWN_DIRECTION", retryable=False)
@@ -541,6 +546,7 @@ class PionexDirectBroker:
             size=size_base,
             reduce_only=False,
             position_side="BOTH",
+            client_order_id=client_order_id,
         )
 
     def _close_position(self, payload: M8Payload, symbol: str, account_mode: str, ai_decision: AIDecisionEnum) -> TradeJournalEntry:
@@ -587,6 +593,8 @@ class PionexDirectBroker:
             close_side = "BUY"
 
         live_mode = self.config.live_trading_enabled and self.client is not None
+        client_order_id = f"{payload.signal_id}_{symbol}_{account_mode}_{close_side}_{payload.intent}"
+
         simulated_fill = {
             "mode": "PIONEX_DIRECT",
             "live_mode": live_mode,
@@ -596,6 +604,7 @@ class PionexDirectBroker:
             "closed_size_base": closed_size_base,
             "entry_price": entry_price,
             "close_price": payload.entry_price,
+            "client_order_id": client_order_id,
         }
 
         result: dict[str, Any] = {
@@ -608,6 +617,7 @@ class PionexDirectBroker:
                 "symbol": symbol,
                 "account_mode": account_mode,
                 "closed_size_base": closed_size_base,
+                "client_order_id": client_order_id,
             },
         }
 
@@ -618,6 +628,7 @@ class PionexDirectBroker:
                     account_mode=account_mode,
                     close_side=close_side,
                     size_base=closed_size_base,
+                    client_order_id=client_order_id,
                 )
                 result["status"] = "CLOSED_LIVE"
                 result["order"] = order
@@ -667,14 +678,16 @@ class PionexDirectBroker:
         account_mode: str,
         close_side: str,
         size_base: float,
+        client_order_id: Optional[str] = None,
     ) -> dict[str, Any]:
         assert self.client is not None
         if account_mode == "SPOT":
-            return self.client.place_spot_market_sell(symbol=symbol, size=size_base)
+            return self.client.place_spot_market_sell(symbol=symbol, size=size_base, client_order_id=client_order_id)
         return self.client.place_futures_market_order(
             symbol=symbol,
             side=close_side,
             size=size_base,
             reduce_only=True,
             position_side="BOTH",
+            client_order_id=client_order_id,
         )

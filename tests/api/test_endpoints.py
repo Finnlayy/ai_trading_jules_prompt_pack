@@ -49,11 +49,11 @@ async def test_health_check():
     assert response.json() == {"status": "ok"}
 
 @pytest.mark.asyncio
-async def test_root_redirects_to_docs():
+async def test_root_serves_frontend():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test", follow_redirects=False) as ac:
         response = await ac.get("/")
-    assert response.status_code == 307
-    assert response.headers["location"] == "/docs"
+    assert response.status_code == 200
+    assert "Pine Script Studio" in response.text
 
 @pytest.mark.asyncio
 async def test_m8_webhook_valid_payload(mock_kimi_api):
@@ -114,5 +114,5 @@ async def test_m8_webhook_process_signal_exception():
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
             response = await ac.post("/webhook/m8", json=payload)
 
-        assert response.status_code == 400
-        assert response.json() == {"detail": "Simulated processing error"}
+        assert response.status_code == 500
+        assert response.json() == {"detail": "Internal server error while processing signal."}
