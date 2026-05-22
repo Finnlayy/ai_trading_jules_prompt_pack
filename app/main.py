@@ -1,5 +1,7 @@
+from pathlib import Path
+
 from fastapi import FastAPI
-from fastapi.responses import RedirectResponse
+from fastapi.responses import FileResponse
 from app.api.backtest_runner import router as backtest_router
 from app.api.endpoints import router as m8_router
 
@@ -12,8 +14,8 @@ app.include_router(m8_router, prefix="/webhook", tags=["webhook"])
 app.include_router(backtest_router, prefix="/backtest", tags=["backtest"])
 
 @app.get("/", include_in_schema=False)
-def docs_redirect():
-    return RedirectResponse(url="/docs", status_code=307)
+def frontend():
+    return FileResponse(Path(__file__).resolve().parents[1] / "frontend.html")
 
 @app.get("/health")
 def health_check():
