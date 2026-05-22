@@ -25,6 +25,15 @@ def _as_float(value: str | None, default: float) -> float:
         return default
 
 
+def _as_optional_float(value: str | None) -> float | None:
+    if value is None or value.strip() == "":
+        return None
+    try:
+        return float(value)
+    except ValueError:
+        return None
+
+
 def _as_int(value: str | None, default: int) -> int:
     if value is None:
         return default
@@ -109,6 +118,9 @@ WAR_ROOM_VIP_CONFLUENCE_SCORE = _as_float(os.getenv("WAR_ROOM_VIP_CONFLUENCE_SCO
 WAR_ROOM_VIP_RELATIVE_VOLUME = _as_float(os.getenv("WAR_ROOM_VIP_RELATIVE_VOLUME"), 1.5)
 WAR_ROOM_VIP_MAX_CRISIS_SCORE = _as_float(os.getenv("WAR_ROOM_VIP_MAX_CRISIS_SCORE"), 15.0)
 WAR_ROOM_VIP_MAX_MC_DISPERSION = _as_float(os.getenv("WAR_ROOM_VIP_MAX_MC_DISPERSION"), 2.5)
+
+# Offline/backtest signal generator controls
+SIGNAL_MIN_CONFLUENCE_OVERRIDE = _as_optional_float(os.getenv("SIGNAL_MIN_CONFLUENCE_OVERRIDE"))
 
 # Telegram notifier
 TELEGRAM_NOTIFICATIONS_ENABLED = _as_bool(os.getenv("TELEGRAM_NOTIFICATIONS_ENABLED"), False)

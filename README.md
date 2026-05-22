@@ -175,3 +175,19 @@ python -m app.research.binance_futures_data \
 Die MTF/CISD-Auswertung resampled echte OHLCV-Buckets und nutzt fuer
 Lower-Timeframe-Zeilen nur den vorherigen abgeschlossenen Higher-Timeframe-State.
 Damit bleibt die Research-Schicht lookahead-sicher und getrennt vom Pionex Direct Broker.
+
+Wenn `/backtest/run` keine Signale erzeugt, pruefe `generation_summary`.
+Fuer Simulationen kannst du den Generator-Threshold temporaer senken:
+
+```text
+POST /backtest/run?symbol=HYPEUSDT&bars=500&max_signals=5&min_confluence=6
+```
+
+Oder per `.env`:
+
+```env
+SIGNAL_MIN_CONFLUENCE_OVERRIDE=6
+```
+
+Das aendert nur die Offline-/Backtest-Signalerzeugung. Die RiskEngine-Grenze
+`MIN_CONFLUENCE_SCORE` fuer eingehende M8-Payloads bleibt davon getrennt.
