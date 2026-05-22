@@ -66,6 +66,7 @@ GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-pro")
 
 # Broker mode selection
 BROKER_MODE = os.getenv("BROKER_MODE", "simulation").strip().lower()
+# Pionex Relay Config
 
 # Relay broker configuration
 PIONEX_RELAY_URL = os.getenv("PIONEX_RELAY_URL", "http://127.0.0.1:5000/webhook")
@@ -127,6 +128,14 @@ TELEGRAM_NOTIFICATIONS_ENABLED = _as_bool(os.getenv("TELEGRAM_NOTIFICATIONS_ENAB
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 
+# Pionex Direct Config
+PIONEX_DIRECT_ENABLED = os.getenv("PIONEX_DIRECT_ENABLED", "false").strip().lower() == "true"
+PIONEX_DIRECT_LIVE_TRADING_ENABLED = os.getenv("PIONEX_DIRECT_LIVE_TRADING_ENABLED", "false").strip().lower() == "true"
+PIONEX_API_KEY = os.getenv("PIONEX_API_KEY", "")
+PIONEX_API_SECRET = os.getenv("PIONEX_API_SECRET", "")
+PIONEX_ALLOWED_SYMBOLS = os.getenv("PIONEX_ALLOWED_SYMBOLS", "BTC_USDT,ETH_USDT,XAG_USDT_PERP")
+
+# core config placeholder
 # Deterministic risk-gate defaults
 MIN_RR_RATIO = 2.0
 MAX_SPREAD = 15.0

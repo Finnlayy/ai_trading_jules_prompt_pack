@@ -10,6 +10,8 @@ from app.schemas.journal import DecisionEnum
 from app.core.config import AI_FAILURE_POLICY, BROKER_MODE
 
 def _build_broker():
+    if BROKER_MODE == "pionex_direct":
+        return PionexDirectBroker()
     if BROKER_MODE in {"pionex_direct", "direct", "pionex_api"}:
         return PionexDirectBroker(journal_path=journal_logger_instance.filepath)
     if BROKER_MODE in {"pionex_relay", "pionex", "relay"}:
