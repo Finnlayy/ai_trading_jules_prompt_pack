@@ -3,6 +3,7 @@ from app.schemas.ai_review import SignalReview, DecisionEnum as AIDecisionEnum
 from app.schemas.journal import DecisionEnum, FinalDecisionEnum
 from app.core.config import MIN_RR_RATIO, MAX_SPREAD, MIN_CONFLUENCE_SCORE, MAX_CRISIS_SCORE, MAX_MC_DISPERSION, COOLDOWN_BARS, MAX_TRADES_PER_DAY
 from app.core.exceptions import RiskGateException
+from app.services.war_room_rules import ai_rule_violation, classify_order
 from typing import Optional, Dict
 
 class RiskEngine:
@@ -24,6 +25,7 @@ class RiskEngine:
                     "decision": DecisionEnum.PROCEED_TO_SIMULATION,
                     "reject_reason": None,
                 }
+            self._gate_war_room_order(payload)
             self._gate_m8_score(payload)
             self._gate_crisis_score(payload)
             self._gate_dispersion(payload)
@@ -47,6 +49,11 @@ class RiskEngine:
     def _gate_invalid_payload(self, payload: M8Payload):
         if payload.m8_reject_reason:
             raise RiskGateException(f"M8 explicitly rejected: {payload.m8_reject_reason}", "M8_EXPLICIT_REJECT")
+
+    def _gate_war_room_order(self, payload: M8Payload):
+        war_room = classify_order(payload)
+        if war_room.reject_reason:
+            raise RiskGateException("War Room order gate blocked entry", war_room.reject_reason)
             
     def _gate_m8_score(self, payload: M8Payload):
         if payload.confluence_score < MIN_CONFLUENCE_SCORE:
@@ -88,6 +95,9 @@ class RiskEngine:
             raise RiskGateException("Maximum trades per day reached", "MAX_TRADES_REACHED")
 
     def _gate_ai_conflict(self, payload: M8Payload, ai_review: SignalReview):
+        war_room_ai_reason = ai_rule_violation(ai_review)
+        if war_room_ai_reason:
+            raise RiskGateException("AI review violated War Room rules", war_room_ai_reason)
         if ai_review.decision == AIDecisionEnum.REJECT:
             raise RiskGateException("AI review rejected the signal", "AI_REJECT")
         if ai_review.requires_human_review:

@@ -103,6 +103,26 @@ Wichtig:
 - `AI_FAILURE_POLICY=reject_live` blockiert live-faehige Orders, falls die AI-Layer als unavailable markiert wird.
 - Kelly-Sizing ist standardmaessig Half-Kelly (`KELLY_DEPLOY_MODE=half`) mit Min/Max-Risiko-Caps aus `.env`.
 
+## Deterministischer War Room
+
+Die Order-Engine arbeitet wie ein War Room: AI darf Informationen markieren,
+aber der deterministische Judge entscheidet ueber `GO`, `HOLD` oder `KILL`.
+
+Payload-Felder fuer Order-Management:
+- `order_command`: `GO`, `HOLD` oder `KILL`; `HOLD` und `KILL` blockieren neue Entries.
+- `market_regime`: optionales Farblabel `GREEN`, `YELLOW`, `ORANGE` oder `RED`.
+- `bar_confirmed`: muss fuer neue Entries `true` sein.
+- `chop_index`: Werte ueber `WAR_ROOM_CHOP_STANDBY_THRESHOLD` fuehren zu Standby.
+- `hurst_exponent` und `macro_event_risk`: markieren Orange-Risk und deckeln Risk auf `WAR_ROOM_ORANGE_MAX_RISK_PCT`.
+- `drawdown_pct`: ab `WAR_ROOM_HARD_KILL_DRAWDOWN_PCT` werden neue Entries hart blockiert.
+- `pending_order_age_seconds`: zu alte Shadow-/Pending-Orders werden als expired geblockt.
+
+AI-Regeln:
+- AI darf keine Risk-Gates umgehen, keine Live-Order erzwingen und keine direkte Execution anfordern.
+- AI mit Confidence unter `WAR_ROOM_AI_MIN_CONFIDENCE` blockiert live-faehige Entry-Pfade.
+- `CLOSE` bleibt priorisiert, damit Risikoabbau nicht durch Entry-Gates blockiert wird.
+- Full-Kelly aus Research-/War-Room-Metaphern ist kein Live-Default; produktiv bleibt Half-Kelly capped.
+
 ## Harte Leitlinie
 
 Keine AI darf direkt Live-Orders platzieren.
