@@ -84,6 +84,25 @@ PIONEX_RELAY_CONTRACTS=1
 
 Solange `PIONEX_RELAY_ENABLED=false` bleibt, erzeugt der Broker nur einen Dry-Run-Payload und sendet nichts an den Relay. Echte Weiterleitung an Pionex erst mit `PIONEX_RELAY_ENABLED=true`.
 
+Fuer native Pionex REST-Ausfuehrung (ohne externen Relay) nutze:
+
+```env
+BROKER_MODE=pionex_direct
+PIONEX_DIRECT_ENABLED=true
+PIONEX_DIRECT_LIVE_TRADING_ENABLED=false
+PIONEX_API_KEY=dein_pionex_api_key
+PIONEX_API_SECRET=dein_pionex_api_secret
+PIONEX_ALLOWED_SYMBOLS=BTC_USDT,BTC_USDT_PERP,ETH_USDT,ETH_USDT_PERP
+PIONEX_DIRECT_FUTURES_MODE=mode1
+AI_FAILURE_POLICY=reject_live
+```
+
+Wichtig:
+- `PIONEX_DIRECT_LIVE_TRADING_ENABLED=false` bedeutet Dry-Run, auch wenn API-Keys gesetzt sind.
+- `intent` ist optional im Payload (`ENTRY`/`CLOSE`). Wenn nicht gesetzt, gilt `ENTRY`.
+- `AI_FAILURE_POLICY=reject_live` blockiert live-faehige Orders, falls die AI-Layer als unavailable markiert wird.
+- Kelly-Sizing ist standardmaessig Half-Kelly (`KELLY_DEPLOY_MODE=half`) mit Min/Max-Risiko-Caps aus `.env`.
+
 ## Harte Leitlinie
 
 Keine AI darf direkt Live-Orders platzieren.
@@ -104,3 +123,34 @@ Deterministische Systeme muessen:
 - ablehnen
 - loggen
 - ausfuehren
+
+## Offline Research Layer
+
+Die zusaetzlichen Fundstuecke werden als kuratierter Research- und Test-Korpus
+gefuehrt, nicht als direkte Produktionsabhaengigkeit.
+
+Konkret gilt:
+- `app/research/reference_corpus.py` dokumentiert pro Quelle, ob sie uebernommen,
+  offline adaptiert oder ausgeschlossen wird.
+- `app/research/binance_futures_data.py` bereitet Binance USD-M Futures-Klines
+  fuer Offline-Experimente vor. Der Live-Broker importiert dieses Modul nicht.
+- Quellen mit synthetischen Daten, leeren Inhalten oder Wallet-/Private-Key-Material
+  werden aus Training, Logs und Produktionspfaden ausgeschlossen.
+- Invarianten aus alten Pionex/Pine-Testideen werden als secret-freie pytest-Tests
+  gepflegt, ohne harte lokale Pfade, UUIDs oder echte Credentials.
+
+Offline-Download mit optionalem MTF/CISD-Report:
+
+```bash
+python -m app.research.binance_futures_data \
+  --symbol ETHUSDT \
+  --interval 5m \
+  --bars 1000 \
+  --out app/scripts/data_cache/ETHUSDT_5m_research.csv \
+  --mtf-report app/scripts/optimizer_results/ETHUSDT_5m_mtf_cisd.json \
+  --mtf-timeframes 15,60,240
+```
+
+Die MTF/CISD-Auswertung resampled echte OHLCV-Buckets und nutzt fuer
+Lower-Timeframe-Zeilen nur den vorherigen abgeschlossenen Higher-Timeframe-State.
+Damit bleibt die Research-Schicht lookahead-sicher und getrennt vom Pionex Direct Broker.

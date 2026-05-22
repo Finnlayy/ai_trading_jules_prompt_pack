@@ -107,6 +107,8 @@ async def backtest_status():
     }
     if hasattr(broker, "is_ready"):
         broker_info["connected"] = broker.is_ready()
+    if hasattr(broker, "is_live_capable"):
+        broker_info["live_capable"] = broker.is_live_capable()
     if hasattr(broker, "get_balance") and broker.is_ready():
         try:
             balance = broker.get_balance()
