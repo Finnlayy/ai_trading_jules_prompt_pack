@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pine Script Studio & The Gauntlet</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background-color: #0a0a0a;
+            color: #e5e5e5;
+        }
+        /* Custom scrollbar for terminal feel */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0a0a0a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        terminalBlack: '#0a0a0a',
+                        slateGray: '#151618',
+                        matteMint: '#3ebd93',
+                        mutedRust: '#b84d4d',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const Sidebar = ({ activeTab, setActiveTab }) => {
+            const tabs = ['Command Center', 'Strategy Configurator', 'The Gauntlet', 'War Room Logs'];
+            return (
+                <div className="w-64 bg-slateGray border-r border-gray-800 h-screen p-4 flex flex-col">
+                    <h1 className="text-xl font-bold mb-8 text-white uppercase tracking-widest border-b border-gray-700 pb-4">Pine Studio</h1>
+                    <div className="flex flex-col space-y-2">
+                        {tabs.map(tab => (
+                            <button
+                                key={tab}
+                                onClick={() => setActiveTab(tab)}
+                                className={`text-left px-4 py-3 text-sm uppercase tracking-wider ${activeTab === tab ? 'bg-gray-800 text-matteMint border-l-4 border-matteMint' : 'text-gray-400 hover:text-white hover:bg-gray-800 border-l-4 border-transparent'} transition-colors`}
+                            >
+                                {tab}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        const CommandCenter = () => {
+            return (
+                <div className="p-8">
+                    <h2 className="text-2xl font-bold mb-8 text-white uppercase border-b border-gray-800 pb-2">Command Center</h2>
+                    <div className="grid grid-cols-3 gap-8">
+                        <div className="col-span-2 bg-slateGray p-6 border border-gray-800">
+                            <h3 className="text-sm text-gray-400 uppercase mb-4 tracking-wider">Chart Telemetry</h3>
+                            <div className="h-96 flex flex-col items-center justify-center border border-gray-700 bg-terminalBlack">
+                                <span className="text-gray-600 mb-2">[ OHLCV Data Visualization ]</span>
+                                <span className="text-gray-700 text-xs uppercase">Shadow Orders Vis Active</span>
+                            </div>
+                        </div>
+                        <div className="bg-slateGray p-6 border border-gray-800 flex flex-col">
+                            <h3 className="text-sm text-gray-400 uppercase mb-4 tracking-wider">KPI Readout</h3>
+                            <div className="space-y-6 flex-1">
+                                <div>
+                                    <div className="text-xs text-gray-500 uppercase mb-1">Sortino Ratio</div>
+                                    <div className="text-2xl text-matteMint font-bold">2.45</div>
+                                </div>
+                                <div>
+                                    <div className="text-xs text-gray-500 uppercase mb-1">Sharpe Ratio</div>
+                                    <div className="text-2xl text-white font-bold">1.82</div>
+                                </div>
+                                <div>
+                                    <div className="text-xs text-gray-500 uppercase mb-1">Hurst Exponent</div>
+                                    <div className="text-2xl text-white font-bold">0.68</div>
+                                </div>
+                                <div>
+                                    <div className="text-xs text-gray-500 uppercase mb-1">Max Simulated Drawdown</div>
+                                    <div className="text-2xl text-mutedRust font-bold">-14.2%</div>
+                                </div>
+                                <div>
+                                    <div className="text-xs text-gray-500 uppercase mb-1">Simulierter PnL</div>
+                                    <div className="text-2xl text-matteMint font-bold">+$12,450.00</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const StrategyConfigurator = () => {
+            return (
+                <div className="p-8">
+                    <h2 className="text-2xl font-bold mb-8 text-white uppercase border-b border-gray-800 pb-2">Strategy Configurator</h2>
+                    <div className="grid grid-cols-3 gap-8">
+                        <div className="col-span-2 bg-slateGray p-6 border border-gray-800 flex flex-col">
+                            <h3 className="text-sm text-gray-400 uppercase mb-4 tracking-wider">The Constructor (Code & Logic)</h3>
+                            <textarea
+                                className="flex-1 w-full min-h-[400px] bg-terminalBlack border border-gray-700 text-gray-300 p-4 font-mono text-sm focus:outline-none focus:border-matteMint"
+                                defaultValue={"// Pine Script v6 Editor\nstrategy('SMC Quantum v6', overlay=true)\n\n// Core Logic Configuration\nlongCondition = ta.crossover(ta.sma(close, 14), ta.sma(close, 28))\nif (longCondition)\n    strategy.entry('Long', strategy.long)\n\n// Risk Management\nstrategy.exit('Exit', 'Long', loss=500, profit=1000)"}
+                            />
+                        </div>
+                        <div className="bg-slateGray p-6 border border-gray-800 flex flex-col">
+                            <h3 className="text-sm text-gray-400 uppercase mb-4 tracking-wider">Agent Chat</h3>
+                            <div className="flex-1 border border-gray-700 bg-terminalBlack p-4 overflow-y-auto min-h-[400px] flex flex-col gap-4">
+                                <div className="border-l-2 border-matteMint pl-3">
+                                    <div className="text-xs text-matteMint font-bold uppercase mb-1">Quant Architect AI</div>
+                                    <div className="text-sm text-gray-300">Consider adding a displacement filter here to reduce false signals during low volatility regimes.</div>
+                                </div>
+                                <div className="border-l-2 border-gray-500 pl-3">
+                                    <div className="text-xs text-gray-500 font-bold uppercase mb-1">Compiler</div>
+                                    <div className="text-sm text-gray-400 font-mono">Syntax check passed. No warnings.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const TheGauntlet = () => {
+            const [slippage, setSlippage] = useState(0);
+            const [liquidityVacuum, setLiquidityVacuum] = useState(false);
+            const [toxicMonday, setToxicMonday] = useState(false);
+
+            return (
+                <div className="p-8">
+                    <h2 className="text-2xl font-bold mb-8 text-white uppercase border-b border-gray-800 pb-2 flex items-center justify-between">
+                        <span>The Gauntlet</span>
+                        <span className="text-xs text-mutedRust border border-mutedRust px-2 py-1 bg-mutedRust/10">Stress Test Mode</span>
+                    </h2>
+
+                    <div className="grid grid-cols-2 gap-8">
+                        <div className="bg-slateGray p-6 border border-gray-800 space-y-8">
+                            <div>
+                                <label className="flex justify-between text-sm text-gray-300 uppercase mb-4 font-bold tracking-wider">
+                                    <span>Slippage Injector</span>
+                                    <span className="text-matteMint">{slippage} bps</span>
+                                </label>
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="50"
+                                    value={slippage}
+                                    onChange={(e) => setSlippage(e.target.value)}
+                                    className="w-full accent-matteMint cursor-pointer mb-2"
+                                />
+                                <p className="text-xs text-gray-500">Inject worst-case fill slippage to simulate toxic market conditions.</p>
+                            </div>
+
+                            <div className="flex items-start justify-between border-t border-gray-700 pt-6">
+                                <div>
+                                    <div className="text-sm text-gray-300 uppercase font-bold tracking-wider mb-1">Liquidity Vacuum</div>
+                                    <div className="text-xs text-gray-500 w-64">Simulates flash crash where no limit orders are filled until the next major support block.</div>
+                                </div>
+                                <button
+                                    onClick={() => setLiquidityVacuum(!liquidityVacuum)}
+                                    className={`px-6 py-2 text-xs uppercase font-bold tracking-wider border ${liquidityVacuum ? 'bg-mutedRust text-white border-mutedRust' : 'bg-terminalBlack text-gray-400 border-gray-700'} transition-colors`}
+                                >
+                                    {liquidityVacuum ? 'Active' : 'Inactive'}
+                                </button>
+                            </div>
+
+                            <div className="flex items-start justify-between border-t border-gray-700 pt-6">
+                                <div>
+                                    <div className="text-sm text-gray-300 uppercase font-bold tracking-wider mb-1">Toxic Monday Filter</div>
+                                    <div className="text-xs text-gray-500 w-64">Removes all trades between 08:00 and 11:30 on Mondays. See how it affects the curve.</div>
+                                </div>
+                                <button
+                                    onClick={() => setToxicMonday(!toxicMonday)}
+                                    className={`px-6 py-2 text-xs uppercase font-bold tracking-wider border ${toxicMonday ? 'bg-matteMint text-black border-matteMint' : 'bg-terminalBlack text-gray-400 border-gray-700'} transition-colors`}
+                                >
+                                    {toxicMonday ? 'Active' : 'Inactive'}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="bg-slateGray p-6 border border-gray-800 flex flex-col">
+                            <h3 className="text-sm text-gray-400 uppercase mb-6 tracking-wider font-bold">Simulated Projections (Konjunktiv)</h3>
+                            <div className="space-y-6 flex-1">
+                                <div className="border-l-2 border-gray-600 pl-4 py-1">
+                                    <div className="text-xs text-gray-500 uppercase mb-2 tracking-widest">Historische simulierte Hit Rate</div>
+                                    <div className="text-lg text-white">Die simulierte Win-Rate beliefe sich auf <span className="text-matteMint font-bold">62.4%</span>.</div>
+                                </div>
+                                <div className="border-l-2 border-gray-600 pl-4 py-1">
+                                    <div className="text-xs text-gray-500 uppercase mb-2 tracking-widest">Theoretische Kapitalentwicklung</div>
+                                    <div className="text-lg text-white">Die simulierte Equity Curve hätte einen Wert von <span className="text-matteMint font-bold">$14,200</span> erreicht.</div>
+                                </div>
+                                <div className="border-l-2 border-gray-600 pl-4 py-1">
+                                    <div className="text-xs text-gray-500 uppercase mb-2 tracking-widest">Subjunktives Drawdown-Risiko</div>
+                                    <div className="text-lg text-gray-300">Der maximale simulierte Drawdown betrüge <span className="text-mutedRust font-bold">-18.5%</span>.</div>
+                                </div>
+
+                                <div className="mt-8 pt-6 border-t border-gray-800">
+                                    <h4 className="text-xs text-gray-500 uppercase mb-4 tracking-widest">The Guillotine Simulator</h4>
+                                    <div className="h-4 w-full bg-terminalBlack border border-gray-700 relative overflow-hidden">
+                                        <div className="absolute top-0 left-0 h-full bg-mutedRust" style={{width: '74%'}}></div>
+                                        <div className="absolute top-0 left-[100%] h-full w-px bg-red-500 -ml-px"></div>
+                                    </div>
+                                    <div className="flex justify-between text-xs text-gray-500 mt-2">
+                                        <span>0%</span>
+                                        <span>Current Peak: -18.5%</span>
+                                        <span className="text-red-500 font-bold">-25% Hard Kill</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const WarRoomLogs = () => {
+            const logs = [
+                { time: '10:04:23.102', event: 'Theoretical Setup Condition Met', detail: 'Long Setup CHOP < 61.8' },
+                { time: '10:05:00.000', event: 'Simulated Order Execution', detail: 'Limit fill assumed at 64,230.50' },
+                { time: '10:15:00.450', event: 'Simulated SL Hit', detail: 'Drawdown of -0.5% recognized' },
+                { time: '11:20:00.890', event: 'Theoretical Setup Condition Met', detail: 'Short Setup BB Expansion' },
+                { time: '11:21:05.120', event: 'Simulated Order Execution', detail: 'Limit fill assumed at 64,800.00' },
+            ];
+            return (
+                <div className="p-8">
+                    <h2 className="text-2xl font-bold mb-8 text-white uppercase border-b border-gray-800 pb-2">War Room Logs</h2>
+                    <div className="bg-slateGray border border-gray-800 overflow-hidden">
+                        <table className="w-full text-left text-sm">
+                            <thead className="bg-terminalBlack">
+                                <tr className="text-gray-500 border-b border-gray-700">
+                                    <th className="p-4 font-bold uppercase tracking-wider text-xs">Timestamp</th>
+                                    <th className="p-4 font-bold uppercase tracking-wider text-xs">Event Type</th>
+                                    <th className="p-4 font-bold uppercase tracking-wider text-xs">System Detail</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {logs.map((log, idx) => (
+                                    <tr key={idx} className="border-b border-gray-800 hover:bg-gray-800/30 transition-colors">
+                                        <td className="p-4 text-gray-400 font-mono text-xs w-48">{log.time}</td>
+                                        <td className="p-4 text-white font-medium">{log.event}</td>
+                                        <td className="p-4 text-gray-400 font-mono text-xs">{log.detail}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [activeTab, setActiveTab] = useState('Command Center');
+
+            const renderContent = () => {
+                switch(activeTab) {
+                    case 'Command Center': return <CommandCenter />;
+                    case 'Strategy Configurator': return <StrategyConfigurator />;
+                    case 'The Gauntlet': return <TheGauntlet />;
+                    case 'War Room Logs': return <WarRoomLogs />;
+                    default: return <CommandCenter />;
+                }
+            };
+
+            return (
+                <div className="flex h-screen w-full bg-terminalBlack selection:bg-matteMint selection:text-black">
+                    <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+                    <div className="flex-1 overflow-y-auto">
+                        {renderContent()}
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
