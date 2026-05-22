@@ -1,3 +1,6 @@
 ## 2024-05-22 - Vectorizing Statistical Battery
 **Learning:** Python loops over large numpy arrays inside the `app/services/statistical_battery.py` calculation logic were found to be very slow (over 100x slower) than pure vectorization. The `variance_ratio` method used a python list comprehension spanning a numpy array over multiple lookback windows, and `runs_test` looped element-wise to compute differences.
 **Action:** When computing statistical indicators on large time-series arrays, prefer using native numpy methods such as `.reshape(-1, k).sum(axis=1)` to simulate sliding windows, and `np.diff` paired with `np.count_nonzero` to eliminate Python-level loops.
+## 2024-05-22 - Bypassing Generator Overhead in Hot Loops
+**Learning:** In highly-frequent inner loops iterating over many candles (e.g., inside `compute_ob_fvg_touches`), the overhead of instantiating Python generator expressions (like `any((c.l <= top and c.h >= bot) for top, bot in bull_ob[-5:])`) becomes a measurable bottleneck compared to the actual calculation.
+**Action:** When performing simple boolean short-circuit checks in performance-critical backtesting hot paths, unroll generator comprehensions into explicitly typed `for` loops with an early `break` to avoid Python's generator lifecycle overhead.
