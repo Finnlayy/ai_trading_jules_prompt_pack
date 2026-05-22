@@ -4,10 +4,13 @@ from app.services.ai_kimi import ai_review_instance
 from app.services.broker import SimulationBroker
 from app.services.paper_broker import PaperBroker
 from app.services.pionex_relay_broker import PionexRelayBroker
+from app.services.pionex_direct_broker import PionexDirectBroker
 from app.services.journal_logger import journal_logger_instance
 from app.core.config import BROKER_MODE
 
 def _build_broker():
+    if BROKER_MODE == "pionex_direct":
+        return PionexDirectBroker()
     if BROKER_MODE in {"pionex_relay", "pionex", "relay"}:
         return PionexRelayBroker()
     if BROKER_MODE == "paper":

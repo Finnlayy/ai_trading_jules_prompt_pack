@@ -25,11 +25,19 @@ GEMINI_BASE_URL = os.getenv("GEMINI_BASE_URL", "https://generativelanguage.googl
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-pro")
 
 BROKER_MODE = os.getenv("BROKER_MODE", "simulation").strip().lower()
+# Pionex Relay Config
 PIONEX_RELAY_URL = os.getenv("PIONEX_RELAY_URL", "http://127.0.0.1:5000/webhook")
 PIONEX_RELAY_ENABLED = os.getenv("PIONEX_RELAY_ENABLED", "false").strip().lower() == "true"
 PIONEX_SIGNAL_BOT_UUID = os.getenv("PIONEX_SIGNAL_BOT_UUID", "")
 PIONEX_RELAY_CONTRACTS = os.getenv("PIONEX_RELAY_CONTRACTS", "1")
 PIONEX_RELAY_TIMEOUT_SECONDS = float(os.getenv("PIONEX_RELAY_TIMEOUT_SECONDS", "10"))
+
+# Pionex Direct Config
+PIONEX_DIRECT_ENABLED = os.getenv("PIONEX_DIRECT_ENABLED", "false").strip().lower() == "true"
+PIONEX_DIRECT_LIVE_TRADING_ENABLED = os.getenv("PIONEX_DIRECT_LIVE_TRADING_ENABLED", "false").strip().lower() == "true"
+PIONEX_API_KEY = os.getenv("PIONEX_API_KEY", "")
+PIONEX_API_SECRET = os.getenv("PIONEX_API_SECRET", "")
+PIONEX_ALLOWED_SYMBOLS = os.getenv("PIONEX_ALLOWED_SYMBOLS", "BTC_USDT,ETH_USDT,XAG_USDT_PERP")
 
 # core config placeholder
 MIN_RR_RATIO = 2.0
