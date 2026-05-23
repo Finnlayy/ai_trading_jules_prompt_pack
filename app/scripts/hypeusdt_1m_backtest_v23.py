@@ -477,10 +477,29 @@ def backtest(candles: Sequence[Candle], p: Params) -> dict:
                     bear_fvg.pop(0)
 
         # touches
-        bull_ob_touch = any((c.l <= top and c.h >= bot) for top, bot in bull_ob[-5:])
-        bear_ob_touch = any((c.h >= bot and c.l <= top) for top, bot in bear_ob[-5:])
-        bull_fvg_touch = any((c.l <= top and c.h >= bot) for top, bot in bull_fvg[-5:])
-        bear_fvg_touch = any((c.h >= bot and c.l <= top) for top, bot in bear_fvg[-5:])
+        bull_ob_touch = False
+        for top, bot in bull_ob[-5:]:
+            if c.l <= top and c.h >= bot:
+                bull_ob_touch = True
+                break
+
+        bear_ob_touch = False
+        for top, bot in bear_ob[-5:]:
+            if c.h >= bot and c.l <= top:
+                bear_ob_touch = True
+                break
+
+        bull_fvg_touch = False
+        for top, bot in bull_fvg[-5:]:
+            if c.l <= top and c.h >= bot:
+                bull_fvg_touch = True
+                break
+
+        bear_fvg_touch = False
+        for top, bot in bear_fvg[-5:]:
+            if c.h >= bot and c.l <= top:
+                bear_fvg_touch = True
+                break
 
         # alignment
         sh4 = state_h4[c.ts] if p.en_h4 else 0
