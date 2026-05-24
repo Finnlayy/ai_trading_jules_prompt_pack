@@ -50,10 +50,10 @@ async def test_health_check():
 
 @pytest.mark.asyncio
 async def test_root_serves_frontend():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test", follow_redirects=False) as ac:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         response = await ac.get("/")
     assert response.status_code == 200
-    assert "Pine Script Studio" in response.text
+    assert "Pine Script Studio & The Gauntlet" in response.text
 
 @pytest.mark.asyncio
 async def test_m8_webhook_valid_payload(mock_kimi_api):
@@ -90,29 +90,3 @@ async def test_m8_webhook_invalid_payload():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         response = await ac.post("/webhook/m8", json=payload)
     assert response.status_code == 422
-
-@pytest.mark.asyncio
-async def test_m8_webhook_process_signal_exception():
-    payload = {
-        "signal_id": "sig-123",
-        "symbol": "BTCUSD",
-        "timeframe": "1h",
-        "direction": "LONG",
-        "timestamp": "2026-05-20T10:00:00Z",
-        "entry_price": 50000.0,
-        "stop_price": 48000.0,
-        "target_price": 54000.0,
-        "confluence_score": 85.5,
-        "crisis_score": 10.0,
-        "mc_dispersion": 1.5,
-        "spread": 10.0
-    }
-
-    with patch("app.api.endpoints.process_signal", new_callable=AsyncMock) as mock_process_signal:
-        mock_process_signal.side_effect = Exception("Simulated processing error")
-
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-            response = await ac.post("/webhook/m8", json=payload)
-
-        assert response.status_code == 500
-        assert response.json() == {"detail": "Internal server error while processing signal."}

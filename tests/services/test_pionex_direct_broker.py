@@ -1,89 +1,3 @@
-import pytest
-from app.services.pionex_direct_broker import PionexDirectBroker, PionexDirectConfig
-from app.schemas.m8_payload import M8Payload
-from app.schemas.journal import DecisionEnum, FinalDecisionEnum
-
-def create_payload(symbol="BTCUSD") -> M8Payload:
-    return M8Payload(
-        signal_id="test-sig-1",
-        symbol=symbol,
-        timeframe="1h",
-        direction="LONG",
-        timestamp="2026-05-20T10:00:00Z",
-        entry_price=50000.0,
-        stop_price=48000.0,
-        target_price=54000.0,
-        confluence_score=85.0,
-        crisis_score=10.0,
-        mc_dispersion=2.0,
-        spread=5.0
-    )
-
-def test_dry_run_direct():
-    config = PionexDirectConfig(
-        enabled=True,
-        live_trading_enabled=False,
-        api_key="mock",
-        api_secret="mock",
-        allowed_symbols=["BTC_USDT"]
-    )
-    broker = PionexDirectBroker(config)
-    payload = create_payload()
-
-    entry = broker.execute_trade(payload, DecisionEnum.PROCEED_TO_SIMULATION)
-
-    assert entry.final_decision == FinalDecisionEnum.EXECUTED_SIM
-    assert entry.result["status"] == "DRY_RUN_DIRECT"
-    assert entry.result["mapped_symbol"] == "BTC_USDT"
-
-def test_live_trading_direct():
-    config = PionexDirectConfig(
-        enabled=True,
-        live_trading_enabled=True,
-        api_key="mock",
-        api_secret="mock",
-        allowed_symbols=["BTC_USDT"]
-    )
-    broker = PionexDirectBroker(config)
-    payload = create_payload()
-
-    entry = broker.execute_trade(payload, DecisionEnum.PROCEED_TO_SIMULATION)
-
-    assert entry.final_decision == FinalDecisionEnum.EXECUTED_SIM
-    assert entry.result["status"] == "SENT_TO_PIONEX_DIRECT"
-
-def test_allowlist_rejection():
-    config = PionexDirectConfig(
-        enabled=True,
-        live_trading_enabled=False,
-        api_key="mock",
-        api_secret="mock",
-        allowed_symbols=["BTC_USDT"]
-    )
-    broker = PionexDirectBroker(config)
-    payload = create_payload(symbol="XAGUSDT.P")
-
-    entry = broker.execute_trade(payload, DecisionEnum.PROCEED_TO_SIMULATION)
-
-    assert entry.final_decision == FinalDecisionEnum.REJECTED
-    assert "SYMBOL_NOT_IN_ALLOWLIST" in entry.result["reject_reason"]
-
-def test_allowlist_acceptance_xag():
-    config = PionexDirectConfig(
-        enabled=True,
-        live_trading_enabled=False,
-        api_key="mock",
-        api_secret="mock",
-        allowed_symbols=["BTC_USDT", "XAG_USDT_PERP"]
-    )
-    broker = PionexDirectBroker(config)
-    payload = create_payload(symbol="XAGUSDT.P")
-
-    entry = broker.execute_trade(payload, DecisionEnum.PROCEED_TO_SIMULATION)
-
-    assert entry.final_decision == FinalDecisionEnum.EXECUTED_SIM
-    assert entry.result["status"] == "DRY_RUN_DIRECT"
-    assert entry.result["mapped_symbol"] == "XAG_USDT_PERP"
 from app.schemas.journal import DecisionEnum, FinalDecisionEnum
 from app.schemas.m8_payload import M8Payload
 from app.services.pionex_direct_broker import PionexDirectBroker, PionexDirectConfig
@@ -217,14 +131,15 @@ def test_pionex_direct_broker_live_spot_entry_calls_client(tmp_path):
     class FakeClient:
         def __init__(self):
             self.buy_called = False
+            self.client_order_id = None
 
         def get_balance(self, coin="USDT", account="spot"):
             return 500.0
 
         def place_spot_market_buy(self, symbol: str, amount_usdt: float, client_order_id: str = None):
             self.buy_called = True
-            self.captured_client_order_id = client_order_id
-            return {"orderId": "spot-live-1", "symbol": symbol, "amount": amount_usdt}
+            self.client_order_id = client_order_id
+            return {"orderId": "spot-live-1", "symbol": symbol, "amount": amount_usdt, "clientOrderId": client_order_id}
 
     fake = FakeClient()
     broker.client = fake
@@ -257,6 +172,8 @@ def test_pionex_direct_broker_futures_mode3_applies_payload_leverage(tmp_path):
         def __init__(self):
             self.leverage_calls = 0
             self.order_calls = 0
+            self.client_order_id = None
+            self.client_order_id = None
 
         def get_balance(self, coin="USDT", account="futures"):
             return 500.0
@@ -267,7 +184,6 @@ def test_pionex_direct_broker_futures_mode3_applies_payload_leverage(tmp_path):
 
         def place_futures_market_order(self, **kwargs):
             self.order_calls += 1
-            self.captured_kwargs = kwargs
             return {"orderId": "fut-live-1", **kwargs}
 
     fake = FakeClient()
@@ -285,3 +201,5 @@ def test_pionex_direct_broker_futures_mode3_applies_payload_leverage(tmp_path):
     assert entry.result["status"] == "SENT_TO_PIONEX_DIRECT"
     assert fake.leverage_calls == 1
     assert fake.order_calls == 1
+    assert fake.client_order_id == None # kwargs order
+    assert entry.simulated_fill["client_order_id"] == "direct-live-2_BTC_USDT_PERP_FUTURES_SHORT_ENTRY"

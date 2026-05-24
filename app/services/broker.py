@@ -1,7 +1,7 @@
 from app.schemas.m8_payload import M8Payload
 from app.schemas.journal import TradeJournalEntry, DirectionEnum, DecisionEnum, FinalDecisionEnum
 from app.schemas.ai_review import DecisionEnum as AIDecisionEnum
-from typing import Optional
+from typing import Dict, Optional
 from datetime import datetime, timezone
 
 class SimulationBroker:
