@@ -168,5 +168,9 @@ class TelegramNewsReceiver:
             await self._client.aclose()
 
 
-# Global singleton (lazy config from env)
+# Global singletons (lazy config from env)
+# GLINT receiver — monitors GLINT bot messages
 telegram_news_receiver_instance = TelegramNewsReceiver()
+
+# Manus receiver — monitors Manus advisor bot messages (separate chat)
+manus_telegram_receiver_instance = TelegramNewsReceiver()

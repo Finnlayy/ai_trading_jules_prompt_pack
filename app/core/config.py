@@ -136,6 +136,11 @@ GLINT_LIVE_TRADING_ENABLED = _as_bool(os.getenv("GLINT_LIVE_TRADING_ENABLED"), F
 GLINT_TELEGRAM_CHAT_ID = os.getenv("GLINT_TELEGRAM_CHAT_ID", TELEGRAM_CHAT_ID)
 GLINT_BOT_USERNAME = os.getenv("GLINT_BOT_USERNAME", "")
 
+# Manus advisor configuration (separate Telegram chat)
+MANUS_ENABLED = _as_bool(os.getenv("MANUS_ENABLED"), False)
+MANUS_TELEGRAM_CHAT_ID = os.getenv("MANUS_TELEGRAM_CHAT_ID", TELEGRAM_CHAT_ID)
+MANUS_BOT_USERNAME = os.getenv("MANUS_BOT_USERNAME", "")
+
 # Deterministic risk-gate defaults
 MIN_RR_RATIO = 2.0
 MAX_SPREAD = 15.0
