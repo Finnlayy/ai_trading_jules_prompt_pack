@@ -35,6 +35,7 @@ from app.core.config import (
 from app.schemas.ai_review import DecisionEnum as AIDecisionEnum
 from app.schemas.journal import DecisionEnum, DirectionEnum, FinalDecisionEnum, TradeJournalEntry
 from app.schemas.m8_payload import M8Payload
+from app.services.broker_interface import BaseBroker
 from app.services.pionex_api import PionexAPIError, PionexClient, PionexCredentials
 from app.services.pionex_kelly_sizer import KellyConfig, KellySizer
 from app.services.pionex_position_ledger import PositionLedger
@@ -67,7 +68,7 @@ class PionexDirectConfig:
             object.__setattr__(self, "allowed_symbols", symbols)
 
 
-class PionexDirectBroker:
+class PionexDirectBroker(BaseBroker):
     def __init__(
         self,
         config: Optional[PionexDirectConfig] = None,
@@ -130,6 +131,19 @@ class PionexDirectBroker:
         if self.config.live_trading_enabled and not self._has_credentials():
             return False
         return True
+
+    def get_broker_name(self) -> str:
+        return "PionexDirectBroker"
+
+    def get_broker_type(self) -> str:
+        return "pionex_direct"
+
+    def get_broker_mode(self) -> str:
+        if self.is_live_capable():
+            return "live"
+        if self.config.enabled:
+            return "dry-run"
+        return "simulation"
 
     def _map_symbol(self, symbol: str) -> Optional[str]:
         mapping = {
@@ -239,6 +253,10 @@ class PionexDirectBroker:
             if value is not None and abs(float(value)) > 0:
                 return True
         return False
+
+    def get_positions(self) -> dict[str, Any]:
+        """BaseBroker interface — alias for get_open_positions."""
+        return self.get_open_positions()
 
     def get_open_positions(self) -> dict[str, Any]:
         if not self.client:

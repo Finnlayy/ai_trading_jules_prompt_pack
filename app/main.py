@@ -14,6 +14,7 @@ from app.api.confidence_registry import router as confidence_router
 from app.api.circuit_breaker import router as circuit_breaker_router
 from app.api.reconciliation import router as reconciliation_router
 from app.api.news import router as news_router
+from app.api.broker import router as broker_router
 
 app = FastAPI(
     title="Agent-Reflex Hybrid Trader API",
@@ -29,6 +30,7 @@ app.include_router(confidence_router, prefix="/confidence", tags=["confidence-re
 app.include_router(circuit_breaker_router, prefix="/circuit", tags=["circuit-breaker"])
 app.include_router(reconciliation_router, prefix="/reconcile", tags=["reconciliation"])
 app.include_router(news_router, prefix="/news", tags=["news"])
+app.include_router(broker_router, prefix="/broker", tags=["broker"])
 
 @app.get("/", include_in_schema=False)
 def frontend():

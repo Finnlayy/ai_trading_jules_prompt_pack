@@ -4,24 +4,17 @@ import inspect
 from app.schemas.m8_payload import M8Payload
 from app.services.risk_engine import risk_engine_instance
 from app.services.ai_kimi import ai_review_instance
-from app.services.broker import SimulationBroker
-from app.services.paper_broker import PaperBroker
-from app.services.pionex_relay_broker import PionexRelayBroker
-from app.services.pionex_direct_broker import PionexDirectBroker
+from app.services.broker_factory import BrokerFactory
 from app.services.journal_logger import journal_logger_instance
 from app.services.regime_engine import regime_engine_instance
 from app.services.signal_generator import BybitDataFeed
 from app.schemas.journal import DecisionEnum
 from app.core.config import AI_FAILURE_POLICY, BROKER_MODE
 
+
 def _build_broker():
-    if BROKER_MODE in {"pionex_direct", "direct", "pionex_api"}:
-        return PionexDirectBroker(journal_path=journal_logger_instance.filepath)
-    if BROKER_MODE in {"pionex_relay", "pionex", "relay"}:
-        return PionexRelayBroker()
-    if BROKER_MODE == "paper":
-        return PaperBroker()
-    return SimulationBroker()
+    """Build broker via factory for clean single-mode selection."""
+    return BrokerFactory.create(mode=BROKER_MODE, journal_path=journal_logger_instance.filepath)
 
 
 # Single broker instance for the MVP
@@ -49,12 +42,14 @@ def _is_live_capable_broker(broker) -> bool:
             return bool(broker.is_live_capable())
         except Exception:
             return False
+    # Legacy fallback for older broker classes
     if BROKER_MODE in {"pionex_relay", "relay", "pionex"} and hasattr(broker, "is_ready"):
         try:
             return bool(broker.is_ready())
         except Exception:
             return False
     return False
+
 
 async def _check_regime(payload: M8Payload) -> dict:
     """
@@ -83,8 +78,8 @@ async def _check_regime(payload: M8Payload) -> dict:
 
 async def process_signal(payload: M8Payload):
     """
-    Main orchestration loop integrating AI Review -> Risk Engine -> Simulation Broker -> Journaling.
-    Now uses asynchronous calls for the real Kimi Swarm API.
+    Main orchestration loop integrating AI Review -> Risk Engine -> Broker -> Journaling.
+    Now uses BrokerFactory for clean broker selection.
     """
 
     # 0. Regime Check (lightweight gate before expensive AI review)
@@ -119,7 +114,7 @@ async def process_signal(payload: M8Payload):
             "reject_reason": f"REGIME_HALT: {regime_result.get('reason', 'Market regime unsuitable')}",
         }
 
-    # 3. Execution via Simulation Broker
+    # 3. Execution via selected Broker
     journal_entry = broker_instance.execute_trade(
         payload=payload,
         decision=decision_result["decision"],

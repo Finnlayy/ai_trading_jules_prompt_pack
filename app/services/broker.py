@@ -10,6 +10,27 @@ class SimulationBroker:
         self.slippage_bps = slippage_bps
         self.journal: list[TradeJournalEntry] = []
 
+    def is_live_capable(self) -> bool:
+        return False
+
+    def is_ready(self) -> bool:
+        return True
+
+    def get_broker_name(self) -> str:
+        return "SimulationBroker"
+
+    def get_broker_type(self) -> str:
+        return "simulation"
+
+    def get_broker_mode(self) -> str:
+        return "simulation"
+
+    def get_positions(self) -> dict:
+        return {"positions": [], "broker": "simulation"}
+
+    def get_wallet_balances(self, account_mode: str = "SPOT") -> dict:
+        return {"balances": [], "broker": "simulation"}
+
     def execute_trade(self, 
                       payload: M8Payload, 
                       decision: DecisionEnum, 

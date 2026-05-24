@@ -966,9 +966,13 @@
 
             async function refreshStatus() {
                 try {
-                    const [healthData, statusData] = await Promise.all([request("/health"), request("/backtest/status")]);
+                    const [healthData, statusData, brokerData] = await Promise.all([
+                        request("/health"),
+                        request("/backtest/status"),
+                        request("/broker/status"),
+                    ]);
                     setHealth(healthData);
-                    setStatus(statusData);
+                    setStatus({ ...statusData, broker: brokerData });
                 } catch (error) {
                     setHealth({ status: "error", error: error.message });
                     addLog("error", "Status refresh failed", { error: error.message });
@@ -1268,8 +1272,9 @@
 
                         <div className="side-status">
                             <div><span className={`dot ${health.status === "ok" ? "ok" : "bad"}`}></span>API {health.status}</div>
-                            <div>Broker {broker.type || "loading"}</div>
-                            <div>Mode {broker.mode || "unknown"}</div>
+                            <div>Broker {broker.broker_name || broker.type || "loading"}</div>
+                            <div>Mode {broker.broker_mode_display || broker.mode || "unknown"}</div>
+                            <div><span className={`dot ${broker.live_capable ? "ok" : "warn"}`}></span>{broker.live_capable ? "Live Ready" : "Dry-Run"}</div>
                             <div>AI {ai.provider || "loading"}</div>
                             <div>Primary {walletAmount(primaryWallet)} USDT</div>
                             <div>Futures {walletAmount(futuresWallet)} USDT</div>

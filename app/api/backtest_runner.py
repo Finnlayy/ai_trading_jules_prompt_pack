@@ -109,26 +109,28 @@ async def backtest_status():
     broker = _get_broker()
     broker_info = {
         "mode": BROKER_MODE,
-        "type": type(broker).__name__,
+        "type": getattr(broker, "get_broker_type", lambda: type(broker).__name__)(),
+        "name": getattr(broker, "get_broker_name", lambda: type(broker).__name__)(),
+        "display_mode": getattr(broker, "get_broker_mode", lambda: "unknown")(),
     }
     if hasattr(broker, "is_ready"):
         broker_info["connected"] = broker.is_ready()
     if hasattr(broker, "is_live_capable"):
         broker_info["live_capable"] = broker.is_live_capable()
-    if (hasattr(broker, "get_wallet_balances") or hasattr(broker, "get_balance")) and broker.is_ready():
+    if hasattr(broker, "get_wallet_balances") and broker.is_ready():
         wallets = {}
         for key, account_mode in (("primary", "SPOT"), ("futures", "FUTURES")):
             try:
-                if hasattr(broker, "get_wallet_balances"):
-                    wallets[key] = broker.get_wallet_balances(account_mode=account_mode)
-                else:
-                    wallets[key] = broker.get_balance(account_mode=account_mode)
+                wallets[key] = broker.get_wallet_balances(account_mode=account_mode)
             except Exception:
                 wallets[key] = {"account_mode": account_mode, "error": "BALANCE_UNAVAILABLE"}
         broker_info["wallets"] = wallets
         broker_info["balance"] = wallets["primary"]
-    if hasattr(broker, "get_open_positions") and broker.is_ready():
-        broker_info["positions"] = broker.get_open_positions()
+    if broker.is_ready():
+        if hasattr(broker, "get_positions"):
+            broker_info["positions"] = broker.get_positions()
+        elif hasattr(broker, "get_open_positions"):
+            broker_info["positions"] = broker.get_open_positions()
     if hasattr(broker, "get_running_bots") and broker.is_ready():
         broker_info["bots"] = broker.get_running_bots()
 
