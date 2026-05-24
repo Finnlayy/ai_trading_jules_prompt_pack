@@ -14,8 +14,12 @@ import requests
 SPOT_BALANCES = "/api/v1/account/balances"
 SPOT_ORDER = "/api/v1/trade/order"
 FUTURES_BALANCES = "/uapi/v1/account/balances"
+FUTURES_POSITIONS = "/uapi/v1/account/positions"
+FUTURES_ACCOUNT_DETAIL = "/uapi/v1/account/detail"
 FUTURES_ORDER = "/uapi/v1/trade/order"
 FUTURES_LEVERAGE = "/uapi/v1/account/leverage"
+BOT_ORDERS = "/api/v1/bot/orders"
+BOT_FUTURES_GRID_ORDER = "/api/v1/bot/orders/futuresGrid/order"
 
 
 class PionexAPIError(Exception):
@@ -121,6 +125,33 @@ class PionexClient:
     def get_futures_balances(self) -> list[dict[str, Any]]:
         response = self._request("GET", FUTURES_BALANCES)
         return response.get("data", {}).get("balances", [])
+
+    def get_futures_positions(self, symbol: Optional[str] = None) -> list[dict[str, Any]]:
+        params = {"symbol": symbol} if symbol else None
+        response = self._request("GET", FUTURES_POSITIONS, params=params)
+        return response.get("data", {}).get("positions", [])
+
+    def get_futures_account_detail(self) -> dict[str, Any]:
+        response = self._request("GET", FUTURES_ACCOUNT_DETAIL)
+        return response.get("data", {})
+
+    def get_bot_orders(
+        self,
+        status: str = "running",
+        base: Optional[str] = None,
+        quote: Optional[str] = None,
+    ) -> dict[str, Any]:
+        params: dict[str, Any] = {"status": status}
+        if base:
+            params["base"] = base.upper()
+        if quote:
+            params["quote"] = quote.upper()
+        response = self._request("GET", BOT_ORDERS, params=params)
+        return response.get("data", {})
+
+    def get_futures_grid_order(self, bu_order_id: str) -> dict[str, Any]:
+        response = self._request("GET", BOT_FUTURES_GRID_ORDER, params={"buOrderId": bu_order_id})
+        return response.get("data", {})
 
     def get_balance(self, coin: str = "USDT", account: str = "spot") -> float:
         balances = self.get_spot_balances() if account == "spot" else self.get_futures_balances()

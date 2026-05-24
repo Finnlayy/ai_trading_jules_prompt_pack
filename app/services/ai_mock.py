@@ -1,5 +1,6 @@
 from app.schemas.m8_payload import M8Payload
 from app.schemas.ai_review import SignalReview, DecisionEnum
+from app.services.ai_layer_memory import ai_layer_memory_instance
 
 class MockAIReviewLayer:
     """
@@ -41,7 +42,19 @@ class MockAIReviewLayer:
             reason_codes=reason_codes,
             risk_flags=[],
             reject_reason="High crisis environment detected" if decision == DecisionEnum.REJECT else None,
-            requires_human_review=requires_human_review
+            requires_human_review=requires_human_review,
+            audit_trace={
+                "trace_type": "ai_reasoning_audit_not_hidden_chain_of_thought",
+                "provider": "mock",
+                "behavior_profile": ai_layer_memory_instance.get_profile().model_dump(),
+                "final_summary": {
+                    "decision": decision.value,
+                    "confidence": confidence,
+                    "reason_codes": reason_codes,
+                    "risk_flags": [],
+                    "requires_human_review": requires_human_review,
+                },
+            },
         )
 
 ai_review_instance = MockAIReviewLayer()

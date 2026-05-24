@@ -198,6 +198,244 @@ class PionexDirectBroker:
             return {"error": exc.message, "retryable": exc.retryable}
 
     @staticmethod
+    def _balance_value(item: dict[str, Any]) -> float:
+        for key in ("free", "available", "balance", "total", "amount"):
+            raw = item.get(key)
+            if raw is None:
+                continue
+            try:
+                return float(raw)
+            except (TypeError, ValueError):
+                continue
+        return 0.0
+
+    @staticmethod
+    def _asset_value(item: dict[str, Any]) -> float | None:
+        for key in ("value_usdt", "valueUsd", "usdValue", "usdtValue", "value", "equity"):
+            raw = item.get(key)
+            if raw is None:
+                continue
+            try:
+                return float(raw)
+            except (TypeError, ValueError):
+                continue
+        return None
+
+    def _normalize_asset_balance(self, item: dict[str, Any]) -> dict[str, Any]:
+        coin = str(item.get("coin") or item.get("asset") or item.get("currency") or "").upper()
+        available = self._coerce_optional_float(item.get("available") or item.get("free"))
+        locked = self._coerce_optional_float(item.get("locked") or item.get("frozen") or item.get("freeze"))
+        explicit_balance = self._coerce_optional_float(item.get("balance") or item.get("total") or item.get("amount"))
+        balance = explicit_balance if explicit_balance is not None else (available or 0.0) + (locked or 0.0)
+        value_usdt = self._asset_value(item)
+        if value_usdt is None and coin == "USDT":
+            value_usdt = balance
+        return {
+            "coin": coin,
+            "balance": balance,
+            "available": available,
+            "locked": locked,
+            "value_usdt": value_usdt,
+            "raw": item,
+        }
+
+    def _normalize_futures_position(self, item: dict[str, Any]) -> dict[str, Any]:
+        symbol = str(item.get("symbol") or "").upper()
+        side = str(item.get("positionSide") or item.get("side") or "").upper()
+        initial_margin = self._coerce_optional_float(item.get("initialMargin"))
+        maint_margin = self._coerce_optional_float(item.get("maintMargin"))
+        unrealized_pnl = self._coerce_optional_float(item.get("unrealizedPnL") or item.get("unrealizedPnl"))
+        net_size = self._coerce_optional_float(item.get("netSize"))
+        size_long = self._coerce_optional_float(item.get("sizeLong"))
+        size_short = self._coerce_optional_float(item.get("sizeShort"))
+        return {
+            "position_id": str(item.get("positionId") or ""),
+            "symbol": symbol,
+            "asset": symbol.split("_", 1)[0] if symbol else "",
+            "is_zcash": symbol.startswith("ZEC_") or symbol.startswith("ZCASH_"),
+            "account_mode": "FUTURES",
+            "isolated_mode": item.get("isolatedMode"),
+            "risk_state": item.get("riskState"),
+            "position_side": side,
+            "net_size": net_size,
+            "avg_price": self._coerce_optional_float(item.get("avgPrice")),
+            "mark_price": self._coerce_optional_float(item.get("markPrice")),
+            "unrealized_pnl": unrealized_pnl,
+            "initial_margin": initial_margin,
+            "maint_margin": maint_margin,
+            "liquidation_price": self._coerce_optional_float(item.get("liquidationPrice")),
+            "leverage": self._coerce_optional_float(item.get("leverage")),
+            "size_long": size_long,
+            "size_short": size_short,
+            "amount_long": self._coerce_optional_float(item.get("amountLong")),
+            "amount_short": self._coerce_optional_float(item.get("amountShort")),
+            "amount_settled": self._coerce_optional_float(item.get("amountSettled")),
+            "updated_at": item.get("updateTime") or item.get("updatedTime"),
+            "created_at": item.get("createTime") or item.get("createdTime"),
+            "raw": item,
+        }
+
+    @staticmethod
+    def _position_is_open(position: dict[str, Any]) -> bool:
+        for key in ("net_size", "size_long", "size_short", "initial_margin", "amount_long", "amount_short"):
+            value = position.get(key)
+            if value is not None and abs(float(value)) > 0:
+                return True
+        return False
+
+    def get_open_positions(self) -> dict[str, Any]:
+        if not self.client:
+            return {"account_mode": "FUTURES", "error": "PIONEX_CLIENT_NOT_CONFIGURED", "positions": []}
+        try:
+            raw_positions = self.client.get_futures_positions()
+            positions = [
+                position
+                for position in (self._normalize_futures_position(item) for item in raw_positions)
+                if self._position_is_open(position)
+            ]
+            return {
+                "account_mode": "FUTURES",
+                "open_count": len(positions),
+                "positions": positions,
+                "summary": {
+                    "total_initial_margin": sum(position.get("initial_margin") or 0.0 for position in positions),
+                    "total_maint_margin": sum(position.get("maint_margin") or 0.0 for position in positions),
+                    "total_unrealized_pnl": sum(position.get("unrealized_pnl") or 0.0 for position in positions),
+                    "zcash_open_count": sum(1 for position in positions if position.get("is_zcash")),
+                    "zcash_initial_margin": sum(
+                        position.get("initial_margin") or 0.0
+                        for position in positions
+                        if position.get("is_zcash")
+                    ),
+                    "zcash_unrealized_pnl": sum(
+                        position.get("unrealized_pnl") or 0.0
+                        for position in positions
+                        if position.get("is_zcash")
+                    ),
+                },
+            }
+        except PionexAPIError as exc:
+            return {
+                "account_mode": "FUTURES",
+                "error": exc.message,
+                "retryable": exc.retryable,
+                "positions": [],
+            }
+
+    def _normalize_bot_order(self, item: dict[str, Any]) -> dict[str, Any]:
+        data = item.get("buOrderData") or {}
+        base = str(item.get("base") or "").upper()
+        quote = str(item.get("quote") or "").upper()
+        symbol = f"{base}_{quote}" if base and quote else ""
+        margin_balance = self._coerce_optional_float(data.get("marginBalance"))
+        quote_investment = self._coerce_optional_float(data.get("quoteInvestment") or data.get("usdtInvestment"))
+        extra_balance = self._coerce_optional_float(data.get("extraBalance"))
+        return {
+            "bot_order_id": str(item.get("buOrderId") or ""),
+            "bot_type": item.get("buOrderType"),
+            "bot_name": item.get("botName") or item.get("customizeName") or item.get("note") or "",
+            "symbol": symbol,
+            "base": base,
+            "quote": quote,
+            "status": item.get("status") or data.get("status"),
+            "is_zcash": base in {"ZEC", "ZCASH"},
+            "leverage": self._coerce_optional_float(data.get("leverage")),
+            "trend": data.get("trend"),
+            "grid_type": data.get("gridType"),
+            "top": self._coerce_optional_float(data.get("top")),
+            "bottom": self._coerce_optional_float(data.get("bottom")),
+            "open_price": self._coerce_optional_float(data.get("openPrice")),
+            "position": self._coerce_optional_float(data.get("position")),
+            "position_open_price": self._coerce_optional_float(data.get("positionOpenPrice")),
+            "margin_balance": margin_balance,
+            "quote_investment": quote_investment,
+            "extra_balance": extra_balance,
+            "liquidation_price": self._coerce_optional_float(data.get("liquidationPrice")),
+            "risk_status": data.get("riskStatus"),
+            "margin_status": data.get("marginStatus"),
+            "profit_withdrawn": self._coerce_optional_float(data.get("profitWithdrawn")),
+            "created_at": item.get("createTime"),
+            "raw": item,
+        }
+
+    def get_running_bots(self) -> dict[str, Any]:
+        if not self.client:
+            return {"status": "running", "error": "PIONEX_CLIENT_NOT_CONFIGURED", "bots": []}
+        try:
+            data = self.client.get_bot_orders(status="running")
+            raw_orders = data.get("results", [])
+            detailed_orders: list[dict[str, Any]] = []
+            for order in raw_orders:
+                if order.get("buOrderType") == "futures_grid" and order.get("buOrderId"):
+                    try:
+                        detailed_orders.append(self.client.get_futures_grid_order(str(order["buOrderId"])))
+                    except PionexAPIError:
+                        detailed_orders.append(order)
+                else:
+                    detailed_orders.append(order)
+
+            bots = [self._normalize_bot_order(item) for item in detailed_orders]
+            futures_grid = [bot for bot in bots if bot.get("bot_type") == "futures_grid"]
+            zcash_bots = [bot for bot in bots if bot.get("is_zcash")]
+            return {
+                "status": "running",
+                "open_count": len(bots),
+                "bots": bots,
+                "summary": {
+                    "futures_grid_count": len(futures_grid),
+                    "zcash_bot_count": len(zcash_bots),
+                    "total_margin_balance": sum(bot.get("margin_balance") or 0.0 for bot in bots),
+                    "total_quote_investment": sum(bot.get("quote_investment") or 0.0 for bot in bots),
+                    "total_extra_balance": sum(bot.get("extra_balance") or 0.0 for bot in bots),
+                    "zcash_margin_balance": sum(bot.get("margin_balance") or 0.0 for bot in zcash_bots),
+                    "zcash_quote_investment": sum(bot.get("quote_investment") or 0.0 for bot in zcash_bots),
+                    "zcash_extra_balance": sum(bot.get("extra_balance") or 0.0 for bot in zcash_bots),
+                },
+            }
+        except PionexAPIError as exc:
+            return {
+                "status": "running",
+                "error": exc.message,
+                "retryable": exc.retryable,
+                "bots": [],
+            }
+
+    @staticmethod
+    def _coerce_optional_float(value: Any) -> float | None:
+        if value is None:
+            return None
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+
+    def get_wallet_balances(self, account_mode: str = "SPOT") -> dict[str, Any]:
+        if not self.client:
+            return {"account_mode": account_mode.upper(), "error": "PIONEX_CLIENT_NOT_CONFIGURED", "assets": []}
+        try:
+            raw_balances = (
+                self.client.get_spot_balances()
+                if account_mode.upper() == "SPOT"
+                else self.client.get_futures_balances()
+            )
+            assets = [self._normalize_asset_balance(item) for item in raw_balances]
+            usdt_asset = next((asset for asset in assets if asset["coin"] == "USDT"), None)
+            return {
+                "coin": "USDT",
+                "account_mode": account_mode.upper(),
+                "balance": usdt_asset["balance"] if usdt_asset else 0.0,
+                "asset_count": len(assets),
+                "assets": assets,
+            }
+        except PionexAPIError as exc:
+            return {
+                "account_mode": account_mode.upper(),
+                "error": exc.message,
+                "retryable": exc.retryable,
+                "assets": [],
+            }
+
+    @staticmethod
     def _is_perp_symbol(symbol: str) -> bool:
         value = (symbol or "").strip().upper()
         return value.endswith(".P") or value.endswith("_PERP")

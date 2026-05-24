@@ -53,7 +53,8 @@ async def test_root_serves_frontend():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test", follow_redirects=False) as ac:
         response = await ac.get("/")
     assert response.status_code == 200
-    assert "Pine Script Studio" in response.text
+    assert "MetricFlow Bot Command Center" in response.text
+    assert "Pine Script Studio" not in response.text
 
 @pytest.mark.asyncio
 async def test_m8_webhook_valid_payload(mock_kimi_api):
@@ -80,6 +81,7 @@ async def test_m8_webhook_valid_payload(mock_kimi_api):
     assert data["status"] == "success"
     assert data["result"]["signal_id"] == "sig-123"
     assert data["result"]["final_decision"] == "EXECUTED_SIM"
+    assert data["result"]["ai_trace"]["trace_type"] == "ai_reasoning_audit_not_hidden_chain_of_thought"
 
 @pytest.mark.asyncio
 async def test_m8_webhook_invalid_payload():

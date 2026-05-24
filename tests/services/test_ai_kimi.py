@@ -51,6 +51,8 @@ async def test_kimi_swarm_success():
         assert review.decision == DecisionEnum.PROCEED_TO_SIMULATION
         assert review.confidence == 0.95
         assert "STRONG_CONFLUENCE" in review.reason_codes
+        assert review.audit_trace["trace_type"] == "ai_reasoning_audit_not_hidden_chain_of_thought"
+        assert review.audit_trace["scouts"]["technical"] == "mocked scout response"
         assert mock_method.call_count == 4 # 3 scouts + 1 orchestrator
 
 @pytest.mark.asyncio
@@ -70,6 +72,7 @@ async def test_kimi_swarm_api_failure_fallback():
         assert review.decision == DecisionEnum.PROCEED_TO_SIMULATION
         assert "API_FALLBACK" in review.reason_codes
         assert "KIMI_UNAVAILABLE" in review.risk_flags
+        assert review.audit_trace["fallback"] is True
 
 
 @pytest.mark.asyncio

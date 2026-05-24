@@ -34,11 +34,34 @@ class BybitDataFeed:
 
     BASE = "https://api.bybit.com"
 
+    _TF_MAP = {
+        "1m": "1",
+        "5m": "5",
+        "15m": "15",
+        "30m": "30",
+        "1h": "60",
+        "4h": "240",
+        "1d": "D",
+    }
+
     @staticmethod
-    def fetch(symbol: str, bars: int = 1000) -> List[OHLCV]:
+    def _tf_to_ms(timeframe: str) -> int:
+        if timeframe.endswith("m"):
+            return int(timeframe[:-1]) * 60_000
+        if timeframe.endswith("h"):
+            return int(timeframe[:-1]) * 3_600_000
+        if timeframe == "4h":
+            return 14_400_000
+        if timeframe == "1d":
+            return 86_400_000
+        return 60_000
+
+    @classmethod
+    def fetch(cls, symbol: str, bars: int = 1000, timeframe: str = "1m") -> List[OHLCV]:
+        interval = cls._TF_MAP.get(timeframe, "1")
         all_bars: List[OHLCV] = []
         end_ms = int(time.time() * 1000)
-        tf_ms = 60_000
+        tf_ms = cls._tf_to_ms(timeframe)
 
         while len(all_bars) < bars:
             remaining = bars - len(all_bars)
@@ -48,7 +71,7 @@ class BybitDataFeed:
                 params={
                     "category": "linear",
                     "symbol": symbol,
-                    "interval": "1",
+                    "interval": interval,
                     "end": end_ms,
                     "limit": limit,
                 },
@@ -139,7 +162,7 @@ class SignalGenerator:
         sl_atr_mul = cal_params.get("sl_atr_mul", 1.4)
         tp_atr_mul = cal_params.get("tp_atr_mul", 2.8)
 
-        raw_bars = self.feed.fetch(symbol, bars)
+        raw_bars = self.feed.fetch(symbol, bars, timeframe)
         if len(raw_bars) < 50:
             self.last_generation_summary = {
                 "symbol": symbol,

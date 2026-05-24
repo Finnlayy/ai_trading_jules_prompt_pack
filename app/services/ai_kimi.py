@@ -18,6 +18,7 @@ from app.core.config import (
     OPENAI_BASE_URL,
     OPENAI_MODEL,
 )
+from app.services.ai_layer_memory import ai_layer_memory_instance
 
 
 @dataclass(frozen=True)
@@ -80,6 +81,17 @@ class KimiSwarmService:
             return get_ai_provider_config(self.provider).unavailable_flag
         except Exception:
             return "AI_PROVIDER_UNAVAILABLE"
+
+    def _behavior_guidance(self) -> str:
+        return ai_layer_memory_instance.behavior_prompt()
+
+    def _trace_base(self) -> dict[str, Any]:
+        return {
+            "trace_type": "ai_reasoning_audit_not_hidden_chain_of_thought",
+            "provider": self.provider or AI_PROVIDER,
+            "behavior_profile": ai_layer_memory_instance.get_profile().model_dump(),
+            "behavior_prompt": self._behavior_guidance(),
+        }
     
     async def review_signal(self, payload: M8Payload) -> SignalReview:
         try:
@@ -93,7 +105,24 @@ class KimiSwarmService:
             )
             
             # Orchestrator synthesizes the responses
-            return await self._run_orchestrator(payload, sentiment_analysis, technical_analysis, risk_analysis)
+            review = await self._run_orchestrator(payload, sentiment_analysis, technical_analysis, risk_analysis)
+            review.audit_trace = {
+                **self._trace_base(),
+                "scouts": {
+                    "sentiment": sentiment_analysis,
+                    "technical": technical_analysis,
+                    "risk": risk_analysis,
+                },
+                "final_summary": {
+                    "decision": review.decision.value,
+                    "confidence": review.confidence,
+                    "reason_codes": review.reason_codes,
+                    "risk_flags": review.risk_flags,
+                    "requires_human_review": review.requires_human_review,
+                    "reject_reason": review.reject_reason,
+                },
+            }
+            return review
             
         except Exception as e:
             print(f"AI provider error ({self.provider or AI_PROVIDER}): {e}")
@@ -106,20 +135,40 @@ class KimiSwarmService:
                 reason_codes=["API_FALLBACK"],
                 risk_flags=[self._provider_unavailable_flag()],
                 reject_reason=None,
-                requires_human_review=False
+                requires_human_review=False,
+                audit_trace={
+                    **self._trace_base(),
+                    "fallback": True,
+                    "error_type": type(e).__name__,
+                    "final_summary": {
+                        "decision": DecisionEnum.PROCEED_TO_SIMULATION.value,
+                        "confidence": 0.5,
+                        "reason_codes": ["API_FALLBACK"],
+                        "risk_flags": [self._provider_unavailable_flag()],
+                    },
+                },
             )
 
     async def _run_sentiment_scout(self, payload: M8Payload) -> str:
         prompt = f"Analyze sentiment for {payload.symbol} at {payload.timestamp}. Is there any macro news?"
-        return await self._call_kimi(prompt, system="You are a market sentiment expert. Keep it brief.")
+        return await self._call_kimi(
+            prompt,
+            system=f"You are a market sentiment expert. Keep it brief.\n\n{self._behavior_guidance()}",
+        )
 
     async def _run_technical_scout(self, payload: M8Payload) -> str:
         prompt = f"Review technicals: Direction: {payload.direction}, Confluence: {payload.confluence_score}, Dispersion: {payload.mc_dispersion}."
-        return await self._call_kimi(prompt, system="You are a quant technical analyst. Assess setup quality.")
+        return await self._call_kimi(
+            prompt,
+            system=f"You are a quant technical analyst. Assess setup quality.\n\n{self._behavior_guidance()}",
+        )
 
     async def _run_risk_scout(self, payload: M8Payload) -> str:
         prompt = f"Assess risk: Crisis Score is {payload.crisis_score}. Spread is {payload.spread}."
-        return await self._call_kimi(prompt, system="You are a risk manager. Flag any anomalies.")
+        return await self._call_kimi(
+            prompt,
+            system=f"You are a risk manager. Flag any anomalies.\n\n{self._behavior_guidance()}",
+        )
 
     async def _run_orchestrator(self, payload: M8Payload, sentiment: str, tech: str, risk: str) -> SignalReview:
         schema_format = """
@@ -149,7 +198,11 @@ class KimiSwarmService:
         
         json_output = await self._call_kimi(
             prompt, 
-            system="You are the lead trading orchestrator. You MUST return strictly valid JSON. Do not include markdown code blocks.",
+            system=(
+                "You are the lead trading orchestrator. You MUST return strictly valid JSON. "
+                "Do not include markdown code blocks.\n\n"
+                f"{self._behavior_guidance()}"
+            ),
             response_format={"type": "json_object"}
         )
         

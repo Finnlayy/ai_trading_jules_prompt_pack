@@ -1,6 +1,6 @@
 from enum import Enum
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 class DecisionEnum(str, Enum):
     PROCEED_TO_SIMULATION = "PROCEED_TO_SIMULATION"
@@ -16,3 +16,4 @@ class SignalReview(BaseModel):
     risk_flags: List[str]
     reject_reason: Optional[str] = None
     requires_human_review: bool
+    audit_trace: Optional[Dict[str, Any]] = None

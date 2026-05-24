@@ -290,3 +290,143 @@ def test_pionex_direct_broker_futures_mode3_applies_payload_leverage(tmp_path):
     assert entry.result["status"] == "SENT_TO_PIONEX_DIRECT"
     assert fake.leverage_calls == 1
     assert fake.order_calls == 1
+
+
+def test_pionex_direct_broker_returns_full_wallet_assets(tmp_path):
+    broker = PionexDirectBroker(
+        config=PionexDirectConfig(
+            enabled=True,
+            live_trading_enabled=False,
+            api_key="k",
+            api_secret="s",
+            allowed_symbols=("BTC_USDT",),
+        ),
+        journal_path=str(tmp_path / "journal.jsonl"),
+    )
+
+    class FakeClient:
+        def get_spot_balances(self):
+            return [
+                {"coin": "USDT", "available": "8.4", "locked": "0"},
+                {"coin": "ETH", "available": "0.2", "locked": "0.01", "usdValue": "700"},
+            ]
+
+        def get_futures_balances(self):
+            return [
+                {"coin": "USDT", "available": "19.00", "frozen": "0.38"},
+                {"coin": "BTC", "available": "0.01", "usdValue": "650"},
+            ]
+
+    broker.client = FakeClient()
+
+    primary = broker.get_wallet_balances(account_mode="SPOT")
+    futures = broker.get_wallet_balances(account_mode="FUTURES")
+
+    assert primary["balance"] == 8.4
+    assert primary["assets"][1]["coin"] == "ETH"
+    assert primary["assets"][1]["value_usdt"] == 700.0
+    assert futures["balance"] == 19.38
+    assert futures["assets"][0]["available"] == 19.0
+    assert futures["assets"][0]["locked"] == 0.38
+    assert futures["assets"][0]["value_usdt"] == 19.38
+    assert futures["assets"][1]["coin"] == "BTC"
+
+
+def test_pionex_direct_broker_returns_open_futures_positions(tmp_path):
+    broker = PionexDirectBroker(
+        config=PionexDirectConfig(
+            enabled=True,
+            live_trading_enabled=False,
+            api_key="k",
+            api_secret="s",
+            allowed_symbols=("ZEC_USDT_PERP",),
+        ),
+        journal_path=str(tmp_path / "journal.jsonl"),
+    )
+
+    class FakeClient:
+        def get_futures_positions(self):
+            return [
+                {
+                    "positionId": "pos-1",
+                    "symbol": "ZEC_USDT_PERP",
+                    "positionSide": "LONG",
+                    "netSize": "0.4",
+                    "avgPrice": "42",
+                    "markPrice": "43",
+                    "initialMargin": "8.25",
+                    "maintMargin": "0.33",
+                    "unrealizedPnL": "0.4",
+                    "leverage": "5",
+                    "liquidationPrice": "30",
+                    "isolatedMode": "ISOLATED",
+                    "riskState": "NORMAL",
+                }
+            ]
+
+    broker.client = FakeClient()
+
+    positions = broker.get_open_positions()
+
+    assert positions["open_count"] == 1
+    assert positions["positions"][0]["symbol"] == "ZEC_USDT_PERP"
+    assert positions["positions"][0]["is_zcash"] is True
+    assert positions["summary"]["total_initial_margin"] == 8.25
+    assert positions["summary"]["zcash_initial_margin"] == 8.25
+    assert positions["summary"]["total_unrealized_pnl"] == 0.4
+
+
+def test_pionex_direct_broker_returns_running_bot_margin(tmp_path):
+    broker = PionexDirectBroker(
+        config=PionexDirectConfig(
+            enabled=True,
+            live_trading_enabled=False,
+            api_key="k",
+            api_secret="s",
+            allowed_symbols=("ZEC_USDT_PERP",),
+        ),
+        journal_path=str(tmp_path / "journal.jsonl"),
+    )
+
+    class FakeClient:
+        def get_bot_orders(self, status="running"):
+            return {
+                "results": [
+                    {
+                        "buOrderId": "bot-1",
+                        "buOrderType": "futures_grid",
+                        "base": "ZEC",
+                        "quote": "USDT",
+                    }
+                ]
+            }
+
+        def get_futures_grid_order(self, bu_order_id):
+            return {
+                "buOrderId": bu_order_id,
+                "buOrderType": "futures_grid",
+                "base": "ZEC",
+                "quote": "USDT",
+                "status": "running",
+                "botName": "Zcash grid",
+                "buOrderData": {
+                    "marginBalance": "9.5",
+                    "quoteInvestment": "10",
+                    "extraBalance": "0.5",
+                    "position": "0.2",
+                    "leverage": "3",
+                    "liquidationPrice": "20",
+                    "riskStatus": "TRADING",
+                },
+            }
+
+    broker.client = FakeClient()
+
+    bots = broker.get_running_bots()
+
+    assert bots["open_count"] == 1
+    assert bots["bots"][0]["symbol"] == "ZEC_USDT"
+    assert bots["bots"][0]["is_zcash"] is True
+    assert bots["summary"]["zcash_bot_count"] == 1
+    assert bots["summary"]["zcash_margin_balance"] == 9.5
+    assert bots["summary"]["total_quote_investment"] == 10.0

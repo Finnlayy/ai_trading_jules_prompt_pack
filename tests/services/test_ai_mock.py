@@ -27,6 +27,7 @@ def test_ai_review_proceed():
     assert review.decision == DecisionEnum.PROCEED_TO_SIMULATION
     assert "FAVORABLE_SETUP" in review.reason_codes
     assert review.requires_human_review is False
+    assert review.audit_trace["provider"] == "mock"
 
 def test_ai_review_weak_confluence_warning():
     layer = MockAIReviewLayer()

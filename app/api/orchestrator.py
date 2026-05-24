@@ -97,6 +97,11 @@ async def process_signal(payload: M8Payload):
         
     return {
         "signal_id": payload.signal_id,
+        "trade_id": journal_entry.trade_id,
         "final_decision": journal_entry.final_decision,
-        "reject_reason": journal_entry.result.get("reject_reason") if journal_entry.result else None
+        "ai_decision": ai_review.decision,
+        "ai_trace": ai_review.audit_trace,
+        "reject_reason": journal_entry.result.get("reject_reason") if journal_entry.result else None,
+        "broker_result": journal_entry.result,
+        "simulated_fill": journal_entry.simulated_fill,
     }
