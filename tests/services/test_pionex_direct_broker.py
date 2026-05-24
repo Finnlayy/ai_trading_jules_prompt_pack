@@ -222,14 +222,15 @@ def test_pionex_direct_broker_live_spot_entry_calls_client(tmp_path):
     class FakeClient:
         def __init__(self):
             self.buy_called = False
+            self.client_order_id = None
 
         def get_balance(self, coin="USDT", account="spot"):
             return 500.0
 
         def place_spot_market_buy(self, symbol: str, amount_usdt: float, client_order_id: str = None):
             self.buy_called = True
-            self.captured_client_order_id = client_order_id
-            return {"orderId": "spot-live-1", "symbol": symbol, "amount": amount_usdt}
+            self.client_order_id = client_order_id
+            return {"orderId": "spot-live-1", "symbol": symbol, "amount": amount_usdt, "clientOrderId": client_order_id}
 
     fake = FakeClient()
     broker.client = fake
@@ -262,6 +263,8 @@ def test_pionex_direct_broker_futures_mode3_applies_payload_leverage(tmp_path):
         def __init__(self):
             self.leverage_calls = 0
             self.order_calls = 0
+            self.client_order_id = None
+            self.client_order_id = None
 
         def get_balance(self, coin="USDT", account="futures"):
             return 500.0
@@ -272,7 +275,6 @@ def test_pionex_direct_broker_futures_mode3_applies_payload_leverage(tmp_path):
 
         def place_futures_market_order(self, **kwargs):
             self.order_calls += 1
-            self.captured_kwargs = kwargs
             return {"orderId": "fut-live-1", **kwargs}
 
     fake = FakeClient()
@@ -290,3 +292,5 @@ def test_pionex_direct_broker_futures_mode3_applies_payload_leverage(tmp_path):
     assert entry.result["status"] == "SENT_TO_PIONEX_DIRECT"
     assert fake.leverage_calls == 1
     assert fake.order_calls == 1
+    assert fake.client_order_id == None # kwargs order
+    assert entry.simulated_fill["client_order_id"] == "direct-live-2_BTC_USDT_PERP_FUTURES_SHORT_ENTRY"

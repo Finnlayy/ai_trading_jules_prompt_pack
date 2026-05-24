@@ -60,6 +60,8 @@
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab)}
+                                aria-label={`Navigate to ${tab}`}
+                                className={`text-left px-4 py-3 text-sm uppercase tracking-wider ${activeTab === tab ? 'bg-gray-800 text-matteMint border-l-4 border-matteMint' : 'text-gray-400 hover:text-white hover:bg-gray-800 border-l-4 border-transparent'} transition-colors`}
                                 className={`text-left px-4 py-3 text-sm uppercase tracking-wider ${activeTab === tab ? 'bg-gray-800 text-matteMint border-l-4 border-matteMint' : 'text-gray-400 hover:text-white hover:bg-gray-800 border-l-4 border-transparent'} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-matteMint focus-visible:ring-offset-2 focus-visible:ring-offset-terminalBlack transition-colors`}
                             >
                                 {tab}
@@ -168,6 +170,7 @@
                                     max="50"
                                     value={slippage}
                                     onChange={(e) => setSlippage(e.target.value)}
+                                    className="w-full accent-matteMint cursor-pointer mb-2 focus-visible:ring-2 focus-visible:ring-matteMint focus:outline-none"
                                     className="w-full accent-matteMint cursor-pointer mb-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-matteMint focus-visible:ring-offset-2 focus-visible:ring-offset-terminalBlack"
                                 />
                                 <p className="text-xs text-gray-500">Inject worst-case fill slippage to simulate toxic market conditions.</p>
@@ -180,6 +183,7 @@
                                 </div>
                                 <button
                                     onClick={() => setLiquidityVacuum(!liquidityVacuum)}
+                                    className={`px-6 py-2 text-xs uppercase font-bold tracking-wider border ${liquidityVacuum ? 'bg-mutedRust text-white border-mutedRust' : 'bg-terminalBlack text-gray-400 border-gray-700'} hover:border-gray-500 focus-visible:ring-2 focus-visible:ring-matteMint focus:outline-none transition-colors`}
                                     aria-pressed={liquidityVacuum}
                                     className={`px-6 py-2 text-xs uppercase font-bold tracking-wider border ${liquidityVacuum ? 'bg-mutedRust text-white border-mutedRust' : 'bg-terminalBlack text-gray-400 border-gray-700'} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-matteMint focus-visible:ring-offset-2 focus-visible:ring-offset-terminalBlack transition-colors`}
                                 >
@@ -194,6 +198,7 @@
                                 </div>
                                 <button
                                     onClick={() => setToxicMonday(!toxicMonday)}
+                                    className={`px-6 py-2 text-xs uppercase font-bold tracking-wider border ${toxicMonday ? 'bg-matteMint text-black border-matteMint' : 'bg-terminalBlack text-gray-400 border-gray-700'} hover:border-gray-500 focus-visible:ring-2 focus-visible:ring-matteMint focus:outline-none transition-colors`}
                                     aria-pressed={toxicMonday}
                                     className={`px-6 py-2 text-xs uppercase font-bold tracking-wider border ${toxicMonday ? 'bg-matteMint text-black border-matteMint' : 'bg-terminalBlack text-gray-400 border-gray-700'} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-matteMint focus-visible:ring-offset-2 focus-visible:ring-offset-terminalBlack transition-colors`}
                                 >
@@ -286,17 +291,10 @@
             };
 
             return (
-                <div className="flex flex-col h-screen w-full bg-terminalBlack selection:bg-matteMint selection:text-black">
-                    <div role="alert" aria-live="assertive" className="w-full bg-mutedRust text-white text-center py-2 text-sm font-bold uppercase tracking-wider flex items-center justify-center gap-2 border-b border-red-900">
-                        <span aria-hidden="true">⚠️</span>
-                        Operator Notice: This is a static UI mockup. Live execution is disabled. Data shown is simulated.
-                        <span aria-hidden="true">⚠️</span>
-                    </div>
-                    <div className="flex flex-1 overflow-hidden">
-                        <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-                        <div className="flex-1 overflow-y-auto">
-                            {renderContent()}
-                        </div>
+                <div className="flex h-screen w-full bg-terminalBlack selection:bg-matteMint selection:text-black">
+                    <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+                    <div className="flex-1 overflow-y-auto">
+                        {renderContent()}
                     </div>
                 </div>
             );

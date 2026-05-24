@@ -6,12 +6,9 @@ and runs them through the full M8 pipeline (AI Review → Risk Engine → Broker
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
-import logging
 from typing import List, Optional
 
 from app.services.signal_generator import signal_generator_instance
-
-logger = logging.getLogger(__name__)
 from app.api.orchestrator import process_signal, reset_broker, _get_broker
 from app.services.risk_engine import risk_engine_instance
 from app.core.config import BROKER_MODE
@@ -102,8 +99,7 @@ async def run_backtest(
         }
 
     except Exception as e:
-        logger.exception("Unexpected error")
-        raise HTTPException(status_code=500, detail="Internal server error while processing signal.")
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get("/status")

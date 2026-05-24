@@ -5,11 +5,6 @@ from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 from app.core.config import (
-    PIONEX_DIRECT_ENABLED,
-    PIONEX_DIRECT_LIVE_TRADING_ENABLED,
-    PIONEX_API_KEY,
-    PIONEX_API_SECRET,
-    PIONEX_ALLOWED_SYMBOLS,
     KELLY_DEPLOY_MODE,
     KELLY_FIXED_RISK_PCT,
     KELLY_LOOKBACK_TRADES,
@@ -53,6 +48,7 @@ class PionexDirectConfig:
     live_trading_enabled: bool = PIONEX_DIRECT_LIVE_TRADING_ENABLED
     api_key: str = PIONEX_API_KEY
     api_secret: str = PIONEX_API_SECRET
+    allowed_symbols: list[str] = None
     allowed_symbols: Optional[tuple[str, ...]] = None
     base_url: str = PIONEX_DIRECT_BASE_URL
     timeout_seconds: float = PIONEX_DIRECT_TIMEOUT_SECONDS
@@ -113,12 +109,16 @@ class PionexDirectBroker:
 
     base_url: str = PIONEX_DIRECT_BASE_URL
     timeout_seconds: float = PIONEX_DIRECT_TIMEOUT_SECONDS
-    allowed_symbols: tuple[str, ...] = tuple(PIONEX_ALLOWED_SYMBOLS)
     default_spot_symbol: str = PIONEX_DIRECT_DEFAULT_SPOT_SYMBOL
     default_futures_symbol: str = PIONEX_DIRECT_DEFAULT_FUTURES_SYMBOL
     futures_enabled: bool = PIONEX_DIRECT_FUTURES_ENABLED
     futures_mode: str = PIONEX_DIRECT_FUTURES_MODE
     allow_payload_leverage: bool = PIONEX_DIRECT_ALLOW_PAYLOAD_LEVERAGE
+
+    def __post_init__(self):
+        if self.allowed_symbols is None:
+            symbols = [s.strip() for s in PIONEX_ALLOWED_SYMBOLS.split(",") if s.strip()]
+            object.__setattr__(self, "allowed_symbols", symbols)
 
 
 class PionexDirectBroker:
@@ -208,6 +208,9 @@ class PionexDirectBroker:
             return "FUTURES"
         return account_mode
 
+    def _client_order_id(self, payload: M8Payload, symbol: str, account_mode: str, side: str) -> str:
+        return f"{payload.signal_id}_{symbol}_{account_mode}_{side}_{payload.intent}"
+
     def _normalized_symbol(self, symbol: str, account_mode: str) -> str:
         value = (symbol or "").strip().upper()
         if not value:
@@ -270,21 +273,6 @@ class PionexDirectBroker:
             simulated_fill=simulated_fill,
             result=result,
         )
-
-        self.journal.append(entry)
-        return entry
-
-    def _send_to_direct_api(self, payload: M8Payload, mapped_symbol: str) -> tuple[FinalDecisionEnum, Dict[str, Any]]:
-        # In a real implementation, this would construct the authenticated requests
-        # to the actual Pionex Direct API and handle signatures.
-
-        # Simulating successful API call for live trading MVP architecture
-        return FinalDecisionEnum.EXECUTED_SIM, {
-            "status": "SENT_TO_PIONEX_DIRECT",
-            "reject_reason": None,
-            "mapped_symbol": mapped_symbol,
-            "mock_live_response": "ok"
-        }
         self.journal.append(entry)
         return entry
 
@@ -399,8 +387,8 @@ class PionexDirectBroker:
         )
         entry_side = payload.direction.upper()
         live_mode = self.config.live_trading_enabled and self.client is not None
+        client_order_id = self._client_order_id(payload, symbol, account_mode, entry_side)
         trade_id = f"pionex-direct-{payload.signal_id}"
-        client_order_id = f"{payload.signal_id}_{symbol}_{account_mode}_{entry_side}_{payload.intent}"
 
         simulated_fill: dict[str, Any] = {
             "mode": "PIONEX_DIRECT",
@@ -558,8 +546,7 @@ class PionexDirectBroker:
             close_side = "BUY"
 
         live_mode = self.config.live_trading_enabled and self.client is not None
-        client_order_id = f"{payload.signal_id}_{symbol}_{account_mode}_{close_side}_{payload.intent}"
-
+        client_order_id = self._client_order_id(payload, symbol, account_mode, close_side)
         simulated_fill = {
             "mode": "PIONEX_DIRECT",
             "live_mode": live_mode,
@@ -604,6 +591,7 @@ class PionexDirectBroker:
                     account_mode=account_mode,
                     direction=direction,
                     size_base=closed_size_base,
+                    client_order_id=client_order_id,
                     entry_price=entry_price,
                     risk_amount=risk_amount,
                 )
