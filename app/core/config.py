@@ -66,7 +66,6 @@ GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-pro")
 
 # Broker mode selection
 BROKER_MODE = os.getenv("BROKER_MODE", "simulation").strip().lower()
-# Pionex Relay Config
 
 # Relay broker configuration
 PIONEX_RELAY_URL = os.getenv("PIONEX_RELAY_URL", "http://127.0.0.1:5000/webhook")
@@ -120,6 +119,9 @@ WAR_ROOM_VIP_RELATIVE_VOLUME = _as_float(os.getenv("WAR_ROOM_VIP_RELATIVE_VOLUME
 WAR_ROOM_VIP_MAX_CRISIS_SCORE = _as_float(os.getenv("WAR_ROOM_VIP_MAX_CRISIS_SCORE"), 15.0)
 WAR_ROOM_VIP_MAX_MC_DISPERSION = _as_float(os.getenv("WAR_ROOM_VIP_MAX_MC_DISPERSION"), 2.5)
 
+# Webhook authentication
+WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "")
+
 # Offline/backtest signal generator controls
 SIGNAL_MIN_CONFLUENCE_OVERRIDE = _as_optional_float(os.getenv("SIGNAL_MIN_CONFLUENCE_OVERRIDE"))
 
@@ -128,20 +130,12 @@ TELEGRAM_NOTIFICATIONS_ENABLED = _as_bool(os.getenv("TELEGRAM_NOTIFICATIONS_ENAB
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 
-# Pionex Direct Config
-PIONEX_DIRECT_ENABLED = os.getenv("PIONEX_DIRECT_ENABLED", "false").strip().lower() == "true"
-PIONEX_DIRECT_LIVE_TRADING_ENABLED = os.getenv("PIONEX_DIRECT_LIVE_TRADING_ENABLED", "false").strip().lower() == "true"
-PIONEX_API_KEY = os.getenv("PIONEX_API_KEY", "")
-PIONEX_API_SECRET = os.getenv("PIONEX_API_SECRET", "")
-PIONEX_ALLOWED_SYMBOLS = os.getenv("PIONEX_ALLOWED_SYMBOLS", "BTC_USDT,ETH_USDT,XAG_USDT_PERP")
-
-# core config placeholder
 # Deterministic risk-gate defaults
 MIN_RR_RATIO = 2.0
 MAX_SPREAD = 15.0
 MIN_CONFLUENCE_SCORE = 70.0
 MAX_CRISIS_SCORE = 30.0
 MAX_MC_DISPERSION = 5.0
-MAX_DAILY_DRAWDOWN = 1000.0
+MAX_DAILY_DRAWDOWN = _as_float(os.getenv("MAX_DAILY_DRAWDOWN"), 5.0)
 MAX_TRADES_PER_DAY = 5
 COOLDOWN_BARS = 3

@@ -4,7 +4,9 @@ from app.schemas.journal import DecisionEnum, FinalDecisionEnum
 from app.core.config import MIN_RR_RATIO, MAX_SPREAD, MIN_CONFLUENCE_SCORE, MAX_CRISIS_SCORE, MAX_MC_DISPERSION, COOLDOWN_BARS, MAX_TRADES_PER_DAY
 from app.core.exceptions import RiskGateException
 from app.services.war_room_rules import ai_rule_violation, classify_order
-from typing import Optional, Dict
+from app.services.portfolio_circuit_breaker import circuit_breaker_instance
+from app.services.correlation_risk import correlation_checker
+from typing import Optional, Dict, List
 
 class RiskEngine:
     def __init__(self):
@@ -12,6 +14,7 @@ class RiskEngine:
         self.trades_today = 0
         self.last_trade_bar = -1
         self.current_bar = 0
+        self.open_positions: List[dict] = []  # for correlation risk checks
 
     def evaluate(self, payload: M8Payload, ai_review: Optional[SignalReview] = None) -> Dict:
         """
@@ -33,6 +36,8 @@ class RiskEngine:
             self._gate_rr(payload)
             self._gate_cooldown()
             self._gate_max_trades()
+            self._gate_portfolio_drawdown()
+            self._gate_correlation_risk(payload)
             if ai_review:
                 self._gate_ai_conflict(payload, ai_review)
 
@@ -102,6 +107,19 @@ class RiskEngine:
             raise RiskGateException("AI review rejected the signal", "AI_REJECT")
         if ai_review.requires_human_review:
              raise RiskGateException("AI requires human review", "AI_HUMAN_REVIEW_REQUIRED")
+
+    def _gate_portfolio_drawdown(self):
+        cb = circuit_breaker_instance.check_trade_allowed()
+        if not cb["trade_allowed"]:
+            raise RiskGateException(
+                f"Portfolio circuit breaker active: {cb['reason']}",
+                "PORTFOLIO_DRAWDOWN_HALT"
+            )
+
+    def _gate_correlation_risk(self, payload: M8Payload):
+        result = correlation_checker.check_new_entry(payload.symbol, self.open_positions)
+        if not result["allowed"]:
+            raise RiskGateException(result["reason"], "CORRELATION_RISK_LIMIT")
 
 
 # Global instance for FastAPI usage

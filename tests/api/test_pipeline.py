@@ -41,7 +41,7 @@ def mock_kimi_api():
             })
         return "mocked scout response"
         
-    with patch.object(ai_review_instance, '_call_kimi', new_callable=AsyncMock) as mock_method:
+    with patch.object(ai_review_instance, '_call_llm', new_callable=AsyncMock) as mock_method:
         mock_method.side_effect = mock_call_kimi
         yield mock_method
 
@@ -62,7 +62,7 @@ def mock_kimi_api_reject():
             })
         return "mocked scout response"
         
-    with patch.object(ai_review_instance, '_call_kimi', new_callable=AsyncMock) as mock_method:
+    with patch.object(ai_review_instance, '_call_llm', new_callable=AsyncMock) as mock_method:
         mock_method.side_effect = mock_call_kimi
         yield mock_method
 

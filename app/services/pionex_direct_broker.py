@@ -5,11 +5,6 @@ from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 from app.core.config import (
-    PIONEX_DIRECT_ENABLED,
-    PIONEX_DIRECT_LIVE_TRADING_ENABLED,
-    PIONEX_API_KEY,
-    PIONEX_API_SECRET,
-    PIONEX_ALLOWED_SYMBOLS,
     KELLY_DEPLOY_MODE,
     KELLY_FIXED_RISK_PCT,
     KELLY_LOOKBACK_TRADES,
@@ -64,61 +59,12 @@ class PionexDirectConfig:
 
     def __post_init__(self):
         if self.allowed_symbols is None:
-            symbols = tuple(s.strip() for s in PIONEX_ALLOWED_SYMBOLS.split(",") if s.strip())
+            raw = PIONEX_ALLOWED_SYMBOLS
+            if isinstance(raw, list):
+                symbols = tuple(s.strip() for s in raw if s.strip())
+            else:
+                symbols = tuple(s.strip() for s in str(raw).split(",") if s.strip())
             object.__setattr__(self, "allowed_symbols", symbols)
-
-
-class PionexDirectBroker:
-    """
-    Broker adapter for the external Pionex Direct API.
-
-    Safety defaults:
-    - If PIONEX_DIRECT_LIVE_TRADING_ENABLED=false, operates in DRY-RUN mode.
-    - Enforces a strict allowlist of symbols.
-    - Only forwards signals after the deterministic risk engine returns PROCEED_TO_SIMULATION.
-    """
-
-    def __init__(self, config: Optional[PionexDirectConfig] = None) -> None:
-        self.config = config or PionexDirectConfig()
-        self.journal: list[TradeJournalEntry] = []
-
-    def is_ready(self) -> bool:
-        return bool(
-            self.config.enabled
-            and self.config.api_key
-            and self.config.api_secret
-        )
-
-    def _map_symbol(self, symbol: str) -> Optional[str]:
-        # Handle cases like XAGUSDT.P -> XAG_USDT_PERP
-        mapping = {
-            "XAGUSDT.P": "XAG_USDT_PERP",
-            "BTCUSD": "BTC_USDT",
-            "ETHUSD": "ETH_USDT",
-        }
-        mapped = mapping.get(symbol, symbol)
-        if mapped in self.config.allowed_symbols:
-            return mapped
-        return None
-
-    def execute_trade(
-        self,
-        payload: M8Payload,
-        decision: DecisionEnum,
-        reject_reason: Optional[str] = None,
-        ai_decision: AIDecisionEnum = AIDecisionEnum.PROCEED_TO_SIMULATION,
-    ) -> TradeJournalEntry:
-        simulated_fill: Dict[str, Any] = {}
-        result: Dict[str, Any]
-
-    base_url: str = PIONEX_DIRECT_BASE_URL
-    timeout_seconds: float = PIONEX_DIRECT_TIMEOUT_SECONDS
-    allowed_symbols: tuple[str, ...] = tuple(PIONEX_ALLOWED_SYMBOLS)
-    default_spot_symbol: str = PIONEX_DIRECT_DEFAULT_SPOT_SYMBOL
-    default_futures_symbol: str = PIONEX_DIRECT_DEFAULT_FUTURES_SYMBOL
-    futures_enabled: bool = PIONEX_DIRECT_FUTURES_ENABLED
-    futures_mode: str = PIONEX_DIRECT_FUTURES_MODE
-    allow_payload_leverage: bool = PIONEX_DIRECT_ALLOW_PAYLOAD_LEVERAGE
 
 
 class PionexDirectBroker:
@@ -184,6 +130,17 @@ class PionexDirectBroker:
         if self.config.live_trading_enabled and not self._has_credentials():
             return False
         return True
+
+    def _map_symbol(self, symbol: str) -> Optional[str]:
+        mapping = {
+            "XAGUSDT.P": "XAG_USDT_PERP",
+            "BTCUSD": "BTC_USDT",
+            "ETHUSD": "ETH_USDT",
+        }
+        mapped = mapping.get(symbol, symbol)
+        if mapped in self.config.allowed_symbols:
+            return mapped
+        return None
 
     def get_balance(self, account_mode: str = "SPOT") -> dict[str, Any]:
         if not self.client:
@@ -446,6 +403,9 @@ class PionexDirectBroker:
             return "FUTURES"
         return account_mode
 
+    def _client_order_id(self, payload: M8Payload, symbol: str, account_mode: str, side: str) -> str:
+        return f"{payload.signal_id}_{symbol}_{account_mode}_{side}_{payload.intent}"
+
     def _normalized_symbol(self, symbol: str, account_mode: str) -> str:
         value = (symbol or "").strip().upper()
         if not value:
@@ -508,21 +468,6 @@ class PionexDirectBroker:
             simulated_fill=simulated_fill,
             result=result,
         )
-
-        self.journal.append(entry)
-        return entry
-
-    def _send_to_direct_api(self, payload: M8Payload, mapped_symbol: str) -> tuple[FinalDecisionEnum, Dict[str, Any]]:
-        # In a real implementation, this would construct the authenticated requests
-        # to the actual Pionex Direct API and handle signatures.
-
-        # Simulating successful API call for live trading MVP architecture
-        return FinalDecisionEnum.EXECUTED_SIM, {
-            "status": "SENT_TO_PIONEX_DIRECT",
-            "reject_reason": None,
-            "mapped_symbol": mapped_symbol,
-            "mock_live_response": "ok"
-        }
         self.journal.append(entry)
         return entry
 
@@ -637,8 +582,8 @@ class PionexDirectBroker:
         )
         entry_side = payload.direction.upper()
         live_mode = self.config.live_trading_enabled and self.client is not None
+        client_order_id = self._client_order_id(payload, symbol, account_mode, entry_side)
         trade_id = f"pionex-direct-{payload.signal_id}"
-        client_order_id = f"{payload.signal_id}_{symbol}_{account_mode}_{entry_side}_{payload.intent}"
 
         simulated_fill: dict[str, Any] = {
             "mode": "PIONEX_DIRECT",
@@ -733,9 +678,18 @@ class PionexDirectBroker:
         client_order_id: Optional[str] = None,
     ) -> dict[str, Any]:
         assert self.client is not None
+        stop_loss = payload.stop_price if payload.stop_price > 0 else None
+        take_profit = payload.target_price if payload.target_price > 0 else None
+
         if account_mode == "SPOT":
             if payload.direction == "LONG":
-                return self.client.place_spot_market_buy(symbol=symbol, amount_usdt=order_value_usdt, client_order_id=client_order_id)
+                return self.client.place_spot_market_buy(
+                    symbol=symbol,
+                    amount_usdt=order_value_usdt,
+                    client_order_id=client_order_id,
+                    stop_loss=stop_loss,
+                    take_profit=take_profit,
+                )
             if payload.direction == "SHORT":
                 raise PionexAPIError("SPOT_SHORT_NOT_SUPPORTED", retryable=False)
             raise PionexAPIError("UNKNOWN_DIRECTION", retryable=False)
@@ -750,6 +704,8 @@ class PionexDirectBroker:
             reduce_only=False,
             position_side="BOTH",
             client_order_id=client_order_id,
+            stop_loss=stop_loss,
+            take_profit=take_profit,
         )
 
     def _close_position(self, payload: M8Payload, symbol: str, account_mode: str, ai_decision: AIDecisionEnum) -> TradeJournalEntry:
@@ -796,8 +752,7 @@ class PionexDirectBroker:
             close_side = "BUY"
 
         live_mode = self.config.live_trading_enabled and self.client is not None
-        client_order_id = f"{payload.signal_id}_{symbol}_{account_mode}_{close_side}_{payload.intent}"
-
+        client_order_id = self._client_order_id(payload, symbol, account_mode, close_side)
         simulated_fill = {
             "mode": "PIONEX_DIRECT",
             "live_mode": live_mode,
@@ -824,6 +779,24 @@ class PionexDirectBroker:
             },
         }
 
+        # Record trade outcome in confidence registry (before potential rollback)
+        if risk_amount and risk_amount > 0:
+            rr_achieved = abs(realized_pnl / risk_amount)
+            pnl_pct = (realized_pnl / risk_amount) * 100.0
+        else:
+            rr_achieved = 0.0
+            pnl_pct = 0.0
+        from app.services.confidence_registry import confidence_registry
+        from app.services.portfolio_circuit_breaker import circuit_breaker_instance
+        confidence_registry.record_trade_outcome(
+            symbol=symbol,
+            direction=direction,
+            pnl_pct=pnl_pct,
+            rr=rr_achieved,
+            win=realized_pnl > 0,
+        )
+        circuit_breaker_instance.record_trade_pnl(realized_pnl)
+
         if live_mode and self.client:
             try:
                 order = self._send_live_close(
@@ -842,6 +815,7 @@ class PionexDirectBroker:
                     account_mode=account_mode,
                     direction=direction,
                     size_base=closed_size_base,
+                    client_order_id=client_order_id,
                     entry_price=entry_price,
                     risk_amount=risk_amount,
                 )
@@ -894,3 +868,100 @@ class PionexDirectBroker:
             position_side="BOTH",
             client_order_id=client_order_id,
         )
+
+    def _poll_fill_status(
+        self,
+        order_id: str,
+        account_mode: str,
+        expected_price: float,
+        symbol: str,
+        max_attempts: int = 5,
+        delay_seconds: float = 2.0,
+    ) -> dict[str, Any]:
+        """
+        Poll exchange for order fill status.
+        Returns fill info or empty dict if not filled / error.
+        """
+        import time
+
+        if not self.client or not order_id:
+            return {}
+
+        for attempt in range(max_attempts):
+            try:
+                if account_mode == "SPOT":
+                    data = self.client.get_spot_order(order_id)
+                else:
+                    data = self.client.get_futures_order(order_id)
+
+                status = str(data.get("status", "")).upper()
+                if status in {"FILLED", "CLOSED", "COMPLETED"}:
+                    fill_price = float(data.get("avgPrice", data.get("price", 0)) or 0)
+                    if fill_price > 0 and expected_price > 0:
+                        self.notifier.send_fill_alert(symbol, order_id, fill_price, expected_price)
+                    return {
+                        "filled": True,
+                        "fill_price": fill_price,
+                        "status": status,
+                        "raw": data,
+                    }
+                if status in {"REJECTED", "CANCELED", "EXPIRED"}:
+                    return {"filled": False, "status": status, "raw": data}
+            except Exception as e:
+                if attempt == max_attempts - 1:
+                    return {"filled": False, "error": str(e)}
+
+            time.sleep(delay_seconds)
+
+        return {"filled": False, "status": "TIMEOUT"}
+
+    def reconcile_ledger(self) -> dict[str, Any]:
+        """
+        Compare local PositionLedger with exchange positions.
+        Returns divergences list and alert if found.
+        """
+        if not self.client:
+            return {"checked": False, "reason": "no_client"}
+
+        divergences: list[str] = []
+
+        try:
+            # Check futures positions
+            futures_positions = self.client.get_futures_positions()
+            exchange_futures: dict[str, float] = {}
+            for pos in futures_positions:
+                sym = str(pos.get("symbol", "")).upper()
+                size = float(pos.get("size", 0) or pos.get("positionSize", 0) or 0)
+                if sym and abs(size) > 0:
+                    exchange_futures[sym] = size
+
+            for key, local in self.ledger._positions.items():
+                account_mode, symbol = key
+                if account_mode != "FUTURES":
+                    continue
+                mapped_symbol = self._map_symbol(symbol) or symbol
+                exchange_size = exchange_futures.get(mapped_symbol, 0.0)
+                if abs(local.size_base - exchange_size) > 1e-8:
+                    divergences.append(
+                        f"FUTURES {mapped_symbol}: local={local.size_base:.6f} vs exchange={exchange_size:.6f}"
+                    )
+
+            # Check for exchange positions not in local ledger
+            for sym, size in exchange_futures.items():
+                key = ("FUTURES", sym)
+                if key not in self.ledger._positions and abs(size) > 1e-8:
+                    divergences.append(
+                        f"FUTURES {sym}: local=NONE vs exchange={size:.6f}"
+                    )
+
+        except Exception as e:
+            divergences.append(f"Reconciliation fetch error: {e}")
+
+        if divergences:
+            self.notifier.send_reconcile_alert(divergences)
+
+        return {
+            "checked": True,
+            "divergences": divergences,
+            "divergence_count": len(divergences),
+        }

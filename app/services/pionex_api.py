@@ -11,6 +11,9 @@ from urllib.parse import urlencode
 import requests
 
 
+SPOT_ORDER_QUERY = "/api/v1/trade/order"
+
+
 SPOT_BALANCES = "/api/v1/account/balances"
 SPOT_ORDER = "/api/v1/trade/order"
 FUTURES_BALANCES = "/uapi/v1/account/balances"
@@ -69,6 +72,7 @@ class PionexClient:
         params: Optional[dict[str, Any]] = None,
         body: Optional[dict[str, Any]] = None,
         auth: bool = True,
+        max_retries: int = 3,
     ) -> dict[str, Any]:
         params = dict(params or {})
         body_str = json.dumps(body, separators=(",", ":")) if body else ""
@@ -80,43 +84,56 @@ class PionexClient:
             headers["PIONEX-KEY"] = self.credentials.api_key
             headers["PIONEX-SIGNATURE"] = self._signature(method, path, params, body_str)
 
-        try:
-            if method.upper() == "GET":
-                response = self.session.get(url, params=params, headers=headers, timeout=self.credentials.timeout_seconds)
-            elif method.upper() == "POST":
-                response = self.session.post(
-                    url,
-                    params=params,
-                    data=body_str,
-                    headers=headers,
-                    timeout=self.credentials.timeout_seconds,
+        last_error: Optional[PionexAPIError] = None
+        for attempt in range(max_retries + 1):
+            try:
+                if method.upper() == "GET":
+                    response = self.session.get(url, params=params, headers=headers, timeout=self.credentials.timeout_seconds)
+                elif method.upper() == "POST":
+                    response = self.session.post(
+                        url,
+                        params=params,
+                        data=body_str,
+                        headers=headers,
+                        timeout=self.credentials.timeout_seconds,
+                    )
+                elif method.upper() == "DELETE":
+                    response = self.session.delete(url, params=params, headers=headers, timeout=self.credentials.timeout_seconds)
+                else:
+                    raise ValueError(f"Unsupported HTTP method: {method}")
+            except requests.RequestException as exc:
+                last_error = PionexAPIError(
+                    message=f"Pionex request failed: {exc}",
+                    retryable=True,
                 )
-            elif method.upper() == "DELETE":
-                response = self.session.delete(url, params=params, headers=headers, timeout=self.credentials.timeout_seconds)
-            else:
-                raise ValueError(f"Unsupported HTTP method: {method}")
-        except requests.RequestException as exc:
-            raise PionexAPIError(
-                message=f"Pionex request failed: {exc}",
-                retryable=True,
-            ) from exc
+                if attempt < max_retries:
+                    time.sleep(2 ** attempt)  # exponential backoff: 1s, 2s, 4s
+                    continue
+                raise last_error from exc
 
-        retryable = response.status_code >= 500 or response.status_code == 429
-        try:
-            payload = response.json()
-        except ValueError:
-            payload = {"message": response.text}
+            retryable = response.status_code >= 500 or response.status_code == 429
+            try:
+                payload = response.json()
+            except ValueError:
+                payload = {"message": response.text}
 
-        if response.status_code != 200 or not payload.get("result", False):
-            message = payload.get("message", f"HTTP {response.status_code}")
-            raise PionexAPIError(
-                message=f"Pionex API error: {message}",
-                status_code=response.status_code,
-                result=payload,
-                retryable=retryable,
-            )
+            if response.status_code != 200 or not payload.get("result", False):
+                message = payload.get("message", f"HTTP {response.status_code}")
+                last_error = PionexAPIError(
+                    message=f"Pionex API error: {message}",
+                    status_code=response.status_code,
+                    result=payload,
+                    retryable=retryable,
+                )
+                if retryable and attempt < max_retries:
+                    time.sleep(2 ** attempt)
+                    continue
+                raise last_error
 
-        return payload
+            return payload
+
+        # Should never reach here
+        raise last_error or PionexAPIError("Unknown error after retries")
 
     def get_spot_balances(self) -> list[dict[str, Any]]:
         response = self._request("GET", SPOT_BALANCES)
@@ -168,7 +185,14 @@ class PionexClient:
                     continue
         return 0.0
 
-    def place_spot_market_buy(self, symbol: str, amount_usdt: float, client_order_id: Optional[str] = None) -> dict[str, Any]:
+    def place_spot_market_buy(
+        self,
+        symbol: str,
+        amount_usdt: float,
+        client_order_id: Optional[str] = None,
+        stop_loss: Optional[float] = None,
+        take_profit: Optional[float] = None,
+    ) -> dict[str, Any]:
         body: dict[str, Any] = {
             "symbol": symbol,
             "side": "BUY",
@@ -177,10 +201,21 @@ class PionexClient:
         }
         if client_order_id:
             body["clientOrderId"] = client_order_id
+        if stop_loss is not None:
+            body["stopLoss"] = str(stop_loss)
+        if take_profit is not None:
+            body["takeProfit"] = str(take_profit)
         response = self._request("POST", SPOT_ORDER, body=body)
         return response.get("data", {})
 
-    def place_spot_market_sell(self, symbol: str, size: float, client_order_id: Optional[str] = None) -> dict[str, Any]:
+    def place_spot_market_sell(
+        self,
+        symbol: str,
+        size: float,
+        client_order_id: Optional[str] = None,
+        stop_loss: Optional[float] = None,
+        take_profit: Optional[float] = None,
+    ) -> dict[str, Any]:
         body: dict[str, Any] = {
             "symbol": symbol,
             "side": "SELL",
@@ -189,6 +224,10 @@ class PionexClient:
         }
         if client_order_id:
             body["clientOrderId"] = client_order_id
+        if stop_loss is not None:
+            body["stopLoss"] = str(stop_loss)
+        if take_profit is not None:
+            body["takeProfit"] = str(take_profit)
         response = self._request("POST", SPOT_ORDER, body=body)
         return response.get("data", {})
 
@@ -200,6 +239,8 @@ class PionexClient:
         reduce_only: bool = False,
         position_side: str = "BOTH",
         client_order_id: Optional[str] = None,
+        stop_loss: Optional[float] = None,
+        take_profit: Optional[float] = None,
     ) -> dict[str, Any]:
         body: dict[str, Any] = {
             "symbol": symbol,
@@ -211,6 +252,10 @@ class PionexClient:
         }
         if client_order_id:
             body["clientOrderId"] = client_order_id
+        if stop_loss is not None:
+            body["stopLoss"] = str(stop_loss)
+        if take_profit is not None:
+            body["takeProfit"] = str(take_profit)
         response = self._request("POST", FUTURES_ORDER, body=body)
         return response.get("data", {})
 
@@ -220,4 +265,12 @@ class PionexClient:
             "leverage": str(leverage),
         }
         response = self._request("POST", FUTURES_LEVERAGE, body=body)
+        return response.get("data", {})
+
+    def get_spot_order(self, order_id: str) -> dict[str, Any]:
+        response = self._request("GET", SPOT_ORDER_QUERY, params={"orderId": order_id})
+        return response.get("data", {})
+
+    def get_futures_order(self, order_id: str) -> dict[str, Any]:
+        response = self._request("GET", FUTURES_ORDER, params={"orderId": order_id})
         return response.get("data", {})

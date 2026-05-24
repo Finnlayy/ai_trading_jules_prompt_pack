@@ -129,3 +129,40 @@ def test_get_futures_grid_order_uses_bot_detail_endpoint():
     assert data["buOrderId"] == "bot-1"
     assert get_mock.call_args.args[0].endswith("/api/v1/bot/orders/futuresGrid/order")
     assert get_mock.call_args.kwargs["params"]["buOrderId"] == "bot-1"
+
+
+def test_place_spot_market_buy_includes_sl_tp():
+    client = PionexClient(PionexCredentials(api_key="k", api_secret="s"))
+    response = _mock_response(200, {"result": True, "data": {"orderId": "abc"}})
+
+    with patch.object(client.session, "post", return_value=response) as post_mock:
+        data = client.place_spot_market_buy(
+            symbol="BTC_USDT",
+            amount_usdt=25.0,
+            stop_loss=48000.0,
+            take_profit=54000.0,
+        )
+
+    assert data["orderId"] == "abc"
+    sent_body = post_mock.call_args.kwargs["data"]
+    assert '"stopLoss":"48000.0"' in sent_body
+    assert '"takeProfit":"54000.0"' in sent_body
+
+
+def test_place_futures_market_order_includes_sl_tp():
+    client = PionexClient(PionexCredentials(api_key="k", api_secret="s"))
+    response = _mock_response(200, {"result": True, "data": {"orderId": "fut-1"}})
+
+    with patch.object(client.session, "post", return_value=response) as post_mock:
+        data = client.place_futures_market_order(
+            symbol="BTC_USDT_PERP",
+            side="BUY",
+            size=0.01,
+            stop_loss=48000.0,
+            take_profit=54000.0,
+        )
+
+    assert data["orderId"] == "fut-1"
+    sent_body = post_mock.call_args.kwargs["data"]
+    assert '"stopLoss":"48000.0"' in sent_body
+    assert '"takeProfit":"54000.0"' in sent_body

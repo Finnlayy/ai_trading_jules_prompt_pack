@@ -1,6 +1,7 @@
 from app.schemas.journal import DecisionEnum, FinalDecisionEnum
 import pytest
 from app.services.pionex_direct_broker import PionexDirectBroker, PionexDirectConfig
+from app.services.confidence_registry import confidence_registry
 from app.schemas.m8_payload import M8Payload
 
 def create_payload(symbol="BTC_USDT") -> M8Payload:
@@ -207,6 +208,39 @@ def test_pionex_direct_broker_entry_then_close_uses_ledger(tmp_path):
     assert close.result["ledger_delta"]["action"] == "CLOSE"
 
 
+def test_pionex_direct_broker_close_updates_confidence_registry(tmp_path):
+    confidence_registry.reset_all()
+    broker = PionexDirectBroker(
+        config=PionexDirectConfig(
+            enabled=True,
+            live_trading_enabled=False,
+            allowed_symbols=("BTC_USDT",),
+        ),
+        journal_path=str(tmp_path / "journal.jsonl"),
+    )
+
+    entry = broker.execute_trade(
+        payload=_payload("conf-entry", direction="LONG", intent="ENTRY", entry_price=100.0, symbol="BTC_USDT"),
+        decision=DecisionEnum.PROCEED_TO_SIMULATION,
+    )
+    assert entry.final_decision == FinalDecisionEnum.EXECUTED_SIM
+
+    close = broker.execute_trade(
+        payload=_payload("conf-close", direction="LONG", intent="CLOSE", entry_price=110.0, symbol="BTC_USDT"),
+        decision=DecisionEnum.PROCEED_TO_SIMULATION,
+    )
+    assert close.final_decision == FinalDecisionEnum.EXECUTED_SIM
+
+    stats = confidence_registry.get_symbol_stats("BTC_USDT")
+    long_stats = stats.long_stats
+    assert long_stats.total == 1
+    assert long_stats.wins == 1
+    assert long_stats.losses == 0
+    assert long_stats.avg_pnl_pct > 0
+
+    confidence_registry.reset_all()
+
+
 def test_pionex_direct_broker_live_spot_entry_calls_client(tmp_path):
     broker = PionexDirectBroker(
         config=PionexDirectConfig(
@@ -222,14 +256,15 @@ def test_pionex_direct_broker_live_spot_entry_calls_client(tmp_path):
     class FakeClient:
         def __init__(self):
             self.buy_called = False
+            self.client_order_id = None
 
         def get_balance(self, coin="USDT", account="spot"):
             return 500.0
 
-        def place_spot_market_buy(self, symbol: str, amount_usdt: float, client_order_id: str = None):
+        def place_spot_market_buy(self, symbol: str, amount_usdt: float, client_order_id: str = None, stop_loss=None, take_profit=None):
             self.buy_called = True
-            self.captured_client_order_id = client_order_id
-            return {"orderId": "spot-live-1", "symbol": symbol, "amount": amount_usdt}
+            self.client_order_id = client_order_id
+            return {"orderId": "spot-live-1", "symbol": symbol, "amount": amount_usdt, "clientOrderId": client_order_id}
 
     fake = FakeClient()
     broker.client = fake
@@ -262,6 +297,8 @@ def test_pionex_direct_broker_futures_mode3_applies_payload_leverage(tmp_path):
         def __init__(self):
             self.leverage_calls = 0
             self.order_calls = 0
+            self.client_order_id = None
+            self.client_order_id = None
 
         def get_balance(self, coin="USDT", account="futures"):
             return 500.0
@@ -272,7 +309,6 @@ def test_pionex_direct_broker_futures_mode3_applies_payload_leverage(tmp_path):
 
         def place_futures_market_order(self, **kwargs):
             self.order_calls += 1
-            self.captured_kwargs = kwargs
             return {"orderId": "fut-live-1", **kwargs}
 
     fake = FakeClient()
@@ -290,6 +326,8 @@ def test_pionex_direct_broker_futures_mode3_applies_payload_leverage(tmp_path):
     assert entry.result["status"] == "SENT_TO_PIONEX_DIRECT"
     assert fake.leverage_calls == 1
     assert fake.order_calls == 1
+    assert fake.client_order_id == None  # kwargs order
+    assert entry.simulated_fill["client_order_id"] == "direct-live-2_BTC_USDT_PERP_FUTURES_SHORT_ENTRY"
 
 
 def test_pionex_direct_broker_returns_full_wallet_assets(tmp_path):
