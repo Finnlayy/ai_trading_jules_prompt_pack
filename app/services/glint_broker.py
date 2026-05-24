@@ -185,7 +185,7 @@ class GlintBroker(BaseBroker):
             self._send_to_glint(command)
             response = self._wait_for_glint_response(timeout_seconds=30)
             result = {"status": "PENDING_GLINT", "command": command, "response": response}
-            final_decision = FinalDecisionEnum.EXECUTED_LIVE
+            final_decision = FinalDecisionEnum.EXECUTED_SIM
             simulated_fill = {}
         else:
             # Dry-run: log what WOULD be sent
@@ -242,8 +242,12 @@ class GlintBroker(BaseBroker):
 
     def _normalize_symbol(self, symbol: str) -> str:
         """Normalize symbol for GLINT bot."""
-        # GLINT uses: BTC, ETH, etc. (without _USDT or USDT suffix)
-        s = symbol.upper().replace("_USDT", "").replace("USDT", "").replace(".P", "")
+        # GLINT uses: BTC, ETH, etc. (without _USDT_PERP, _USDT or USDT suffix)
+        s = symbol.upper()
+        for suffix in ["_USDT_PERP", "_USDT", "USDT_PERP", "USDT", ".P", "_PERP", "PERP"]:
+            if s.endswith(suffix):
+                s = s[:-len(suffix)]
+                break
         return s or symbol.upper()
 
     def _compute_size(self, payload: M8Payload) -> float:
