@@ -215,3 +215,40 @@ async def test_ai_unavailable_can_proceed_when_policy_allows_live():
     finally:
         orchestrator.AI_FAILURE_POLICY = previous_policy
         orchestrator.broker_instance = previous_broker
+
+
+@pytest.mark.asyncio
+async def test_pipeline_supports_sync_ai_review():
+    def fake_sync_review(_payload):
+        return SignalReview(
+            schema_version="1.0",
+            signal_id="sig-sync-ai",
+            decision="PROCEED_TO_SIMULATION",
+            confidence=0.8,
+            reason_codes=["SYNC_REVIEW"],
+            risk_flags=[],
+            reject_reason=None,
+            requires_human_review=False,
+        )
+
+    with patch.object(ai_review_instance, "review_signal", new=fake_sync_review):
+        payload = {
+            "signal_id": "sig-sync-ai",
+            "symbol": "BTCUSD",
+            "timeframe": "1h",
+            "direction": "LONG",
+            "timestamp": "2026-05-20T10:00:00Z",
+            "entry_price": 50000.0,
+            "stop_price": 48000.0,
+            "target_price": 54000.0,
+            "confluence_score": 85.0,
+            "crisis_score": 10.0,
+            "mc_dispersion": 1.5,
+            "spread": 8.0,
+        }
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+            response = await ac.post("/webhook/m8", json=payload)
+
+    data = response.json()
+    assert data["status"] == "success"
+    assert data["result"]["final_decision"] == "EXECUTED_SIM"

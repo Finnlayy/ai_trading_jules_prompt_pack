@@ -74,6 +74,12 @@ class KimiSwarmService:
     """
     def __init__(self, provider: str | None = None) -> None:
         self.provider = provider
+
+    def _provider_unavailable_flag(self) -> str:
+        try:
+            return get_ai_provider_config(self.provider).unavailable_flag
+        except Exception:
+            return "AI_PROVIDER_UNAVAILABLE"
     
     async def review_signal(self, payload: M8Payload) -> SignalReview:
         try:
@@ -90,8 +96,7 @@ class KimiSwarmService:
             return await self._run_orchestrator(payload, sentiment_analysis, technical_analysis, risk_analysis)
             
         except Exception as e:
-            provider_config = get_ai_provider_config(self.provider)
-            print(f"AI provider error ({provider_config.provider}): {e}")
+            print(f"AI provider error ({self.provider or AI_PROVIDER}): {e}")
             # Fallback pattern if API fails: proceed to deterministic risk engine but log warning
             return SignalReview(
                 schema_version="1.0",
@@ -99,7 +104,7 @@ class KimiSwarmService:
                 decision=DecisionEnum.PROCEED_TO_SIMULATION,
                 confidence=0.5,
                 reason_codes=["API_FALLBACK"],
-                risk_flags=[provider_config.unavailable_flag],
+                risk_flags=[self._provider_unavailable_flag()],
                 reject_reason=None,
                 requires_human_review=False
             )
@@ -207,4 +212,9 @@ class KimiSwarmService:
             or "unknown field" in message
         )
 
-ai_review_instance = KimiSwarmService()
+if AI_PROVIDER in {"mock", "offline", "none"}:
+    from app.services.ai_mock import MockAIReviewLayer
+
+    ai_review_instance = MockAIReviewLayer()
+else:
+    ai_review_instance = KimiSwarmService(provider=AI_PROVIDER)

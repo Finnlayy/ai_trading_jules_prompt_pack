@@ -41,7 +41,7 @@ Ziel: Jules soll einen umsetzbaren Projektplan fuer ein simulation-first KI-Trad
 Der Python-AI-Layer kann per `.env` zwischen Moonshot/Kimi, OpenAI/ChatGPT und Google Gemini wechseln. Die Swarm-Logik bleibt gleich: Sentiment-Scout, Technical-Scout, Risk-Scout und ein Orchestrator.
 
 1. Kopiere `.env.example` nach `.env`.
-2. Setze `AI_PROVIDER` auf `moonshot`, `openai` oder `gemini`.
+2. Setze `AI_PROVIDER` auf `moonshot`, `openai`, `gemini` oder `mock`.
 3. Trage nur den passenden echten Key in `.env` ein.
 
 ```env
@@ -61,6 +61,12 @@ AI_PROVIDER=gemini
 GEMINI_API_KEY=dein_gemini_key
 GEMINI_MODEL=gemini-2.5-pro
 ```
+
+```env
+AI_PROVIDER=mock
+```
+
+`mock` nutzt die lokale `MockAIReviewLayer` ohne externe API-Calls.
 
 Die echte `.env` ist in `.gitignore` eingetragen und darf nicht committed werden.
 

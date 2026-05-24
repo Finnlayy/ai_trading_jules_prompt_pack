@@ -1,3 +1,5 @@
+import inspect
+
 from app.schemas.m8_payload import M8Payload
 from app.services.risk_engine import risk_engine_instance
 from app.services.ai_kimi import ai_review_instance
@@ -60,7 +62,8 @@ async def process_signal(payload: M8Payload):
     """
     
     # 1. AI Context Review (Non-execution, Kimi Swarm via async API)
-    ai_review = await ai_review_instance.review_signal(payload)
+    ai_review_result = ai_review_instance.review_signal(payload)
+    ai_review = await ai_review_result if inspect.isawaitable(ai_review_result) else ai_review_result
     
     # 2. Deterministic Decision
     if (

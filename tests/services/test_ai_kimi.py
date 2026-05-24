@@ -70,3 +70,15 @@ async def test_kimi_swarm_api_failure_fallback():
         assert review.decision == DecisionEnum.PROCEED_TO_SIMULATION
         assert "API_FALLBACK" in review.reason_codes
         assert "KIMI_UNAVAILABLE" in review.risk_flags
+
+
+@pytest.mark.asyncio
+async def test_kimi_swarm_invalid_provider_fallback():
+    service = KimiSwarmService(provider="unknown-provider")
+    payload = create_valid_payload()
+
+    review = await service.review_signal(payload)
+
+    assert review.decision == DecisionEnum.PROCEED_TO_SIMULATION
+    assert "API_FALLBACK" in review.reason_codes
+    assert "AI_PROVIDER_UNAVAILABLE" in review.risk_flags
