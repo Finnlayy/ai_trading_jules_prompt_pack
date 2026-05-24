@@ -3,307 +3,720 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pine Script Studio & The Gauntlet</title>
+    <title>Trading Bot Command Center</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap');
+
+        :root {
+            --bg: #0b0c0b;
+            --panel: #151714;
+            --panel-strong: #1d211c;
+            --line: #32382f;
+            --text: #f1f4ec;
+            --muted: #9ca696;
+            --soft: #cbd3c3;
+            --green: #77c76a;
+            --red: #ef6f64;
+            --amber: #d8a84f;
+            --cyan: #71b8c7;
+            --input: #0f110f;
+            --shadow: rgba(0, 0, 0, 0.34);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: 'JetBrains Mono', monospace;
-            background-color: #0a0a0a;
-            color: #e5e5e5;
+            margin: 0;
+            min-height: 100vh;
+            color: var(--text);
+            font-family: "IBM Plex Sans", sans-serif;
+            background:
+                linear-gradient(120deg, rgba(119, 199, 106, 0.08), transparent 34%),
+                linear-gradient(240deg, rgba(216, 168, 79, 0.09), transparent 38%),
+                var(--bg);
         }
-        /* Custom scrollbar for terminal feel */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
+
+        button, input, select, textarea {
+            font: inherit;
         }
-        ::-webkit-scrollbar-track {
-            background: #0a0a0a;
+
+        button {
+            border: 1px solid var(--line);
+            background: var(--panel-strong);
+            color: var(--text);
+            cursor: pointer;
+            min-height: 38px;
         }
-        ::-webkit-scrollbar-thumb {
-            background: #333;
+
+        button:hover {
+            border-color: var(--soft);
         }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #555;
+
+        button.primary {
+            background: var(--green);
+            border-color: var(--green);
+            color: #081008;
+            font-weight: 700;
         }
-    </style>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        terminalBlack: '#0a0a0a',
-                        slateGray: '#151618',
-                        matteMint: '#3ebd93',
-                        mutedRust: '#b84d4d',
-                    }
-                }
+
+        button.danger {
+            background: rgba(239, 111, 100, 0.15);
+            border-color: rgba(239, 111, 100, 0.55);
+            color: #ffd4d0;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            min-height: 38px;
+            border: 1px solid var(--line);
+            background: var(--input);
+            color: var(--text);
+            padding: 9px 10px;
+            outline: none;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--green);
+            box-shadow: 0 0 0 2px rgba(119, 199, 106, 0.16);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 210px;
+            font-family: "JetBrains Mono", monospace;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .shell {
+            display: grid;
+            grid-template-columns: 260px 1fr;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            border-right: 1px solid var(--line);
+            background: rgba(13, 15, 13, 0.86);
+            padding: 22px;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+        }
+
+        .brand {
+            font-size: 18px;
+            font-weight: 700;
+            line-height: 1.1;
+            margin-bottom: 22px;
+        }
+
+        .brand small {
+            display: block;
+            margin-top: 8px;
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .nav {
+            display: grid;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+
+        .nav button {
+            text-align: left;
+            padding: 10px 12px;
+        }
+
+        .nav button.active {
+            border-color: var(--green);
+            background: rgba(119, 199, 106, 0.14);
+        }
+
+        .side-block {
+            border-top: 1px solid var(--line);
+            padding-top: 16px;
+            margin-top: 18px;
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.55;
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            margin-right: 8px;
+            background: var(--amber);
+        }
+
+        .status-dot.ok {
+            background: var(--green);
+        }
+
+        .status-dot.bad {
+            background: var(--red);
+        }
+
+        main {
+            padding: 24px;
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 18px;
+            margin-bottom: 18px;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: clamp(26px, 4vw, 42px);
+            line-height: 1;
+            letter-spacing: 0;
+        }
+
+        .subtitle {
+            color: var(--muted);
+            margin-top: 8px;
+        }
+
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 14px;
+        }
+
+        .panel {
+            border: 1px solid var(--line);
+            background: rgba(21, 23, 20, 0.88);
+            box-shadow: 0 18px 50px var(--shadow);
+            padding: 16px;
+        }
+
+        .span-3 { grid-column: span 3; }
+        .span-4 { grid-column: span 4; }
+        .span-5 { grid-column: span 5; }
+        .span-6 { grid-column: span 6; }
+        .span-7 { grid-column: span 7; }
+        .span-8 { grid-column: span 8; }
+        .span-12 { grid-column: span 12; }
+
+        .panel-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 14px;
+            color: var(--soft);
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .kpi {
+            font-size: 30px;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .kpi-label {
+            margin-top: 8px;
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .mono {
+            font-family: "JetBrains Mono", monospace;
+        }
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            min-height: 24px;
+            padding: 3px 8px;
+            border: 1px solid var(--line);
+            color: var(--soft);
+            font-family: "JetBrains Mono", monospace;
+            font-size: 11px;
+            background: var(--input);
+        }
+
+        .pill.ok {
+            color: #c9ffc1;
+            border-color: rgba(119, 199, 106, 0.5);
+        }
+
+        .pill.warn {
+            color: #ffe0a5;
+            border-color: rgba(216, 168, 79, 0.5);
+        }
+
+        .pill.bad {
+            color: #ffd4d0;
+            border-color: rgba(239, 111, 100, 0.5);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        label {
+            display: grid;
+            gap: 6px;
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .full {
+            grid-column: 1 / -1;
+        }
+
+        .result {
+            min-height: 250px;
+            overflow: auto;
+            border: 1px solid var(--line);
+            background: #090a09;
+            padding: 12px;
+            color: #c8e0c2;
+            font-family: "JetBrains Mono", monospace;
+            font-size: 12px;
+            line-height: 1.55;
+            white-space: pre-wrap;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th, td {
+            border-bottom: 1px solid var(--line);
+            padding: 9px 8px;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        th {
+            color: var(--muted);
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @media (max-width: 1000px) {
+            .shell {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                position: static;
+                height: auto;
+                border-right: 0;
+                border-bottom: 1px solid var(--line);
+            }
+
+            .nav {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .span-3, .span-4, .span-5, .span-6, .span-7, .span-8 {
+                grid-column: span 12;
             }
         }
-    </script>
+
+        @media (max-width: 640px) {
+            main {
+                padding: 14px;
+            }
+
+            .topbar {
+                display: grid;
+            }
+
+            .actions {
+                justify-content: stretch;
+            }
+
+            .actions button {
+                flex: 1;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .nav {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 </head>
 <body>
     <div id="root"></div>
+
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useEffect, useMemo, useState } = React;
 
-        const Sidebar = ({ activeTab, setActiveTab }) => {
-            const tabs = ['Command Center', 'Strategy Configurator', 'The Gauntlet', 'War Room Logs'];
-            return (
-                <div className="w-64 bg-slateGray border-r border-gray-800 h-screen p-4 flex flex-col">
-                    <h1 className="text-xl font-bold mb-8 text-white uppercase tracking-widest border-b border-gray-700 pb-4">Pine Studio</h1>
-                    <div className="flex flex-col space-y-2">
-                        {tabs.map(tab => (
-                            <button
-                                key={tab}
-                                onClick={() => setActiveTab(tab)}
-                                className={`text-left px-4 py-3 text-sm uppercase tracking-wider ${activeTab === tab ? 'bg-gray-800 text-matteMint border-l-4 border-matteMint' : 'text-gray-400 hover:text-white hover:bg-gray-800 border-l-4 border-transparent'} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-matteMint focus-visible:ring-offset-2 focus-visible:ring-offset-terminalBlack transition-colors`}
-                            >
-                                {tab}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            );
+        const defaultSignal = {
+            signal_id: `manual-${Date.now()}`,
+            symbol: "BTCUSD",
+            timeframe: "1h",
+            direction: "LONG",
+            intent: "ENTRY",
+            account_mode: "SPOT",
+            timestamp: new Date().toISOString(),
+            entry_price: 50000,
+            stop_price: 48000,
+            target_price: 54000,
+            confluence_score: 85,
+            crisis_score: 10,
+            mc_dispersion: 2,
+            spread: 5,
+            order_command: "GO",
+            bar_confirmed: true
         };
 
-        const CommandCenter = () => {
-            return (
-                <div className="p-8">
-                    <h2 className="text-2xl font-bold mb-8 text-white uppercase border-b border-gray-800 pb-2">Command Center</h2>
-                    <div className="grid grid-cols-3 gap-8">
-                        <div className="col-span-2 bg-slateGray p-6 border border-gray-800">
-                            <h3 className="text-sm text-gray-400 uppercase mb-4 tracking-wider">Chart Telemetry</h3>
-                            <div className="h-96 flex flex-col items-center justify-center border border-gray-700 bg-terminalBlack">
-                                <span className="text-gray-600 mb-2">[ OHLCV Data Visualization ]</span>
-                                <span className="text-gray-700 text-xs uppercase">Shadow Orders Vis Active</span>
-                            </div>
-                        </div>
-                        <div className="bg-slateGray p-6 border border-gray-800 flex flex-col">
-                            <h3 className="text-sm text-gray-400 uppercase mb-4 tracking-wider">KPI Readout</h3>
-                            <div className="space-y-6 flex-1">
-                                <div>
-                                    <div className="text-xs text-gray-500 uppercase mb-1">Sortino Ratio</div>
-                                    <div className="text-2xl text-matteMint font-bold">2.45</div>
-                                </div>
-                                <div>
-                                    <div className="text-xs text-gray-500 uppercase mb-1">Sharpe Ratio</div>
-                                    <div className="text-2xl text-white font-bold">1.82</div>
-                                </div>
-                                <div>
-                                    <div className="text-xs text-gray-500 uppercase mb-1">Hurst Exponent</div>
-                                    <div className="text-2xl text-white font-bold">0.68</div>
-                                </div>
-                                <div>
-                                    <div className="text-xs text-gray-500 uppercase mb-1">Max Simulated Drawdown</div>
-                                    <div className="text-2xl text-mutedRust font-bold">-14.2%</div>
-                                </div>
-                                <div>
-                                    <div className="text-xs text-gray-500 uppercase mb-1">Simulierter PnL</div>
-                                    <div className="text-2xl text-matteMint font-bold">+$12,450.00</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
+        function pretty(value) {
+            return JSON.stringify(value, null, 2);
+        }
 
-        const StrategyConfigurator = () => {
-            return (
-                <div className="p-8">
-                    <h2 className="text-2xl font-bold mb-8 text-white uppercase border-b border-gray-800 pb-2">Strategy Configurator</h2>
-                    <div className="grid grid-cols-3 gap-8">
-                        <div className="col-span-2 bg-slateGray p-6 border border-gray-800 flex flex-col">
-                            <h3 className="text-sm text-gray-400 uppercase mb-4 tracking-wider">The Constructor (Code & Logic)</h3>
-                            <textarea
-                                className="flex-1 w-full min-h-[400px] bg-terminalBlack border border-gray-700 text-gray-300 p-4 font-mono text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-matteMint focus-visible:ring-offset-2 focus-visible:ring-offset-terminalBlack"
-                                defaultValue={"// Pine Script v6 Editor\nstrategy('SMC Quantum v6', overlay=true)\n\n// Core Logic Configuration\nlongCondition = ta.crossover(ta.sma(close, 14), ta.sma(close, 28))\nif (longCondition)\n    strategy.entry('Long', strategy.long)\n\n// Risk Management\nstrategy.exit('Exit', 'Long', loss=500, profit=1000)"}
-                            />
-                        </div>
-                        <div className="bg-slateGray p-6 border border-gray-800 flex flex-col">
-                            <h3 className="text-sm text-gray-400 uppercase mb-4 tracking-wider">Agent Chat</h3>
-                            <div className="flex-1 border border-gray-700 bg-terminalBlack p-4 overflow-y-auto min-h-[400px] flex flex-col gap-4">
-                                <div className="border-l-2 border-matteMint pl-3">
-                                    <div className="text-xs text-matteMint font-bold uppercase mb-1">Quant Architect AI</div>
-                                    <div className="text-sm text-gray-300">Consider adding a displacement filter here to reduce false signals during low volatility regimes.</div>
-                                </div>
-                                <div className="border-l-2 border-gray-500 pl-3">
-                                    <div className="text-xs text-gray-500 font-bold uppercase mb-1">Compiler</div>
-                                    <div className="text-sm text-gray-400 font-mono">Syntax check passed. No warnings.</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
+        function App() {
+            const [tab, setTab] = useState("Command");
+            const [health, setHealth] = useState({ status: "checking" });
+            const [status, setStatus] = useState(null);
+            const [signal, setSignal] = useState(defaultSignal);
+            const [signalResult, setSignalResult] = useState("No signal submitted yet.");
+            const [backtest, setBacktest] = useState({ symbol: "HYPEUSDT", timeframe: "1m", bars: 500, max_signals: 10, min_confluence: "" });
+            const [backtestResult, setBacktestResult] = useState("No backtest run yet.");
+            const [loading, setLoading] = useState(false);
 
-        const TheGauntlet = () => {
-            const [slippage, setSlippage] = useState(0);
-            const [liquidityVacuum, setLiquidityVacuum] = useState(false);
-            const [toxicMonday, setToxicMonday] = useState(false);
-
-            return (
-                <div className="p-8">
-                    <h2 className="text-2xl font-bold mb-8 text-white uppercase border-b border-gray-800 pb-2 flex items-center justify-between">
-                        <span>The Gauntlet</span>
-                        <span className="text-xs text-mutedRust border border-mutedRust px-2 py-1 bg-mutedRust/10">Stress Test Mode</span>
-                    </h2>
-
-                    <div className="grid grid-cols-2 gap-8">
-                        <div className="bg-slateGray p-6 border border-gray-800 space-y-8">
-                            <div>
-                                <label htmlFor="slippage-injector" className="flex justify-between text-sm text-gray-300 uppercase mb-4 font-bold tracking-wider">
-                                    <span>Slippage Injector</span>
-                                    <span className="text-matteMint">{slippage} bps</span>
-                                </label>
-                                <input
-                                    id="slippage-injector"
-                                    type="range"
-                                    min="0"
-                                    max="50"
-                                    value={slippage}
-                                    onChange={(e) => setSlippage(e.target.value)}
-                                    className="w-full accent-matteMint cursor-pointer mb-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-matteMint focus-visible:ring-offset-2 focus-visible:ring-offset-terminalBlack"
-                                />
-                                <p className="text-xs text-gray-500">Inject worst-case fill slippage to simulate toxic market conditions.</p>
-                            </div>
-
-                            <div className="flex items-start justify-between border-t border-gray-700 pt-6">
-                                <div>
-                                    <div className="text-sm text-gray-300 uppercase font-bold tracking-wider mb-1">Liquidity Vacuum</div>
-                                    <div className="text-xs text-gray-500 w-64">Simulates flash crash where no limit orders are filled until the next major support block.</div>
-                                </div>
-                                <button
-                                    onClick={() => setLiquidityVacuum(!liquidityVacuum)}
-                                    aria-pressed={liquidityVacuum}
-                                    className={`px-6 py-2 text-xs uppercase font-bold tracking-wider border ${liquidityVacuum ? 'bg-mutedRust text-white border-mutedRust' : 'bg-terminalBlack text-gray-400 border-gray-700'} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-matteMint focus-visible:ring-offset-2 focus-visible:ring-offset-terminalBlack transition-colors`}
-                                >
-                                    {liquidityVacuum ? 'Active' : 'Inactive'}
-                                </button>
-                            </div>
-
-                            <div className="flex items-start justify-between border-t border-gray-700 pt-6">
-                                <div>
-                                    <div className="text-sm text-gray-300 uppercase font-bold tracking-wider mb-1">Toxic Monday Filter</div>
-                                    <div className="text-xs text-gray-500 w-64">Removes all trades between 08:00 and 11:30 on Mondays. See how it affects the curve.</div>
-                                </div>
-                                <button
-                                    onClick={() => setToxicMonday(!toxicMonday)}
-                                    aria-pressed={toxicMonday}
-                                    className={`px-6 py-2 text-xs uppercase font-bold tracking-wider border ${toxicMonday ? 'bg-matteMint text-black border-matteMint' : 'bg-terminalBlack text-gray-400 border-gray-700'} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-matteMint focus-visible:ring-offset-2 focus-visible:ring-offset-terminalBlack transition-colors`}
-                                >
-                                    {toxicMonday ? 'Active' : 'Inactive'}
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="bg-slateGray p-6 border border-gray-800 flex flex-col">
-                            <h3 className="text-sm text-gray-400 uppercase mb-6 tracking-wider font-bold">Simulated Projections (Konjunktiv)</h3>
-                            <div className="space-y-6 flex-1">
-                                <div className="border-l-2 border-gray-600 pl-4 py-1">
-                                    <div className="text-xs text-gray-500 uppercase mb-2 tracking-widest">Historische simulierte Hit Rate</div>
-                                    <div className="text-lg text-white">Die simulierte Win-Rate beliefe sich auf <span className="text-matteMint font-bold">62.4%</span>.</div>
-                                </div>
-                                <div className="border-l-2 border-gray-600 pl-4 py-1">
-                                    <div className="text-xs text-gray-500 uppercase mb-2 tracking-widest">Theoretische Kapitalentwicklung</div>
-                                    <div className="text-lg text-white">Die simulierte Equity Curve hätte einen Wert von <span className="text-matteMint font-bold">$14,200</span> erreicht.</div>
-                                </div>
-                                <div className="border-l-2 border-gray-600 pl-4 py-1">
-                                    <div className="text-xs text-gray-500 uppercase mb-2 tracking-widest">Subjunktives Drawdown-Risiko</div>
-                                    <div className="text-lg text-gray-300">Der maximale simulierte Drawdown betrüge <span className="text-mutedRust font-bold">-18.5%</span>.</div>
-                                </div>
-
-                                <div className="mt-8 pt-6 border-t border-gray-800">
-                                    <h4 className="text-xs text-gray-500 uppercase mb-4 tracking-widest">The Guillotine Simulator</h4>
-                                    <div className="h-4 w-full bg-terminalBlack border border-gray-700 relative overflow-hidden">
-                                        <div className="absolute top-0 left-0 h-full bg-mutedRust" style={{width: '74%'}}></div>
-                                        <div className="absolute top-0 left-[100%] h-full w-px bg-red-500 -ml-px"></div>
-                                    </div>
-                                    <div className="flex justify-between text-xs text-gray-500 mt-2">
-                                        <span>0%</span>
-                                        <span>Current Peak: -18.5%</span>
-                                        <span className="text-red-500 font-bold">-25% Hard Kill</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        const WarRoomLogs = () => {
-            const logs = [
-                { time: '10:04:23.102', event: 'Theoretical Setup Condition Met', detail: 'Long Setup CHOP < 61.8' },
-                { time: '10:05:00.000', event: 'Simulated Order Execution', detail: 'Limit fill assumed at 64,230.50' },
-                { time: '10:15:00.450', event: 'Simulated SL Hit', detail: 'Drawdown of -0.5% recognized' },
-                { time: '11:20:00.890', event: 'Theoretical Setup Condition Met', detail: 'Short Setup BB Expansion' },
-                { time: '11:21:05.120', event: 'Simulated Order Execution', detail: 'Limit fill assumed at 64,800.00' },
-            ];
-            return (
-                <div className="p-8">
-                    <h2 className="text-2xl font-bold mb-8 text-white uppercase border-b border-gray-800 pb-2">War Room Logs</h2>
-                    <div className="bg-slateGray border border-gray-800 overflow-hidden">
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-terminalBlack">
-                                <tr className="text-gray-500 border-b border-gray-700">
-                                    <th className="p-4 font-bold uppercase tracking-wider text-xs">Timestamp</th>
-                                    <th className="p-4 font-bold uppercase tracking-wider text-xs">Event Type</th>
-                                    <th className="p-4 font-bold uppercase tracking-wider text-xs">System Detail</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {logs.map((log, idx) => (
-                                    <tr key={idx} className="border-b border-gray-800 hover:bg-gray-800/30 transition-colors">
-                                        <td className="p-4 text-gray-400 font-mono text-xs w-48">{log.time}</td>
-                                        <td className="p-4 text-white font-medium">{log.event}</td>
-                                        <td className="p-4 text-gray-400 font-mono text-xs">{log.detail}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            );
-        };
-
-        const App = () => {
-            const [activeTab, setActiveTab] = useState('Command Center');
-
-            const renderContent = () => {
-                switch(activeTab) {
-                    case 'Command Center': return <CommandCenter />;
-                    case 'Strategy Configurator': return <StrategyConfigurator />;
-                    case 'The Gauntlet': return <TheGauntlet />;
-                    case 'War Room Logs': return <WarRoomLogs />;
-                    default: return <CommandCenter />;
+            async function request(path, options = {}) {
+                const response = await fetch(path, {
+                    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+                    ...options
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.detail || `HTTP ${response.status}`);
                 }
-            };
+                return data;
+            }
+
+            async function refresh() {
+                try {
+                    const [healthData, statusData] = await Promise.all([
+                        request("/health"),
+                        request("/backtest/status")
+                    ]);
+                    setHealth(healthData);
+                    setStatus(statusData);
+                } catch (error) {
+                    setHealth({ status: "error", error: error.message });
+                }
+            }
+
+            useEffect(() => {
+                refresh();
+                const timer = setInterval(refresh, 10000);
+                return () => clearInterval(timer);
+            }, []);
+
+            const broker = status?.broker || {};
+            const risk = status?.risk_engine_state || {};
+            const brokerState = broker.connected || broker.type === "SimulationBroker" ? "Ready" : "Not ready";
+            const statusClass = health.status === "ok" ? "ok" : "bad";
+
+            function updateSignal(key, value) {
+                setSignal(current => ({ ...current, [key]: value }));
+            }
+
+            async function submitSignal(event) {
+                event.preventDefault();
+                setLoading(true);
+                setSignalResult("Submitting signal...");
+                try {
+                    const payload = {
+                        ...signal,
+                        entry_price: Number(signal.entry_price),
+                        stop_price: Number(signal.stop_price),
+                        target_price: Number(signal.target_price),
+                        confluence_score: Number(signal.confluence_score),
+                        crisis_score: Number(signal.crisis_score),
+                        mc_dispersion: Number(signal.mc_dispersion),
+                        spread: Number(signal.spread),
+                        bar_confirmed: Boolean(signal.bar_confirmed)
+                    };
+                    const data = await request("/webhook/m8", {
+                        method: "POST",
+                        body: JSON.stringify(payload)
+                    });
+                    setSignalResult(pretty(data));
+                    await refresh();
+                } catch (error) {
+                    setSignalResult(`ERROR: ${error.message}`);
+                } finally {
+                    setLoading(false);
+                }
+            }
+
+            async function runBacktest(event) {
+                event.preventDefault();
+                setLoading(true);
+                setBacktestResult("Running backtest...");
+                try {
+                    const params = new URLSearchParams({
+                        symbol: backtest.symbol,
+                        timeframe: backtest.timeframe,
+                        bars: String(backtest.bars),
+                        max_signals: String(backtest.max_signals)
+                    });
+                    if (backtest.min_confluence !== "") {
+                        params.set("min_confluence", String(backtest.min_confluence));
+                    }
+                    const data = await request(`/backtest/run?${params.toString()}`, { method: "POST" });
+                    setBacktestResult(pretty(data));
+                    await refresh();
+                } catch (error) {
+                    setBacktestResult(`ERROR: ${error.message}`);
+                } finally {
+                    setLoading(false);
+                }
+            }
+
+            async function resetBot() {
+                setLoading(true);
+                try {
+                    const data = await request("/backtest/reset", { method: "POST" });
+                    setSignalResult(pretty(data));
+                    setBacktestResult(pretty(data));
+                    await refresh();
+                } catch (error) {
+                    setSignalResult(`ERROR: ${error.message}`);
+                } finally {
+                    setLoading(false);
+                }
+            }
+
+            const rows = useMemo(() => {
+                if (typeof backtestResult !== "string" || !backtestResult.startsWith("{")) return [];
+                try {
+                    return JSON.parse(backtestResult).results || [];
+                } catch {
+                    return [];
+                }
+            }, [backtestResult]);
 
             return (
-                <div className="flex flex-col h-screen w-full bg-terminalBlack selection:bg-matteMint selection:text-black">
-                    <div role="alert" aria-live="assertive" className="w-full bg-mutedRust text-white text-center py-2 text-sm font-bold uppercase tracking-wider flex items-center justify-center gap-2 border-b border-red-900">
-                        <span aria-hidden="true">⚠️</span>
-                        Operator Notice: This is a static UI mockup. Live execution is disabled. Data shown is simulated.
-                        <span aria-hidden="true">⚠️</span>
-                    </div>
-                    <div className="flex flex-1 overflow-hidden">
-                        <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-                        <div className="flex-1 overflow-y-auto">
-                            {renderContent()}
+                <div className="shell">
+                    <aside className="sidebar">
+                        <div className="brand">
+                            Pionex Bot Console
+                            <small>AI review, risk gates, broker execution, journal output</small>
                         </div>
-                    </div>
+
+                        <div className="nav">
+                            {["Command", "Manual Signal", "Backtest", "Raw Output"].map(item => (
+                                <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)}>
+                                    {item}
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="side-block">
+                            <div><span className={`status-dot ${statusClass}`}></span>API: {health.status}</div>
+                            <div>Broker: {broker.type || "loading"}</div>
+                            <div>Mode: {broker.mode || "unknown"}</div>
+                        </div>
+
+                        <div className="side-block">
+                            <div className="mono">/webhook/m8</div>
+                            <div className="mono">/backtest/run</div>
+                            <div className="mono">/backtest/status</div>
+                        </div>
+                    </aside>
+
+                    <main>
+                        <div className="topbar">
+                            <div>
+                                <h1>Trading Bot Command Center</h1>
+                                <div className="subtitle">Current running app: FastAPI bot pipeline with AI review, risk engine, Pionex broker adapters, and backtest runner.</div>
+                            </div>
+                            <div className="actions">
+                                <button onClick={refresh} disabled={loading}>Refresh</button>
+                                <button className="danger" onClick={resetBot} disabled={loading}>Reset State</button>
+                            </div>
+                        </div>
+
+                        <section className={tab === "Command" ? "" : "hidden"}>
+                            <div className="grid">
+                                <div className="panel span-3">
+                                    <div className="panel-title">API Health <span className={`pill ${statusClass}`}>{health.status}</span></div>
+                                    <div className="kpi">{health.status === "ok" ? "Online" : "Check"}</div>
+                                    <div className="kpi-label">FastAPI service at 127.0.0.1:8000</div>
+                                </div>
+                                <div className="panel span-3">
+                                    <div className="panel-title">Broker <span className={brokerState === "Ready" ? "pill ok" : "pill warn"}>{brokerState}</span></div>
+                                    <div className="kpi">{broker.type || "..."}</div>
+                                    <div className="kpi-label">Mode: {broker.mode || "unknown"}</div>
+                                </div>
+                                <div className="panel span-3">
+                                    <div className="panel-title">Trades Today</div>
+                                    <div className="kpi">{risk.trades_today ?? 0}</div>
+                                    <div className="kpi-label">Risk engine state</div>
+                                </div>
+                                <div className="panel span-3">
+                                    <div className="panel-title">Live Capability</div>
+                                    <div className="kpi">{broker.live_capable ? "Armed" : "Dry"}</div>
+                                    <div className="kpi-label">Live remains gated by config and risk checks</div>
+                                </div>
+
+                                <div className="panel span-7">
+                                    <div className="panel-title">Bot Flow</div>
+                                    <table>
+                                        <tbody>
+                                            <tr><th>1. Signal</th><td>TradingView or manual payload enters <span className="mono">/webhook/m8</span>.</td></tr>
+                                            <tr><th>2. AI Review</th><td>Provider layer returns a strict SignalReview; it never places orders directly.</td></tr>
+                                            <tr><th>3. Risk Engine</th><td>Deterministic gates decide GO, HOLD, KILL, reject, or simulation.</td></tr>
+                                            <tr><th>4. Broker</th><td>Simulation, paper, relay, or direct Pionex adapter executes only after gates pass.</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div className="panel span-5">
+                                    <div className="panel-title">Current Status JSON</div>
+                                    <div className="result">{pretty({ health, status })}</div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section className={tab === "Manual Signal" ? "" : "hidden"}>
+                            <div className="grid">
+                                <form className="panel span-6" onSubmit={submitSignal}>
+                                    <div className="panel-title">Manual M8 Signal</div>
+                                    <div className="form-grid">
+                                        <label>Signal ID<input value={signal.signal_id} onChange={e => updateSignal("signal_id", e.target.value)} /></label>
+                                        <label>Symbol<input value={signal.symbol} onChange={e => updateSignal("symbol", e.target.value)} /></label>
+                                        <label>Timeframe<input value={signal.timeframe} onChange={e => updateSignal("timeframe", e.target.value)} /></label>
+                                        <label>Direction<select value={signal.direction} onChange={e => updateSignal("direction", e.target.value)}><option>LONG</option><option>SHORT</option></select></label>
+                                        <label>Intent<select value={signal.intent} onChange={e => updateSignal("intent", e.target.value)}><option>ENTRY</option><option>CLOSE</option></select></label>
+                                        <label>Account Mode<select value={signal.account_mode} onChange={e => updateSignal("account_mode", e.target.value)}><option>SPOT</option><option>FUTURES</option></select></label>
+                                        <label>Entry Price<input type="number" value={signal.entry_price} onChange={e => updateSignal("entry_price", e.target.value)} /></label>
+                                        <label>Stop Price<input type="number" value={signal.stop_price} onChange={e => updateSignal("stop_price", e.target.value)} /></label>
+                                        <label>Target Price<input type="number" value={signal.target_price} onChange={e => updateSignal("target_price", e.target.value)} /></label>
+                                        <label>Confluence<input type="number" min="0" max="100" value={signal.confluence_score} onChange={e => updateSignal("confluence_score", e.target.value)} /></label>
+                                        <label>Crisis Score<input type="number" min="0" max="100" value={signal.crisis_score} onChange={e => updateSignal("crisis_score", e.target.value)} /></label>
+                                        <label>Spread<input type="number" min="0" value={signal.spread} onChange={e => updateSignal("spread", e.target.value)} /></label>
+                                        <label>MC Dispersion<input type="number" min="0" value={signal.mc_dispersion} onChange={e => updateSignal("mc_dispersion", e.target.value)} /></label>
+                                        <label>Order Command<select value={signal.order_command} onChange={e => updateSignal("order_command", e.target.value)}><option>GO</option><option>HOLD</option><option>KILL</option></select></label>
+                                        <label className="full">Timestamp<input value={signal.timestamp} onChange={e => updateSignal("timestamp", e.target.value)} /></label>
+                                    </div>
+                                    <div className="actions" style={{marginTop: 14}}>
+                                        <button type="button" onClick={() => setSignal({ ...defaultSignal, signal_id: `manual-${Date.now()}`, timestamp: new Date().toISOString() })}>Load Sample</button>
+                                        <button className="primary" type="submit" disabled={loading}>Submit Signal</button>
+                                    </div>
+                                </form>
+
+                                <div className="panel span-6">
+                                    <div className="panel-title">Execution Result</div>
+                                    <div className="result">{signalResult}</div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section className={tab === "Backtest" ? "" : "hidden"}>
+                            <div className="grid">
+                                <form className="panel span-4" onSubmit={runBacktest}>
+                                    <div className="panel-title">Backtest Runner</div>
+                                    <div className="form-grid">
+                                        <label className="full">Symbol<input value={backtest.symbol} onChange={e => setBacktest({ ...backtest, symbol: e.target.value })} /></label>
+                                        <label>Timeframe<input value={backtest.timeframe} onChange={e => setBacktest({ ...backtest, timeframe: e.target.value })} /></label>
+                                        <label>Bars<input type="number" min="50" value={backtest.bars} onChange={e => setBacktest({ ...backtest, bars: e.target.value })} /></label>
+                                        <label>Max Signals<input type="number" min="1" value={backtest.max_signals} onChange={e => setBacktest({ ...backtest, max_signals: e.target.value })} /></label>
+                                        <label>Min Confluence<input type="number" min="0" max="100" value={backtest.min_confluence} onChange={e => setBacktest({ ...backtest, min_confluence: e.target.value })} /></label>
+                                    </div>
+                                    <div className="actions" style={{marginTop: 14}}>
+                                        <button className="primary" type="submit" disabled={loading}>Run Backtest</button>
+                                    </div>
+                                </form>
+
+                                <div className="panel span-8">
+                                    <div className="panel-title">Backtest Output</div>
+                                    <div className="result">{backtestResult}</div>
+                                </div>
+
+                                <div className="panel span-12">
+                                    <div className="panel-title">Latest Signals</div>
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Signal</th>
+                                                <th>Direction</th>
+                                                <th>Entry</th>
+                                                <th>Confluence</th>
+                                                <th>Decision</th>
+                                                <th>Reject Reason</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {rows.length === 0 ? (
+                                                <tr><td colSpan="6">No backtest rows loaded.</td></tr>
+                                            ) : rows.slice(0, 12).map(row => (
+                                                <tr key={row.signal_id}>
+                                                    <td className="mono">{row.signal_id}</td>
+                                                    <td>{row.direction}</td>
+                                                    <td>{row.entry_price}</td>
+                                                    <td>{row.confluence_score}</td>
+                                                    <td>{row.final_decision}</td>
+                                                    <td>{row.reject_reason || ""}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section className={tab === "Raw Output" ? "" : "hidden"}>
+                            <div className="grid">
+                                <div className="panel span-6">
+                                    <div className="panel-title">Status</div>
+                                    <div className="result">{pretty({ health, status })}</div>
+                                </div>
+                                <div className="panel span-6">
+                                    <div className="panel-title">Last Signal Result</div>
+                                    <div className="result">{signalResult}</div>
+                                </div>
+                            </div>
+                        </section>
+                    </main>
                 </div>
             );
-        };
+        }
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        ReactDOM.createRoot(document.getElementById("root")).render(<App />);
     </script>
 </body>
 </html>
