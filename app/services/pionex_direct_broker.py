@@ -49,6 +49,64 @@ class PionexDirectConfig:
     api_key: str = PIONEX_API_KEY
     api_secret: str = PIONEX_API_SECRET
     allowed_symbols: list[str] = None
+    allowed_symbols: Optional[tuple[str, ...]] = None
+    base_url: str = PIONEX_DIRECT_BASE_URL
+    timeout_seconds: float = PIONEX_DIRECT_TIMEOUT_SECONDS
+    default_spot_symbol: str = PIONEX_DIRECT_DEFAULT_SPOT_SYMBOL
+    default_futures_symbol: str = PIONEX_DIRECT_DEFAULT_FUTURES_SYMBOL
+    futures_enabled: bool = PIONEX_DIRECT_FUTURES_ENABLED
+    futures_mode: str = PIONEX_DIRECT_FUTURES_MODE
+    allow_payload_leverage: bool = PIONEX_DIRECT_ALLOW_PAYLOAD_LEVERAGE
+
+    def __post_init__(self):
+        if self.allowed_symbols is None:
+            symbols = tuple(s.strip() for s in PIONEX_ALLOWED_SYMBOLS.split(",") if s.strip())
+            object.__setattr__(self, "allowed_symbols", symbols)
+
+
+class PionexDirectBroker:
+    """
+    Broker adapter for the external Pionex Direct API.
+
+    Safety defaults:
+    - If PIONEX_DIRECT_LIVE_TRADING_ENABLED=false, operates in DRY-RUN mode.
+    - Enforces a strict allowlist of symbols.
+    - Only forwards signals after the deterministic risk engine returns PROCEED_TO_SIMULATION.
+    """
+
+    def __init__(self, config: Optional[PionexDirectConfig] = None) -> None:
+        self.config = config or PionexDirectConfig()
+        self.journal: list[TradeJournalEntry] = []
+
+    def is_ready(self) -> bool:
+        return bool(
+            self.config.enabled
+            and self.config.api_key
+            and self.config.api_secret
+        )
+
+    def _map_symbol(self, symbol: str) -> Optional[str]:
+        # Handle cases like XAGUSDT.P -> XAG_USDT_PERP
+        mapping = {
+            "XAGUSDT.P": "XAG_USDT_PERP",
+            "BTCUSD": "BTC_USDT",
+            "ETHUSD": "ETH_USDT",
+        }
+        mapped = mapping.get(symbol, symbol)
+        if mapped in self.config.allowed_symbols:
+            return mapped
+        return None
+
+    def execute_trade(
+        self,
+        payload: M8Payload,
+        decision: DecisionEnum,
+        reject_reason: Optional[str] = None,
+        ai_decision: AIDecisionEnum = AIDecisionEnum.PROCEED_TO_SIMULATION,
+    ) -> TradeJournalEntry:
+        simulated_fill: Dict[str, Any] = {}
+        result: Dict[str, Any]
+
     base_url: str = PIONEX_DIRECT_BASE_URL
     timeout_seconds: float = PIONEX_DIRECT_TIMEOUT_SECONDS
     default_spot_symbol: str = PIONEX_DIRECT_DEFAULT_SPOT_SYMBOL
@@ -182,6 +240,7 @@ class PionexDirectBroker:
         else:
             risk = payload.stop_price - payload.entry_price
             reward = payload.entry_price - payload.target_price
+
         return reward / risk if risk > 0 else 0.0
 
     @staticmethod

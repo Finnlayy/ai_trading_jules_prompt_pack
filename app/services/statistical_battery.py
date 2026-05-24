@@ -54,17 +54,16 @@ def hurst_rs(prices: Sequence[float], max_lag: int = 100) -> float:
         if chunks < 2:
             continue
 
-        rs_list = []
-        for i in range(chunks):
-            chunk = returns[i * lag : (i + 1) * lag]
-            mean_chunk = np.mean(chunk)
-            cumdev = np.cumsum(chunk - mean_chunk)
-            r = np.max(cumdev) - np.min(cumdev)
-            s = np.std(chunk, ddof=1)
-            if s > 1e-12:
-                rs_list.append(r / s)
+        # Vectorized Hurst Calculation
+        reshaped = returns[:chunks * lag].reshape(chunks, lag)
+        means = np.mean(reshaped, axis=1, keepdims=True)
+        cumdevs = np.cumsum(reshaped - means, axis=1)
+        r = np.max(cumdevs, axis=1) - np.min(cumdevs, axis=1)
+        s = np.std(reshaped, axis=1, ddof=1)
 
-        if rs_list:
+        valid = s > 1e-12
+        if np.any(valid):
+            rs_list = r[valid] / s[valid]
             lags.append(math.log(lag))
             rs_values.append(math.log(np.mean(rs_list)))
 

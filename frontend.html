@@ -62,6 +62,7 @@
                                 onClick={() => setActiveTab(tab)}
                                 aria-label={`Navigate to ${tab}`}
                                 className={`text-left px-4 py-3 text-sm uppercase tracking-wider ${activeTab === tab ? 'bg-gray-800 text-matteMint border-l-4 border-matteMint' : 'text-gray-400 hover:text-white hover:bg-gray-800 border-l-4 border-transparent'} transition-colors`}
+                                className={`text-left px-4 py-3 text-sm uppercase tracking-wider ${activeTab === tab ? 'bg-gray-800 text-matteMint border-l-4 border-matteMint' : 'text-gray-400 hover:text-white hover:bg-gray-800 border-l-4 border-transparent'} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-matteMint focus-visible:ring-offset-2 focus-visible:ring-offset-terminalBlack transition-colors`}
                             >
                                 {tab}
                             </button>
@@ -121,7 +122,7 @@
                         <div className="col-span-2 bg-slateGray p-6 border border-gray-800 flex flex-col">
                             <h3 className="text-sm text-gray-400 uppercase mb-4 tracking-wider">The Constructor (Code & Logic)</h3>
                             <textarea
-                                className="flex-1 w-full min-h-[400px] bg-terminalBlack border border-gray-700 text-gray-300 p-4 font-mono text-sm focus:outline-none focus:border-matteMint"
+                                className="flex-1 w-full min-h-[400px] bg-terminalBlack border border-gray-700 text-gray-300 p-4 font-mono text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-matteMint focus-visible:ring-offset-2 focus-visible:ring-offset-terminalBlack"
                                 defaultValue={"// Pine Script v6 Editor\nstrategy('SMC Quantum v6', overlay=true)\n\n// Core Logic Configuration\nlongCondition = ta.crossover(ta.sma(close, 14), ta.sma(close, 28))\nif (longCondition)\n    strategy.entry('Long', strategy.long)\n\n// Risk Management\nstrategy.exit('Exit', 'Long', loss=500, profit=1000)"}
                             />
                         </div>
@@ -170,6 +171,7 @@
                                     value={slippage}
                                     onChange={(e) => setSlippage(e.target.value)}
                                     className="w-full accent-matteMint cursor-pointer mb-2 focus-visible:ring-2 focus-visible:ring-matteMint focus:outline-none"
+                                    className="w-full accent-matteMint cursor-pointer mb-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-matteMint focus-visible:ring-offset-2 focus-visible:ring-offset-terminalBlack"
                                 />
                                 <p className="text-xs text-gray-500">Inject worst-case fill slippage to simulate toxic market conditions.</p>
                             </div>
@@ -182,6 +184,8 @@
                                 <button
                                     onClick={() => setLiquidityVacuum(!liquidityVacuum)}
                                     className={`px-6 py-2 text-xs uppercase font-bold tracking-wider border ${liquidityVacuum ? 'bg-mutedRust text-white border-mutedRust' : 'bg-terminalBlack text-gray-400 border-gray-700'} hover:border-gray-500 focus-visible:ring-2 focus-visible:ring-matteMint focus:outline-none transition-colors`}
+                                    aria-pressed={liquidityVacuum}
+                                    className={`px-6 py-2 text-xs uppercase font-bold tracking-wider border ${liquidityVacuum ? 'bg-mutedRust text-white border-mutedRust' : 'bg-terminalBlack text-gray-400 border-gray-700'} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-matteMint focus-visible:ring-offset-2 focus-visible:ring-offset-terminalBlack transition-colors`}
                                 >
                                     {liquidityVacuum ? 'Active' : 'Inactive'}
                                 </button>
@@ -195,6 +199,8 @@
                                 <button
                                     onClick={() => setToxicMonday(!toxicMonday)}
                                     className={`px-6 py-2 text-xs uppercase font-bold tracking-wider border ${toxicMonday ? 'bg-matteMint text-black border-matteMint' : 'bg-terminalBlack text-gray-400 border-gray-700'} hover:border-gray-500 focus-visible:ring-2 focus-visible:ring-matteMint focus:outline-none transition-colors`}
+                                    aria-pressed={toxicMonday}
+                                    className={`px-6 py-2 text-xs uppercase font-bold tracking-wider border ${toxicMonday ? 'bg-matteMint text-black border-matteMint' : 'bg-terminalBlack text-gray-400 border-gray-700'} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-matteMint focus-visible:ring-offset-2 focus-visible:ring-offset-terminalBlack transition-colors`}
                                 >
                                     {toxicMonday ? 'Active' : 'Inactive'}
                                 </button>
