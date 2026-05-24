@@ -30,6 +30,7 @@ def test_reconcile_ledger_detects_divergence():
             live_trading_enabled=False,
             allowed_symbols=("BTC_USDT_PERP",),
         ),
+        journal_path="/tmp/test_reconcile_clean.jsonl",
     )
 
     class FakeClient:
