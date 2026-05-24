@@ -214,10 +214,42 @@ def compute_ob_fvg_touches(
 
         # Touches on current bar
         c = candles[i]
-        bull_ob_touch[i] = any((c.l <= top and c.h >= bot) for top, bot in bull_ob[-5:]) if bull_ob else False
-        bear_ob_touch[i] = any((c.h >= bot and c.l <= top) for top, bot in bear_ob[-5:]) if bear_ob else False
-        bull_fvg_touch[i] = any((c.l <= top and c.h >= bot) for top, bot in bull_fvg[-5:]) if bull_fvg else False
-        bear_fvg_touch[i] = any((c.h >= bot and c.l <= top) for top, bot in bear_fvg[-5:]) if bear_fvg else False
+
+        # Bull OB
+        if bull_ob:
+            found = False
+            for top, bot in bull_ob[-5:]:
+                if c.l <= top and c.h >= bot:
+                    found = True
+                    break
+            bull_ob_touch[i] = found
+
+        # Bear OB
+        if bear_ob:
+            found = False
+            for top, bot in bear_ob[-5:]:
+                if c.h >= bot and c.l <= top:
+                    found = True
+                    break
+            bear_ob_touch[i] = found
+
+        # Bull FVG
+        if bull_fvg:
+            found = False
+            for top, bot in bull_fvg[-5:]:
+                if c.l <= top and c.h >= bot:
+                    found = True
+                    break
+            bull_fvg_touch[i] = found
+
+        # Bear FVG
+        if bear_fvg:
+            found = False
+            for top, bot in bear_fvg[-5:]:
+                if c.h >= bot and c.l <= top:
+                    found = True
+                    break
+            bear_fvg_touch[i] = found
 
     return bull_ob_touch, bear_ob_touch, bull_fvg_touch, bear_fvg_touch
 

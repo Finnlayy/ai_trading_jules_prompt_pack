@@ -53,12 +53,19 @@ class PionexDirectConfig:
     live_trading_enabled: bool = PIONEX_DIRECT_LIVE_TRADING_ENABLED
     api_key: str = PIONEX_API_KEY
     api_secret: str = PIONEX_API_SECRET
-    allowed_symbols: list[str] = None
+    allowed_symbols: Optional[tuple[str, ...]] = None
+    base_url: str = PIONEX_DIRECT_BASE_URL
+    timeout_seconds: float = PIONEX_DIRECT_TIMEOUT_SECONDS
+    default_spot_symbol: str = PIONEX_DIRECT_DEFAULT_SPOT_SYMBOL
+    default_futures_symbol: str = PIONEX_DIRECT_DEFAULT_FUTURES_SYMBOL
+    futures_enabled: bool = PIONEX_DIRECT_FUTURES_ENABLED
+    futures_mode: str = PIONEX_DIRECT_FUTURES_MODE
+    allow_payload_leverage: bool = PIONEX_DIRECT_ALLOW_PAYLOAD_LEVERAGE
 
     def __post_init__(self):
         if self.allowed_symbols is None:
-            symbols = [s.strip() for s in PIONEX_ALLOWED_SYMBOLS.split(",") if s.strip()]
-            object.__setattr__(self, 'allowed_symbols', symbols)
+            symbols = tuple(s.strip() for s in PIONEX_ALLOWED_SYMBOLS.split(",") if s.strip())
+            object.__setattr__(self, "allowed_symbols", symbols)
 
 
 class PionexDirectBroker:
@@ -231,47 +238,6 @@ class PionexDirectBroker:
             risk = payload.stop_price - payload.entry_price
             reward = payload.entry_price - payload.target_price
 
-        rr_ratio = reward / risk if risk > 0 else 0.0
-
-        if decision != DecisionEnum.PROCEED_TO_SIMULATION:
-            final_decision = FinalDecisionEnum.REJECTED
-            result = {"status": "REJECTED", "reject_reason": reject_reason}
-        else:
-            mapped_symbol = self._map_symbol(payload.symbol)
-            if not mapped_symbol:
-                final_decision = FinalDecisionEnum.REJECTED
-                result = {
-                    "status": "REJECTED",
-                    "reject_reason": f"SYMBOL_NOT_IN_ALLOWLIST: {payload.symbol} (mapped: {mapped_symbol})"
-                }
-            elif not self.config.enabled or not self.is_ready():
-                final_decision = FinalDecisionEnum.REJECTED
-                result = {
-                    "status": "CONFIG_ERROR",
-                    "reject_reason": "PIONEX_DIRECT_NOT_CONFIGURED"
-                }
-            else:
-                simulated_fill = {
-                    "fill_price": payload.entry_price,
-                    "fee": 0.0,
-                    "slippage": 0.0,
-                    "mode": "PIONEX_DIRECT",
-                    "live_trading_enabled": self.config.live_trading_enabled,
-                }
-
-                if not self.config.live_trading_enabled:
-                    final_decision = FinalDecisionEnum.EXECUTED_SIM
-                    result = {
-                        "status": "DRY_RUN_DIRECT",
-                        "reject_reason": None,
-                        "mapped_symbol": mapped_symbol,
-                    }
-                else:
-                    final_decision, result = self._send_to_direct_api(payload, mapped_symbol)
-
-        entry = TradeJournalEntry(
-            trade_id=f"pionex-direct-{payload.signal_id}",
-            timestamp=datetime.now(timezone.utc).isoformat(),
         return reward / risk if risk > 0 else 0.0
 
     @staticmethod
@@ -297,7 +263,6 @@ class PionexDirectBroker:
             entry_price=payload.entry_price,
             stop_price=payload.stop_price,
             target_price=payload.target_price,
-            risk_reward=rr_ratio,
             risk_reward=self._trade_rr(payload),
             m8_score=payload.confluence_score,
             ai_decision=DecisionEnum(ai_decision.value),

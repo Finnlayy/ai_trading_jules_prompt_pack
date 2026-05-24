@@ -1,9 +1,9 @@
+from app.schemas.journal import DecisionEnum, FinalDecisionEnum
 import pytest
 from app.services.pionex_direct_broker import PionexDirectBroker, PionexDirectConfig
 from app.schemas.m8_payload import M8Payload
-from app.schemas.journal import DecisionEnum, FinalDecisionEnum
 
-def create_payload(symbol="BTCUSD") -> M8Payload:
+def create_payload(symbol="BTC_USDT") -> M8Payload:
     return M8Payload(
         signal_id="test-sig-1",
         symbol=symbol,
@@ -25,7 +25,7 @@ def test_dry_run_direct():
         live_trading_enabled=False,
         api_key="mock",
         api_secret="mock",
-        allowed_symbols=["BTC_USDT"]
+        allowed_symbols=("BTC_USDT",)
     )
     broker = PionexDirectBroker(config)
     payload = create_payload()
@@ -34,7 +34,7 @@ def test_dry_run_direct():
 
     assert entry.final_decision == FinalDecisionEnum.EXECUTED_SIM
     assert entry.result["status"] == "DRY_RUN_DIRECT"
-    assert entry.result["mapped_symbol"] == "BTC_USDT"
+    assert entry.result["ledger_delta"]["symbol"] == "BTC_USDT"
 
 def test_live_trading_direct():
     config = PionexDirectConfig(
@@ -42,9 +42,15 @@ def test_live_trading_direct():
         live_trading_enabled=True,
         api_key="mock",
         api_secret="mock",
-        allowed_symbols=["BTC_USDT"]
+        allowed_symbols=("BTC_USDT",)
     )
     broker = PionexDirectBroker(config)
+    class FakeClient:
+        def place_spot_market_buy(self, **kwargs):
+            return {"orderId": "123"}
+        def get_balance(self, **kwargs):
+            return 1000.0
+    broker.client = FakeClient()
     payload = create_payload()
 
     entry = broker.execute_trade(payload, DecisionEnum.PROCEED_TO_SIMULATION)
@@ -58,7 +64,7 @@ def test_allowlist_rejection():
         live_trading_enabled=False,
         api_key="mock",
         api_secret="mock",
-        allowed_symbols=["BTC_USDT"]
+        allowed_symbols=("BTC_USDT",)
     )
     broker = PionexDirectBroker(config)
     payload = create_payload(symbol="XAGUSDT.P")
@@ -66,7 +72,7 @@ def test_allowlist_rejection():
     entry = broker.execute_trade(payload, DecisionEnum.PROCEED_TO_SIMULATION)
 
     assert entry.final_decision == FinalDecisionEnum.REJECTED
-    assert "SYMBOL_NOT_IN_ALLOWLIST" in entry.result["reject_reason"]
+    assert "SYMBOL_NOT_ALLOWED" in entry.result["reject_reason"]
 
 def test_allowlist_acceptance_xag():
     config = PionexDirectConfig(
@@ -74,7 +80,7 @@ def test_allowlist_acceptance_xag():
         live_trading_enabled=False,
         api_key="mock",
         api_secret="mock",
-        allowed_symbols=["BTC_USDT", "XAG_USDT_PERP"]
+        allowed_symbols=("BTC_USDT", "XAG_USDT_PERP")
     )
     broker = PionexDirectBroker(config)
     payload = create_payload(symbol="XAGUSDT.P")
@@ -83,8 +89,7 @@ def test_allowlist_acceptance_xag():
 
     assert entry.final_decision == FinalDecisionEnum.EXECUTED_SIM
     assert entry.result["status"] == "DRY_RUN_DIRECT"
-    assert entry.result["mapped_symbol"] == "XAG_USDT_PERP"
-from app.schemas.journal import DecisionEnum, FinalDecisionEnum
+    assert entry.result["ledger_delta"]["symbol"] == "XAG_USDT_PERP"
 from app.schemas.m8_payload import M8Payload
 from app.services.pionex_direct_broker import PionexDirectBroker, PionexDirectConfig
 
