@@ -169,8 +169,18 @@ class TelegramNewsReceiver:
 
 
 # Global singletons (lazy config from env)
-# GLINT receiver — monitors GLINT bot messages
-telegram_news_receiver_instance = TelegramNewsReceiver()
+from app.core.config import TELEGRAM_BOT_TOKEN, GLINT_TELEGRAM_CHAT_ID, MANUS_TELEGRAM_CHAT_ID
+
+# GLINT receiver — monitors GLINT bot messages (uses GLINT-specific chat ID)
+telegram_news_receiver_instance = TelegramNewsReceiver(
+    bot_token=TELEGRAM_BOT_TOKEN,
+    chat_id=GLINT_TELEGRAM_CHAT_ID,
+    max_messages=100,
+)
 
 # Manus receiver — monitors Manus advisor bot messages (separate chat)
-manus_telegram_receiver_instance = TelegramNewsReceiver()
+manus_telegram_receiver_instance = TelegramNewsReceiver(
+    bot_token=TELEGRAM_BOT_TOKEN,
+    chat_id=MANUS_TELEGRAM_CHAT_ID,
+    max_messages=100,
+)

@@ -3,15 +3,10 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from app.core.config import TELEGRAM_BOT_TOKEN, MANUS_TELEGRAM_CHAT_ID
 from app.services.news_aggregator import news_aggregator_instance
-from app.services.telegram_news_receiver import TelegramNewsReceiver, telegram_news_receiver_instance
-
-# Manus receiver — separate Telegram chat from GLINT
-manus_telegram_receiver_instance = TelegramNewsReceiver(
-    bot_token=TELEGRAM_BOT_TOKEN,
-    chat_id=MANUS_TELEGRAM_CHAT_ID,
-    max_messages=100,
+from app.services.telegram_news_receiver import (
+    telegram_news_receiver_instance,
+    manus_telegram_receiver_instance,
 )
 
 router = APIRouter()
