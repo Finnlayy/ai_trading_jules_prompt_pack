@@ -105,6 +105,8 @@ PIONEX_DIRECT_MIN_BASE_SIZE = _as_float(os.getenv("PIONEX_DIRECT_MIN_BASE_SIZE")
 
 # AI availability policy for live-capable modes
 AI_FAILURE_POLICY = os.getenv("AI_FAILURE_POLICY", "reject_live").strip().lower()  # reject_live|allow_live
+AI_TELEGRAM_ADVISORS_ENABLED = _as_bool(os.getenv("AI_TELEGRAM_ADVISORS_ENABLED"), False)
+AI_TELEGRAM_ADVISOR_TIMEOUT_SECONDS = _as_float(os.getenv("AI_TELEGRAM_ADVISOR_TIMEOUT_SECONDS"), 20.0)
 
 # Deterministic War Room order-management controls
 WAR_ROOM_ENABLED = _as_bool(os.getenv("WAR_ROOM_ENABLED"), True)

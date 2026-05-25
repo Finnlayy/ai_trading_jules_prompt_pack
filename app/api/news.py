@@ -8,6 +8,7 @@ from app.services.telegram_news_receiver import (
     telegram_news_receiver_instance,
     manus_telegram_receiver_instance,
 )
+from app.services.telegram_advisors import telegram_advisor_hub
 
 router = APIRouter()
 
@@ -77,6 +78,7 @@ async def get_glint_messages():
                 "text": m.text,
                 "sender": m.sender,
                 "timestamp": m.timestamp,
+                "chat_id": m.chat_id,
             }
             for m in messages
         ],
@@ -97,9 +99,28 @@ async def poll_glint_messages():
                 "text": m.text,
                 "sender": m.sender,
                 "timestamp": m.timestamp,
+                "chat_id": m.chat_id,
             }
             for m in new_messages
         ],
+    }
+
+
+@router.post("/glint/ask")
+async def ask_glint(question: str = "Positions"):
+    """Ask GLINT a harmless status-style question and wait briefly for a response."""
+    result = await telegram_advisor_hub.ask_glint(question)
+    if not result["configured"]:
+        return {"status": "error", "detail": "GLINT not configured. Set GLINT_TELEGRAM_CHAT_ID and GLINT_BOT_USERNAME."}
+    if not result["sent"]:
+        return {"status": "error", "detail": result.get("error") or "Failed to send message to GLINT chat."}
+    return {
+        "status": "ok",
+        "question": question,
+        "sent": result["sent"],
+        "timed_out": result["timed_out"],
+        "new_count": len(result["messages"]),
+        "messages": result["messages"],
     }
 
 
@@ -121,6 +142,7 @@ async def get_manus_messages():
                 "text": m.text,
                 "sender": m.sender,
                 "timestamp": m.timestamp,
+                "chat_id": m.chat_id,
             }
             for m in messages
         ],
@@ -141,6 +163,7 @@ async def poll_manus_messages():
                 "text": m.text,
                 "sender": m.sender,
                 "timestamp": m.timestamp,
+                "chat_id": m.chat_id,
             }
             for m in new_messages
         ],
@@ -150,40 +173,16 @@ async def poll_manus_messages():
 @router.post("/manus/ask")
 async def ask_manus(question: str):
     """Send a question to the Manus advisor bot and wait for response."""
-    if not manus_telegram_receiver_instance._is_configured():
+    result = await telegram_advisor_hub.ask_manus(question)
+    if not result["configured"]:
         return {"status": "error", "detail": "Manus not configured. Set MANUS_TELEGRAM_CHAT_ID and MANUS_BOT_USERNAME."}
-
-    # Send the question
-    sent = manus_telegram_receiver_instance.notifier.send(question) if hasattr(manus_telegram_receiver_instance, 'notifier') else False
-    if not sent:
-        # Fallback: use the GLINT notifier with Manus chat ID
-        from app.services.telegram_notifier import TelegramNotifier, TelegramConfig
-        notifier = TelegramNotifier(
-            TelegramConfig(
-                enabled=True,
-                bot_token=TELEGRAM_BOT_TOKEN,
-                chat_id=MANUS_TELEGRAM_CHAT_ID,
-            )
-        )
-        sent = notifier.send(question)
-
-    if not sent:
-        return {"status": "error", "detail": "Failed to send message to Manus chat."}
-
-    # Poll for response
-    new_messages = await manus_telegram_receiver_instance.poll_async()
+    if not result["sent"]:
+        return {"status": "error", "detail": result.get("error") or "Failed to send message to Manus chat."}
     return {
         "status": "ok",
         "question": question,
-        "sent": sent,
-        "new_messages_count": len(new_messages),
-        "messages": [
-            {
-                "id": m.id,
-                "text": m.text,
-                "sender": m.sender,
-                "timestamp": m.timestamp,
-            }
-            for m in new_messages
-        ],
+        "sent": result["sent"],
+        "timed_out": result["timed_out"],
+        "new_messages_count": len(result["messages"]),
+        "messages": result["messages"],
     }

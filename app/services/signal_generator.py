@@ -134,6 +134,7 @@ class SignalGenerator:
         )
         self.feed = BybitDataFeed()
         self.last_generation_summary: Dict = {}
+        self.last_raw_bars: List[OHLCV] = []
 
     def _ohlcv_to_cisd_candles(self, bars: List[OHLCV]) -> List[CISDScorerCandle]:
         return [CISDScorerCandle(ts=b.ts, o=b.o, h=b.h, l=b.l, c=b.c, v=b.v) for b in bars]
@@ -163,6 +164,7 @@ class SignalGenerator:
         tp_atr_mul = cal_params.get("tp_atr_mul", 2.8)
 
         raw_bars = self.feed.fetch(symbol, bars, timeframe)
+        self.last_raw_bars = raw_bars
         if len(raw_bars) < 50:
             self.last_generation_summary = {
                 "symbol": symbol,

@@ -13,9 +13,9 @@ from __future__ import annotations
 
 import os
 from collections import deque
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import ClassVar, List, Optional
 
 import httpx
 
@@ -38,6 +38,9 @@ class GlintMessage:
 class TelegramNewsReceiver:
     """Polls Telegram for messages and stores GLINT feed items."""
 
+    _instances_by_token: ClassVar[dict[str, list["TelegramNewsReceiver"]]] = {}
+    _last_update_id_by_token: ClassVar[dict[str, Optional[int]]] = {}
+
     def __init__(
         self,
         bot_token: str = "",
@@ -51,8 +54,12 @@ class TelegramNewsReceiver:
         self.poll_interval = poll_interval_seconds
         self._messages: deque = deque(maxlen=max_messages)
         self._last_update_id: Optional[int] = None
+        self._seen_message_keys: set[tuple[str, int]] = set()
         self._enabled = bool(self.bot_token and self.chat_id)
         self._client: Optional[httpx.AsyncClient] = None
+        if self.bot_token:
+            self._instances_by_token.setdefault(self.bot_token, []).append(self)
+            self._last_update_id_by_token.setdefault(self.bot_token, None)
 
     def _client_sync(self) -> httpx.Client:
         return httpx.Client(timeout=15.0)
@@ -98,12 +105,13 @@ class TelegramNewsReceiver:
         try:
             with self._client_sync() as client:
                 params: dict = {"limit": limit}
-                if self._last_update_id is not None:
-                    params["offset"] = self._last_update_id + 1
+                last_update_id = self._last_update_id_by_token.get(self.bot_token)
+                if last_update_id is not None:
+                    params["offset"] = last_update_id + 1
                 response = client.get(self._url("getUpdates"), params=params)
                 response.raise_for_status()
                 data = response.json()
-                return self._process_updates(data.get("result", []))
+                return self._dispatch_updates(self.bot_token, data.get("result", [])).get(self, [])
         except Exception:
             return []
 
@@ -114,19 +122,35 @@ class TelegramNewsReceiver:
         try:
             client = self._client_async()
             params: dict = {"limit": limit}
-            if self._last_update_id is not None:
-                params["offset"] = self._last_update_id + 1
+            last_update_id = self._last_update_id_by_token.get(self.bot_token)
+            if last_update_id is not None:
+                params["offset"] = last_update_id + 1
             response = await client.get(self._url("getUpdates"), params=params)
             response.raise_for_status()
             data = response.json()
-            return self._process_updates(data.get("result", []))
+            return self._dispatch_updates(self.bot_token, data.get("result", [])).get(self, [])
         except Exception:
             return []
+
+    @classmethod
+    def _dispatch_updates(
+        cls, bot_token: str, updates: list
+    ) -> dict["TelegramNewsReceiver", List[GlintMessage]]:
+        max_update_id = cls._last_update_id_by_token.get(bot_token)
+        for update in updates:
+            update_id = update.get("update_id", 0)
+            max_update_id = max(max_update_id or 0, update_id)
+        cls._last_update_id_by_token[bot_token] = max_update_id
+
+        results: dict[TelegramNewsReceiver, List[GlintMessage]] = {}
+        for receiver in cls._instances_by_token.get(bot_token, []):
+            receiver._last_update_id = max_update_id
+            results[receiver] = receiver._process_updates(updates)
+        return results
 
     def _process_updates(self, updates: list) -> List[GlintMessage]:
         new_messages: List[GlintMessage] = []
         for update in updates:
-            self._last_update_id = max(self._last_update_id or 0, update.get("update_id", 0))
             msg = update.get("message") or update.get("channel_post") or update.get("edited_message")
             if not msg:
                 continue
@@ -137,6 +161,10 @@ class TelegramNewsReceiver:
             text = self._extract_text(msg)
             if not text:
                 continue
+            key = (str(chat_id), int(msg.get("message_id", 0) or 0))
+            if key in self._seen_message_keys:
+                continue
+            self._seen_message_keys.add(key)
             gm = GlintMessage(
                 id=msg.get("message_id", 0),
                 text=text,

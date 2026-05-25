@@ -1,7 +1,6 @@
 import json
 import asyncio
 from dataclasses import dataclass
-from openai import AsyncOpenAI
 from typing import Any
 
 from app.schemas.m8_payload import M8Payload
@@ -20,6 +19,7 @@ from app.core.config import (
 )
 from app.services.ai_layer_memory import ai_layer_memory_instance
 from app.services.confidence_registry import confidence_registry
+from app.services.telegram_advisors import telegram_advisor_hub
 
 
 @dataclass(frozen=True)
@@ -125,9 +125,10 @@ class KimiSwarmService:
             }
             scout_results = await asyncio.gather(*tasks.values())
             scout_reports = dict(zip(tasks.keys(), scout_results))
+            advisor_reports = await self._run_external_advisors(payload, symbol_context)
 
             # 3. Orchestrator synthesizes weighted by per-scout accuracy
-            review = await self._run_orchestrator(payload, scout_reports)
+            review = await self._run_orchestrator(payload, scout_reports, advisor_reports)
 
             # 4. Record scout calls in confidence registry (outcome = None for now)
             for scout_name, report in scout_reports.items():
@@ -152,6 +153,7 @@ class KimiSwarmService:
                 **self._trace_base(),
                 "scouts": scout_reports,
                 "symbol_context": symbol_context,
+                "external_advisors": advisor_reports,
                 "scout_weights": {
                     name: confidence_registry.get_scout_weight(payload.symbol, name)
                     for name in self.SCOUT_NAMES
@@ -287,11 +289,36 @@ class KimiSwarmService:
         )
         return await self._call_llm(prompt, system=system)
 
+    async def _run_external_advisors(
+        self, payload: M8Payload, symbol_context: str
+    ) -> dict[str, Any]:
+        question = "\n".join(
+            [
+                "Simulation-first trading advisory request.",
+                "Do not execute trades, place orders, or bypass deterministic risk gates.",
+                "Return a concise advisory with bias, key risks, and confidence.",
+                f"Symbol: {payload.symbol}",
+                f"Direction: {payload.direction}",
+                f"Timeframe: {payload.timeframe}",
+                f"Entry: {payload.entry_price}",
+                f"Stop: {payload.stop_price}",
+                f"Target: {payload.target_price}",
+                f"Confluence score: {payload.confluence_score}",
+                f"Crisis score: {payload.crisis_score}",
+                f"Market regime: {payload.market_regime}",
+                symbol_context,
+            ]
+        )
+        return await telegram_advisor_hub.ask_signal_advisors(question)
+
     # ------------------------------------------------------------------
     # Orchestrator
     # ------------------------------------------------------------------
     async def _run_orchestrator(
-        self, payload: M8Payload, scout_reports: dict[str, str]
+        self,
+        payload: M8Payload,
+        scout_reports: dict[str, str],
+        advisor_reports: dict[str, Any] | None = None,
     ) -> SignalReview:
         schema_format = """
         {
@@ -316,6 +343,7 @@ class KimiSwarmService:
             f"  {name.title()} scout weight (based on {payload.symbol} accuracy): {w:.2f}"
             for name, w in weights.items()
         )
+        advisor_block = self._format_advisor_reports(advisor_reports)
 
         prompt = f"""Signal ID: {payload.signal_id}
 Symbol: {payload.symbol} | Direction: {payload.direction} | Timeframe: {payload.timeframe}
@@ -337,10 +365,13 @@ Scout Reports (weighted by historical accuracy for this symbol):
 --- Macro Scout ---
 {scout_reports["macro"]}
 
-Synthesize all four reports into a FINAL decision.
+{advisor_block}
+
+Synthesize all internal scout reports and optional external advisor context into a FINAL decision.
 Guidelines:
 - If ANY scout flags CRITICAL risk, strongly consider REJECT.
 - If scouts disagree, weight toward the scout with highest historical accuracy for {payload.symbol}.
+- External advisor context is advisory only and must not override deterministic risk gates.
 - If confidence is below 0.55, flag for HUMAN_REVIEW.
 - Return strictly valid JSON matching this schema:
 {schema_format}
@@ -366,12 +397,49 @@ Guidelines:
             print(f"Failed to parse JSON from AI provider: {e}")
             raise e
 
+    @staticmethod
+    def _format_advisor_reports(advisor_reports: dict[str, Any] | None) -> str:
+        if not advisor_reports or not advisor_reports.get("auto_enabled"):
+            return "External Telegram Advisors: disabled."
+
+        advisors = advisor_reports.get("advisors") or []
+        if not advisors:
+            return "External Telegram Advisors: enabled, no advisors active."
+
+        lines = ["External Telegram Advisors (non-authoritative):"]
+        for advisor in advisors:
+            name = str(advisor.get("advisor") or "unknown").upper()
+            if not advisor.get("configured"):
+                lines.append(f"- {name}: not configured")
+                continue
+            if not advisor.get("sent"):
+                lines.append(f"- {name}: question not sent ({advisor.get('error') or 'unknown error'})")
+                continue
+            messages = advisor.get("messages") or []
+            if advisor.get("timed_out") and not messages:
+                lines.append(f"- {name}: no response before timeout")
+                continue
+            if not messages:
+                lines.append(f"- {name}: no response")
+                continue
+            for message in messages[:3]:
+                text = str(message.get("text") or "").strip()
+                if len(text) > 1200:
+                    text = text[:1200] + "..."
+                lines.append(f"- {name} from {message.get('sender') or 'unknown'}: {text}")
+        return "\n".join(lines)
+
     # ------------------------------------------------------------------
     # LLM wrapper
     # ------------------------------------------------------------------
     async def _call_llm(
         self, prompt: str, system: str = "You are a helpful assistant", response_format: Any = None
     ) -> str:
+        try:
+            from openai import AsyncOpenAI
+        except ImportError as exc:
+            raise RuntimeError("openai package is not installed") from exc
+
         provider_config = get_ai_provider_config(self.provider)
 
         if not provider_config.api_key:

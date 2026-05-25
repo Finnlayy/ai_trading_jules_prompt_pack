@@ -221,6 +221,33 @@ class ConfidenceRegistry:
         dstats.record_trade(pnl_pct, rr, win)
         self._save()
 
+    def mark_scout_outcome(
+        self,
+        symbol: str,
+        scout_names: list[str],
+        was_correct: bool,
+    ) -> None:
+        """
+        Mark already-recorded scout calls as correct after a paper/live outcome is known.
+
+        Scout calls are recorded when the LLM review runs. Paper replay learns later, when
+        a virtual trade closes, so this method updates correctness without double-counting
+        another scout call.
+        """
+        stats = self.get_symbol_stats(symbol)
+        if not was_correct:
+            return
+        changed = False
+        for scout_name in scout_names:
+            sstats = stats.scout_stats.get(scout_name)
+            if not sstats or sstats.calls <= 0:
+                continue
+            if sstats.correct_calls < sstats.calls:
+                sstats.correct_calls += 1
+                changed = True
+        if changed:
+            self._save()
+
     def get_symbol_context(self, symbol: str, direction: str) -> str:
         """
         Build a concise context string for injection into scout prompts.
