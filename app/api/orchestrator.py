@@ -1,5 +1,6 @@
 import asyncio
 import inspect
+from datetime import datetime, timezone
 
 from app.schemas.m8_payload import M8Payload
 from app.services.risk_engine import risk_engine_instance
@@ -122,8 +123,45 @@ async def process_signal(payload: M8Payload):
         ai_decision=ai_review.decision,
     )
 
-    # 4. Journaling
+    # 4. Live Fill Tracking
+    from app.services.live_fill_tracker import live_fill_tracker, FillData
+    from app.services.dashboard_sse import dashboard_sse_manager
+
+    live_fill_tracker.record_intent(
+        trade_id=journal_entry.trade_id,
+        symbol=payload.symbol,
+        direction=payload.direction,
+        entry_price=payload.entry_price,
+        stop_price=payload.stop_price,
+        target_price=payload.target_price,
+        decision=decision_result["decision"],
+        strategy_id=payload.strategy_id,
+    )
+
+    # 5. Journaling
     journal_logger_instance.log(journal_entry)
+
+    # 6. Record fill if trade executed
+    if decision_result["decision"] == DecisionEnum.PROCEED_TO_SIMULATION and journal_entry.simulated_fill:
+        fill = journal_entry.simulated_fill
+        live_fill_tracker.record_fill(
+            journal_entry.trade_id,
+            FillData(
+                entry_price=fill.get("fill_price", payload.entry_price),
+                fill_time=datetime.now(timezone.utc),
+                size=fill.get("size", 0.0),
+                side=payload.direction,
+                fees=fill.get("fees", 0.0),
+                slippage=fill.get("slippage", 0.0),
+            ),
+        )
+        dashboard_sse_manager.broadcast_trade_update({
+            "trade_id": journal_entry.trade_id,
+            "symbol": payload.symbol,
+            "direction": payload.direction,
+            "entry_price": payload.entry_price,
+            "status": "filled",
+        })
 
     # Update Risk Engine state if trade executed
     if decision_result["decision"] == DecisionEnum.PROCEED_TO_SIMULATION:

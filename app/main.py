@@ -16,6 +16,11 @@ from app.api.reconciliation import router as reconciliation_router
 from app.api.news import router as news_router
 from app.api.broker import router as broker_router
 from app.api.paper import router as paper_router
+from app.api.strategies import router as strategies_router
+from app.api.patterns import router as patterns_router
+from app.api.news_impact import router as news_impact_router
+from app.api.autonomous_loop import router as autonomous_loop_router
+from app.api.live_trading import router as live_trading_router
 
 app = FastAPI(
     title="Agent-Reflex Hybrid Trader API",
@@ -33,6 +38,11 @@ app.include_router(reconciliation_router, prefix="/reconcile", tags=["reconcilia
 app.include_router(news_router, prefix="/news", tags=["news"])
 app.include_router(broker_router, prefix="/broker", tags=["broker"])
 app.include_router(paper_router, prefix="/paper", tags=["paper"])
+app.include_router(strategies_router, prefix="/strategies", tags=["strategies"])
+app.include_router(patterns_router, prefix="/patterns", tags=["patterns"])
+app.include_router(news_impact_router, prefix="/news", tags=["news-impact"])
+app.include_router(autonomous_loop_router, prefix="/loop", tags=["autonomous_loop"])
+app.include_router(live_trading_router, prefix="/live", tags=["live_trading"])
 
 @app.get("/", include_in_schema=False)
 def frontend():
@@ -75,14 +85,55 @@ async def _heartbeat_loop():
         await asyncio.sleep(3600)  # every hour
 
 
+async def _news_poll_loop():
+    """Periodically fetch news from RSS feeds."""
+    from app.services.news_aggregator import news_aggregator_instance
+    from app.core.config import NEWS_POLL_INTERVAL_MINUTES
+
+    # Initial fetch after short delay
+    await asyncio.sleep(10)
+
+    while True:
+        try:
+            await news_aggregator_instance.fetch(source="all")
+        except Exception:
+            pass
+        await asyncio.sleep(NEWS_POLL_INTERVAL_MINUTES * 60)
+
+
+async def _autonomous_loop_auto_start():
+    """Optionally auto-start the autonomous trading loop after startup."""
+    from app.core.config import AUTONOMOUS_LOOP_AUTO_START
+    from app.services.autonomous_loop import autonomous_loop_instance
+
+    await asyncio.sleep(15)
+    if AUTONOMOUS_LOOP_AUTO_START:
+        try:
+            autonomous_loop_instance.start()
+        except Exception:
+            pass
+
+
+_news_poll_task = None
+_autostart_task = None
+
+
 @app.on_event("startup")
 def startup_event():
-    global _heartbeat_task
+    global _heartbeat_task, _news_poll_task, _autostart_task
     _heartbeat_task = asyncio.create_task(_heartbeat_loop())
+    _news_poll_task = asyncio.create_task(_news_poll_loop())
+    _autostart_task = asyncio.create_task(_autonomous_loop_auto_start())
 
 
 @app.on_event("shutdown")
 def shutdown_event():
-    global _heartbeat_task
+    global _heartbeat_task, _news_poll_task, _autostart_task
+    from app.services.autonomous_loop import autonomous_loop_instance
+    autonomous_loop_instance.stop()
     if _heartbeat_task:
         _heartbeat_task.cancel()
+    if _news_poll_task:
+        _news_poll_task.cancel()
+    if _autostart_task:
+        _autostart_task.cancel()

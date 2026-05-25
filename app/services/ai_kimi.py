@@ -197,6 +197,18 @@ class KimiSwarmService:
     # Scouts
     # ------------------------------------------------------------------
     async def _run_sentiment_scout(self, payload: M8Payload, symbol_context: str) -> str:
+        # Fetch and score relevant news
+        from app.services.news_aggregator import news_aggregator_instance
+        from app.services.news_impact_scorer import news_impact_scorer
+
+        cached_news = news_aggregator_instance.get_cached()
+        scored = news_impact_scorer.score_items(cached_news, payload.symbol)
+        relevant = sorted(scored, key=lambda x: x.composite_score, reverse=True)[:5]
+        news_block = "\n".join(
+            f"- [{n.item.source}] {n.item.title} (Relevanz: {n.symbol_relevance:.2f}, Sentiment: {n.sentiment_polarity:.2f})"
+            for n in relevant if n.symbol_relevance >= 0.3
+        ) or "No relevant recent news."
+
         system = (
             "You are the Sentiment Scout — a market sentiment analyst.\n"
             "Analyze news flow, social sentiment, and event risk for this signal.\n"
@@ -213,6 +225,7 @@ class KimiSwarmService:
             f"Timestamp: {payload.timestamp}\n"
             f"Macro event risk flag: {payload.macro_event_risk}\n"
             f"Crisis score: {payload.crisis_score}\n"
+            f"\nRecent relevant news:\n{news_block}\n"
             "Assess sentiment landscape and event risk."
         )
         return await self._call_llm(prompt, system=system)

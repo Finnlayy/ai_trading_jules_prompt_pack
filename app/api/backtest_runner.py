@@ -23,6 +23,7 @@ async def run_backtest(
     bars: int = 500,
     max_signals: Optional[int] = 50,
     min_confluence: Optional[float] = None,
+    strategy_id: Optional[str] = None,
 ):
     """
     Run a full backtest through the M8 pipeline on historical data.
@@ -42,6 +43,10 @@ async def run_backtest(
         risk_engine_instance.current_bar = 0
 
         # Generate payloads from historical data
+        if strategy_id:
+            from app.services.strategy_engine import strategy_registry
+            strategy_registry.set_active_strategy(strategy_id)
+
         payloads = signal_generator_instance.generate_payloads(
             symbol=symbol,
             timeframe=timeframe,

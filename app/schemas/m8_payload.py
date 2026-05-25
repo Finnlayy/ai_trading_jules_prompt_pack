@@ -29,3 +29,6 @@ class M8Payload(BaseModel):
     pending_order_age_seconds: Optional[float] = Field(default=None, ge=0.0)
     max_pending_order_age_seconds: Optional[float] = Field(default=None, gt=0.0)
     m8_reject_reason: Optional[str] = None
+    strategy_id: Optional[str] = Field(default=None, description="ID der auslösenden Strategie")
+    pattern_detected: Optional[str] = Field(default=None, description="Erkanntes Chart-Pattern")
+    pattern_score: float = Field(default=0.0, ge=0, le=100, description="Pattern-Konfidenz 0-100")
