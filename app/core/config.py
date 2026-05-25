@@ -152,6 +152,9 @@ AUTONOMOUS_LOOP_PAUSE_ON_ERROR_COUNT = _as_int(os.getenv("AUTONOMOUS_LOOP_PAUSE_
 AUTONOMOUS_LOOP_ERROR_PAUSE_SECONDS = _as_float(os.getenv("AUTONOMOUS_LOOP_ERROR_PAUSE_SECONDS"), 60.0)
 AUTONOMOUS_LOOP_STRATEGY_ROTATION_ENABLED = _as_bool(os.getenv("AUTONOMOUS_LOOP_STRATEGY_ROTATION_ENABLED"), True)
 
+# Database configuration
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///app/data/trading.db")
+
 # News Impact configuration
 NEWS_IMPACT_ENABLED = _as_bool(os.getenv("NEWS_IMPACT_ENABLED"), True)
 NEWS_IMPACT_MAX_AGE_HOURS = _as_float(os.getenv("NEWS_IMPACT_MAX_AGE_HOURS"), 24.0)

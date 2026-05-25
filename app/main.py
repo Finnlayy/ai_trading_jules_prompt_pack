@@ -21,6 +21,7 @@ from app.api.patterns import router as patterns_router
 from app.api.news_impact import router as news_impact_router
 from app.api.autonomous_loop import router as autonomous_loop_router
 from app.api.live_trading import router as live_trading_router
+from app.api.db_insight import router as db_insight_router
 
 app = FastAPI(
     title="Agent-Reflex Hybrid Trader API",
@@ -43,6 +44,7 @@ app.include_router(patterns_router, prefix="/patterns", tags=["patterns"])
 app.include_router(news_impact_router, prefix="/news", tags=["news-impact"])
 app.include_router(autonomous_loop_router, prefix="/loop", tags=["autonomous_loop"])
 app.include_router(live_trading_router, prefix="/live", tags=["live_trading"])
+app.include_router(db_insight_router, prefix="/db", tags=["db-insight"])
 
 @app.get("/", include_in_schema=False)
 def frontend():
@@ -121,6 +123,9 @@ _autostart_task = None
 @app.on_event("startup")
 def startup_event():
     global _heartbeat_task, _news_poll_task, _autostart_task
+    # Create DB tables
+    from app.db import Base, engine
+    Base.metadata.create_all(bind=engine)
     _heartbeat_task = asyncio.create_task(_heartbeat_loop())
     _news_poll_task = asyncio.create_task(_news_poll_loop())
     _autostart_task = asyncio.create_task(_autonomous_loop_auto_start())

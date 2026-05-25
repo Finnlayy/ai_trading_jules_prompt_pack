@@ -177,6 +177,30 @@ class LiveFillTracker:
             "timestamp": datetime.now(timezone.utc).isoformat(),
         })
         self._persist()
+        # Also persist to SQLite
+        try:
+            from app.db import SessionLocal
+            from app.db.models import Position
+            db = SessionLocal()
+            db.add(Position(
+                trade_id=trade_id,
+                symbol=intent.symbol if intent else "UNKNOWN",
+                direction=intent.direction if intent else "LONG",
+                entry_price=fill_data.entry_price,
+                current_price=fill_data.entry_price,
+                size=fill_data.size,
+                unrealized_pnl=0.0,
+                realized_pnl=None,
+                strategy_id=intent.strategy_id if intent else None,
+                stop_price=intent.stop_price if intent else 0.0,
+                target_price=intent.target_price if intent else 0.0,
+                is_open=True,
+                opened_at=fill_data.fill_time,
+            ))
+            db.commit()
+            db.close()
+        except Exception:
+            pass
 
     def record_exit(self, trade_id: str, exit_price: float,
                     exit_time: datetime | None = None) -> None:
@@ -199,6 +223,21 @@ class LiveFillTracker:
             "timestamp": exit.isoformat(),
         })
         self._persist()
+        # Also update SQLite
+        try:
+            from app.db import SessionLocal
+            from app.db.models import Position
+            db = SessionLocal()
+            db_pos = db.query(Position).filter(Position.trade_id == trade_id).first()
+            if db_pos:
+                db_pos.is_open = False
+                db_pos.current_price = exit_price
+                db_pos.realized_pnl = pnl
+                db_pos.closed_at = exit
+                db.commit()
+            db.close()
+        except Exception:
+            pass
 
     def update_price(self, trade_id: str, current_price: float) -> None:
         """Update current price and unrealized PnL for a position."""
