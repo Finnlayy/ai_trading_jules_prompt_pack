@@ -1590,7 +1590,8 @@
                     control: "Control Panel",
                     aiLayer: "AI Layer",
                     logs: "Logs & System",
-                    news: "News Feed"
+                    news: "News Feed",
+                    agents: "Agent Registry"
                 };
                 return map[key] || key;
             };
@@ -1608,7 +1609,8 @@
                             control: true,
                             aiLayer: true,
                             logs: true,
-                            news: true
+                            news: true,
+                        agents: true
                         }
                     });
                 }
@@ -1689,7 +1691,8 @@
                         control: true,
                         aiLayer: true,
                         logs: true,
-                        news: true
+                        news: true,
+                        agents: true
                     }
                 };
             });
@@ -1707,6 +1710,10 @@
             const [raw, setRaw] = useState("Waiting for bot activity.");
             const [loading, setLoading] = useState(false);
             const [filters, setFilters] = useState({ date: "all", segment: "all", symbol: "" });
+
+            const [agents, setAgents] = useState([]);
+            const [leaderboard, setLeaderboard] = useState([]);
+
             const [aiLayer, setAiLayer] = useState({ provider: "", profile: null, memory: [], behavior_prompt: "" });
             const [aiMessage, setAiMessage] = useState("");
             const [chartState, setChartState] = useState({ symbol: "BTCUSDT", timeframe: "1h", bars: [], indicators: [], loading: false });
@@ -1750,6 +1757,24 @@
                     throw err;
                 }
                 return data;
+            }
+
+
+            async function fetchAgents() {
+                try {
+                    const res = await fetch("/academy/agents/registry");
+                    if (res.ok) {
+                        const data = await res.json();
+                        setAgents(data.agents || []);
+                    }
+                    const res2 = await fetch("/academy/agents/leaderboard");
+                    if (res2.ok) {
+                        const data2 = await res2.json();
+                        setLeaderboard(data2.leaderboard || []);
+                    }
+                } catch (e) {
+                    console.error("Failed to fetch academy data", e);
+                }
             }
 
             async function refreshStatus() {
@@ -2090,6 +2115,14 @@
                                     <span>{tab === item ? "●" : ""}</span>
                                 </button>
                             ))}
+                            <div className="nav-category">Academy</div>
+                            {["Agents", "Training"].map(item => (
+                                <button type="button" key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)}>
+                                    <span className="nav-icon">{item === "Agents" ? "◉" : "◊"}</span>
+                                    <span>{item}</span>
+                                    <span>{tab === item ? "●" : ""}</span>
+                                </button>
+                            ))}
                         </nav>
 
                         <div className="side-status">
@@ -2192,6 +2225,11 @@
                             <NewsPanel request={request} addLog={addLog} />
                         </section>)}
 
+
+                        {layoutConfig.panels.agents && (<section className={tab === "Agents" ? "" : "hidden"}>
+                            <AgentsPanel agents={agents} leaderboard={leaderboard} />
+                        </section>)}
+
                         {layoutConfig.panels.logs && (<section className={tab === "Logs" ? "" : "hidden"}>
                             <Logs logs={logs} raw={raw} status={{ health, status }} />
                         </section>)}
@@ -2206,6 +2244,72 @@
                             <LayoutSettingsPanel layout={layoutConfig} onChange={setLayoutConfig} />
                         </aside>
                     )}
+                </div>
+            );
+        }
+
+
+        function AgentsPanel({ agents, leaderboard }) {
+            return (
+                <div className="grid">
+                    <div className="card span-12">
+                        <h2>Agent Registry & Leaderboard</h2>
+                        <div style={{display: 'flex', gap: '20px', flexWrap: 'wrap', marginTop: '16px'}}>
+                            {agents.map(agent => (
+                                <div key={agent.name} style={{
+                                    border: '1px solid var(--line)',
+                                    padding: '16px',
+                                    borderRadius: '8px',
+                                    width: '300px',
+                                    background: 'var(--surface)'
+                                }}>
+                                    <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                                        <h3 style={{margin:0, textTransform: 'capitalize'}}>{agent.name} Scout</h3>
+                                        <span className="pill ok">{agent.archetype}</span>
+                                    </div>
+                                    <p style={{fontSize: '12px', color: 'var(--muted)', marginTop: '4px'}}>
+                                        Gen {agent.generation} • Born {new Date(agent.created_at).toISOString().split('T')[0]}
+                                    </p>
+
+                                    <div style={{display: 'flex', justifyContent: 'space-between', marginTop: '16px'}}>
+                                        <div>
+                                            <div style={{fontSize: '11px', color: 'var(--muted)'}}>ACCURACY</div>
+                                            <div style={{fontSize: '18px', fontWeight: 'bold'}}>
+                                                {(agent.accuracy * 100).toFixed(1)}%
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div style={{fontSize: '11px', color: 'var(--muted)'}}>CALLS</div>
+                                            <div style={{fontSize: '18px', fontWeight: 'bold'}}>{agent.total_calls}</div>
+                                        </div>
+                                        <div>
+                                            <div style={{fontSize: '11px', color: 'var(--muted)'}}>STREAK</div>
+                                            <div style={{fontSize: '18px', fontWeight: 'bold', color: 'var(--emerald)'}}>
+                                                {agent.current_streak}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div style={{marginTop: '16px'}}>
+                                        <div style={{fontSize: '11px', color: 'var(--muted)', marginBottom: '8px'}}>BADGES</div>
+                                        <div style={{display: 'flex', gap: '4px', flexWrap: 'wrap'}}>
+                                            {agent.badges && agent.badges.length > 0 ? agent.badges.map((b, i) => (
+                                                <div key={i} title={b.description} style={{
+                                                    padding: '4px 8px',
+                                                    background: 'var(--surface-soft)',
+                                                    border: '1px solid var(--line)',
+                                                    borderRadius: '12px',
+                                                    fontSize: '12px'
+                                                }}>
+                                                    {b.icon} {b.name}
+                                                </div>
+                                            )) : <span style={{fontSize: '12px', color: 'var(--muted)'}}>No badges yet</span>}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 </div>
             );
         }
