@@ -17,6 +17,10 @@
     "correct_calls": 2,
     "accuracy": 1.0,
     "current_streak": 2
+    "total_calls": 3,
+    "correct_calls": 3,
+    "accuracy": 1.0,
+    "current_streak": 3
   },
   {
     "scout_id": "8589bbb2-ddcc-410e-8bb9-45717a852987",
@@ -36,6 +40,10 @@
     "correct_calls": 2,
     "accuracy": 1.0,
     "current_streak": 2
+    "total_calls": 3,
+    "correct_calls": 3,
+    "accuracy": 1.0,
+    "current_streak": 3
   },
   {
     "scout_id": "0d4342f0-4031-4334-9b90-0013bf190452",
@@ -55,6 +63,10 @@
     "correct_calls": 2,
     "accuracy": 1.0,
     "current_streak": 2
+    "total_calls": 3,
+    "correct_calls": 3,
+    "accuracy": 1.0,
+    "current_streak": 3
   },
   {
     "scout_id": "34059d23-47bf-4280-ba75-dea7348866eb",
@@ -74,5 +86,9 @@
     "correct_calls": 2,
     "accuracy": 1.0,
     "current_streak": 2
+    "total_calls": 3,
+    "correct_calls": 3,
+    "accuracy": 1.0,
+    "current_streak": 3
   }
 ]

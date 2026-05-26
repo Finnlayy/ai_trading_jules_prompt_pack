@@ -38,3 +38,30 @@ def get_leaderboard():
 
     leaderboard.sort(key=lambda x: (x["accuracy"], x["experience"]), reverse=True)
     return {"leaderboard": leaderboard}
+
+from app.services.training_drills import training_drills
+from app.services.prompt_evolution import prompt_evolution
+from app.services.ab_testing import ab_testing
+from app.services.academy_curriculum import academy_curriculum
+from app.schemas.academy import SyntheticDrill
+
+@router.get("/drills/available")
+def get_available_drills(scout_name: str, count: int = 5):
+    drills = training_drills.generate_drills(scout_name, count)
+    return {"drills": [d.model_dump() for d in drills]}
+
+@router.post("/drill/evaluate")
+async def evaluate_drill(drill: SyntheticDrill, scout_decision: str, confidence: float = 0.8):
+    result = await training_drills.evaluate_drill(drill, scout_decision, confidence)
+    academy_curriculum.record_drill_result(drill.scout_target, "Beginner", result.is_correct, result.confidence)
+    return result.model_dump()
+
+@router.get("/ab-tests")
+def get_ab_tests():
+    tests = ab_testing.get_all()
+    return {"ab_tests": [t.model_dump() for t in tests]}
+
+@router.get("/curriculum/{scout_name}")
+def get_curriculum(scout_name: str):
+    progress = academy_curriculum.get_all_for_scout(scout_name)
+    return {"curriculum": [p.model_dump() for p in progress]}
