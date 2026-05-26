@@ -19,6 +19,8 @@
             --line: #dde8df;
             --ink: #142118;
             --muted: #68786d;
+
+            /* Core accent palette */
             --mint: #c9f3dd;
             --mint-strong: #33a56b;
             --sky: #dceeff;
@@ -28,8 +30,73 @@
             --butter: #fff1bd;
             --butter-strong: #a87812;
             --lilac: #ebe4ff;
+
+            /* Extended palette (Phase 1) */
+            --emerald: #10b981;
+            --emerald-soft: #d1fae5;
+            --emerald-bg: #ecfdf5;
+            --coral: #f43f5e;
+            --coral-soft: #ffe4e6;
+            --coral-bg: #fff1f2;
+            --indigo: #6366f1;
+            --indigo-soft: #e0e7ff;
+            --indigo-bg: #eef2ff;
+            --amber: #f59e0b;
+            --amber-soft: #fef3c7;
+            --amber-bg: #fffbeb;
+            --rose: #e11d48;
+            --rose-soft: #ffe4e6;
+            --rose-bg: #fff1f2;
+            --teal: #14b8a6;
+            --teal-soft: #ccfbf1;
+            --teal-bg: #f0fdfa;
+
+            /* Status color mapping */
+            --status-long: var(--emerald);
+            --status-short: var(--coral);
+            --status-executed: var(--mint-strong);
+            --status-rejected: var(--rose);
+            --status-sim: var(--sky-strong);
+            --status-ai: var(--indigo);
+            --status-warn: var(--amber);
+            --status-ok: var(--emerald);
+            --status-error: var(--rose);
+            --status-info: var(--sky-strong);
+
+            /* Interactive feedback */
+            --hover-overlay: rgba(30, 54, 38, 0.04);
+            --focus-ring: 0 0 0 3px rgba(99, 102, 241, 0.25);
+            --active-press: scale(0.98);
+
             --radius: 18px;
+            --radius-sm: 12px;
+            --radius-xs: 8px;
             --shadow: 0 18px 60px rgba(30, 54, 38, 0.10);
+            --shadow-sm: 0 4px 12px rgba(30, 54, 38, 0.06);
+            --shadow-focus: 0 0 0 3px rgba(99, 102, 241, 0.15);
+        }
+
+        /* Dark mode preparation */
+        .dark {
+            --bg: #0a0a0a;
+            --surface: #151618;
+            --surface-soft: #1c1d20;
+            --line: #2a2b2e;
+            --ink: #f0f0f0;
+            --muted: #9ca3af;
+            --hover-overlay: rgba(255, 255, 255, 0.04);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0a0a0a;
+                --surface: #151618;
+                --surface-soft: #1c1d20;
+                --line: #2a2b2e;
+                --ink: #f0f0f0;
+                --muted: #9ca3af;
+                --hover-overlay: rgba(255, 255, 255, 0.04);
+            }
         }
 
         * { box-sizing: border-box; }
@@ -49,54 +116,121 @@
             font: inherit;
         }
 
+        /* ============================================
+           PHASE 1–2: Button System & Form Elements
+           ============================================ */
+
         button {
-            min-height: 38px;
-            border: 1px solid var(--line);
-            border-radius: 12px;
+            min-height: 40px;
+            padding: 8px 18px;
+            border: 1.5px solid var(--line);
+            border-radius: var(--radius-sm);
             color: var(--ink);
             background: var(--surface);
             cursor: pointer;
             font-weight: 600;
+            font-size: 14px;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
         }
 
-        button:hover {
-            border-color: #b8c9bc;
+        button:hover:not(:disabled) {
+            border-color: var(--muted);
             transform: translateY(-1px);
+            box-shadow: var(--shadow-sm);
+        }
+
+        button:active:not(:disabled) {
+            transform: var(--active-press);
         }
 
         button:disabled {
-            cursor: wait;
-            opacity: 0.65;
+            cursor: not-allowed;
+            opacity: 0.5;
             transform: none;
+            box-shadow: none;
         }
 
         button.primary {
-            background: var(--mint-strong);
-            border-color: var(--mint-strong);
+            background: var(--emerald);
+            border-color: var(--emerald);
             color: #ffffff;
+        }
+        button.primary:hover:not(:disabled) {
+            background: #059669;
+            border-color: #059669;
+        }
+
+        button.secondary {
+            background: var(--surface-soft);
+            border-color: var(--line);
+            color: var(--ink);
+        }
+        button.secondary:hover:not(:disabled) {
+            background: var(--hover-overlay);
+            border-color: var(--muted);
         }
 
         button.warning {
-            background: var(--butter);
-            border-color: #eed276;
-            color: #6b4b08;
+            background: var(--amber-bg);
+            border-color: var(--amber);
+            color: #92400e;
+        }
+        button.warning:hover:not(:disabled) {
+            background: var(--amber-soft);
         }
 
         button.danger {
-            background: var(--peach);
-            border-color: #f0b8a7;
-            color: #91351f;
+            background: var(--rose);
+            border-color: var(--rose);
+            color: #ffffff;
         }
+        button.danger:hover:not(:disabled) {
+            background: #be123c;
+            border-color: #be123c;
+        }
+
+        button.ghost {
+            background: transparent;
+            border-color: transparent;
+            color: var(--muted);
+        }
+        button.ghost:hover:not(:disabled) {
+            background: var(--hover-overlay);
+            color: var(--ink);
+        }
+
+        /* Loading spinner on buttons */
+        button.loading {
+            position: relative;
+            color: transparent;
+        }
+        button.loading::after {
+            content: "";
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--line);
+            border-top-color: var(--ink);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
         input, select, textarea {
             width: 100%;
             min-height: 40px;
-            border: 1px solid var(--line);
-            border-radius: 12px;
-            background: #ffffff;
+            border: 1.5px solid var(--line);
+            border-radius: var(--radius-sm);
+            background: var(--surface);
             color: var(--ink);
-            padding: 9px 11px;
+            padding: 9px 12px;
             outline: none;
+            font-size: 14px;
+            transition: border-color 0.15s, box-shadow 0.15s;
         }
 
         textarea {
@@ -105,9 +239,40 @@
             line-height: 1.45;
         }
 
+        input::placeholder, textarea::placeholder {
+            color: var(--muted);
+            opacity: 0.7;
+        }
+
         input:focus, select:focus, textarea:focus {
-            border-color: var(--mint-strong);
-            box-shadow: 0 0 0 3px rgba(51, 165, 107, 0.14);
+            border-color: var(--indigo);
+            box-shadow: var(--focus-ring);
+        }
+
+        input:invalid:not(:placeholder-shown), select:invalid:not(:placeholder-shown) {
+            border-color: var(--rose);
+            box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.12);
+        }
+
+        input:valid:not(:placeholder-shown), select:valid:not(:placeholder-shown) {
+            border-color: var(--emerald);
+        }
+
+        /* Validation icons */
+        .input-wrap {
+            position: relative;
+        }
+        .input-wrap .input-icon {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 16px;
+            pointer-events: none;
+        }
+        .input-wrap input:focus ~ .input-icon,
+        .input-wrap select:focus ~ .input-icon {
+            color: var(--indigo);
         }
 
         .app {
@@ -281,6 +446,300 @@
             font-size: 30px;
             line-height: 1;
             font-weight: 700;
+        }
+
+        /* ============================================
+           PHASE 2–3: Navigation, Panels, KPIs
+           ============================================ */
+
+        /* Navigation icons & active states */
+        nav button {
+            position: relative;
+            overflow: hidden;
+        }
+        nav button::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%) scaleY(0);
+            width: 3px;
+            height: 60%;
+            background: var(--indigo);
+            border-radius: 0 2px 2px 0;
+            transition: transform 0.2s ease;
+        }
+        nav button.active::before {
+            transform: translateY(-50%) scaleY(1);
+        }
+        nav button.active {
+            background: var(--surface);
+            border-color: var(--indigo-soft);
+            box-shadow: var(--shadow-sm);
+            color: var(--indigo);
+        }
+        nav button .nav-icon {
+            font-size: 16px;
+            margin-right: 8px;
+            opacity: 0.7;
+        }
+        nav button.active .nav-icon {
+            opacity: 1;
+        }
+
+        /* Nav category dividers */
+        .nav-category {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--muted);
+            padding: 12px 12px 4px;
+            letter-spacing: 0.08em;
+        }
+
+        /* Panel enhancements */
+        .panel {
+            transition: box-shadow 0.2s ease, transform 0.15s ease;
+        }
+        .panel:hover {
+            box-shadow: 0 22px 64px rgba(30, 54, 38, 0.12);
+        }
+        .panel-title {
+            letter-spacing: 0.06em;
+        }
+
+        /* KPI Card redesign */
+        .kpi-card {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 16px;
+            border-radius: var(--radius-sm);
+            background: var(--surface-soft);
+            border: 1px solid var(--line);
+        }
+        .kpi-card .kpi-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: var(--radius-xs);
+            display: grid;
+            place-items: center;
+            font-size: 16px;
+        }
+        .kpi-card.tone-ok .kpi-icon { background: var(--emerald-soft); }
+        .kpi-card.tone-warn .kpi-icon { background: var(--amber-soft); }
+        .kpi-card.tone-error .kpi-icon { background: var(--rose-soft); }
+        .kpi-card.tone-ai .kpi-icon { background: var(--indigo-soft); }
+        .kpi-card.tone-info .kpi-icon { background: var(--sky-soft); }
+
+        .kpi-card .kpi-value {
+            font-size: 28px;
+            font-weight: 700;
+            line-height: 1;
+        }
+        .kpi-card.tone-ok .kpi-value { color: var(--emerald); }
+        .kpi-card.tone-warn .kpi-value { color: var(--amber); }
+        .kpi-card.tone-error .kpi-value { color: var(--rose); }
+        .kpi-card.tone-ai .kpi-value { color: var(--indigo); }
+        .kpi-card.tone-info .kpi-value { color: var(--sky-strong); }
+
+        .kpi-card .kpi-caption {
+            font-size: 12px;
+            color: var(--muted);
+            font-weight: 500;
+        }
+
+        /* ============================================
+           PHASE 4: Signal Cards & Trade Table
+           ============================================ */
+
+        /* Signal Card */
+        .signal-card {
+            position: relative;
+            padding: 16px;
+            border-radius: var(--radius-sm);
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-top-width: 4px;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+        .signal-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-sm);
+        }
+        .signal-card.direction-long { border-top-color: var(--emerald); }
+        .signal-card.direction-short { border-top-color: var(--coral); }
+
+        .signal-card .signal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .signal-card .signal-symbol {
+            font-size: 18px;
+            font-weight: 700;
+        }
+        .signal-card .signal-badge {
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .signal-card .signal-badge.long { background: var(--emerald-soft); color: #065f46; }
+        .signal-card .signal-badge.short { background: var(--coral-soft); color: #9f1239; }
+
+        .signal-card .signal-metrics {
+            display: flex;
+            gap: 16px;
+            font-size: 13px;
+            color: var(--muted);
+        }
+        .signal-card .signal-metric strong {
+            color: var(--ink);
+            font-weight: 600;
+        }
+
+        /* Trade Table redesign */
+        .ordertable {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 13px;
+        }
+        .ordertable thead th {
+            padding: 10px 12px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--muted);
+            border-bottom: 2px solid var(--line);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .ordertable tbody tr {
+            transition: background 0.1s;
+        }
+        .ordertable tbody tr:hover {
+            background: var(--hover-overlay);
+        }
+        .ordertable tbody td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--line);
+        }
+        .ordertable tbody tr.status-executed { background: var(--emerald-bg); }
+        .ordertable tbody tr.status-rejected { background: var(--rose-bg); }
+        .ordertable tbody tr.status-sim { background: var(--indigo-bg); }
+        .ordertable tbody tr.status-executed:hover,
+        .ordertable tbody tr.status-rejected:hover,
+        .ordertable tbody tr.status-sim:hover {
+            filter: brightness(0.97);
+        }
+
+        /* ============================================
+           PHASE 5: AI Panel & Scout Boxes
+           ============================================ */
+
+        .scout-box {
+            padding: 14px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--line);
+            background: var(--surface-soft);
+        }
+        .scout-box.technical { border-left: 4px solid var(--emerald); }
+        .scout-box.sentiment { border-left: 4px solid var(--amber); }
+        .scout-box.risk { border-left: 4px solid var(--rose); }
+        .scout-box.macro { border-left: 4px solid var(--sky-strong); }
+
+        .scout-box .scout-title {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .scout-box.technical .scout-title { color: var(--emerald); }
+        .scout-box.sentiment .scout-title { color: var(--amber); }
+        .scout-box.risk .scout-title { color: var(--rose); }
+        .scout-box.macro .scout-title { color: var(--sky-strong); }
+
+        .confidence-bar {
+            height: 8px;
+            border-radius: 4px;
+            background: var(--line);
+            overflow: hidden;
+        }
+        .confidence-bar .confidence-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.4s ease;
+        }
+        .confidence-fill.high { background: var(--emerald); }
+        .confidence-fill.medium { background: var(--amber); }
+        .confidence-fill.low { background: var(--rose); }
+
+        /* ============================================
+           PHASE 6–8: Utilities, Responsive, Accessibility
+           ============================================ */
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+        .pill.ok { background: var(--emerald-soft); color: #065f46; }
+        .pill.warn { background: var(--amber-soft); color: #92400e; }
+        .pill.error { background: var(--rose-soft); color: #9f1239; }
+        .pill.ai { background: var(--indigo-soft); color: #3730a3; }
+        .pill.info { background: var(--sky-soft); color: #1e40af; }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+        }
+        .status-dot.running { background: var(--emerald); box-shadow: 0 0 0 2px var(--emerald-soft); }
+        .status-dot.paused { background: var(--amber); box-shadow: 0 0 0 2px var(--amber-soft); }
+        .status-dot.stopped { background: var(--rose); box-shadow: 0 0 0 2px var(--rose-soft); }
+
+        /* Reduced motion */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* Responsive breakpoints */
+        @media (max-width: 1024px) {
+            .app {
+                grid-template-columns: 1fr;
+            }
+            aside {
+                display: none;
+            }
+        }
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+            .span-3, .span-4, .span-5, .span-6, .span-7, .span-8, .span-12 {
+                grid-column: span 1;
+            }
+            .filterbar {
+                grid-template-columns: 1fr;
+            }
         }
 
         .kpi-caption {
@@ -960,8 +1419,20 @@
                     headers: { "Content-Type": "application/json", ...(options.headers || {}) },
                     ...options
                 });
-                const data = await response.json();
-                if (!response.ok) throw new Error(data.detail || `HTTP ${response.status}`);
+                let data;
+                const text = await response.text();
+                try {
+                    data = JSON.parse(text);
+                } catch {
+                    data = { detail: `Non-JSON response: ${text.slice(0, 200)}` };
+                }
+                if (!response.ok) {
+                    const err = new Error(data.detail || `HTTP ${response.status} @ ${path}`);
+                    err.status = response.status;
+                    err.path = path;
+                    err.response = data;
+                    throw err;
+                }
                 return data;
             }
 
@@ -1270,18 +1741,37 @@
                         </div>
 
                         <nav>
-                            {["Overview", "Wallets", "Charts", "Control", "AI Layer", "Confidence", "Orders", "Backtest", "News", "Logs"].map(item => (
+                            <div className="nav-category">Trading</div>
+                            {["Overview", "Control", "Orders", "Live Paper"].map(item => (
                                 <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)}>
-                                    <span>{item}</span><span>{tab === item ? "On" : ""}</span>
+                                    <span className="nav-icon">{item === "Overview" ? "◈" : item === "Control" ? "⚡" : item === "Orders" ? "◎" : "◉"}</span>
+                                    <span>{item}</span>
+                                    <span>{tab === item ? "●" : ""}</span>
+                                </button>
+                            ))}
+                            <div className="nav-category">Analyse</div>
+                            {["Wallets", "Charts", "Backtest", "Confidence", "AI Layer"].map(item => (
+                                <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)}>
+                                    <span className="nav-icon">{item === "Wallets" ? "◉" : item === "Charts" ? "◊" : item === "Backtest" ? "◐" : item === "Confidence" ? "◈" : "✦"}</span>
+                                    <span>{item}</span>
+                                    <span>{tab === item ? "●" : ""}</span>
+                                </button>
+                            ))}
+                            <div className="nav-category">System</div>
+                            {["News", "Logs"].map(item => (
+                                <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)}>
+                                    <span className="nav-icon">{item === "News" ? "◉" : "◊"}</span>
+                                    <span>{item}</span>
+                                    <span>{tab === item ? "●" : ""}</span>
                                 </button>
                             ))}
                         </nav>
 
                         <div className="side-status">
-                            <div><span className={`dot ${health.status === "ok" ? "ok" : "bad"}`}></span>API {health.status}</div>
+                            <div><span className={`status-dot ${health.status === "ok" ? "running" : "stopped"}`}></span>API {health.status}</div>
                             <div>Broker {broker.broker_name || broker.type || "loading"}</div>
                             <div>Mode {broker.broker_mode_display || broker.mode || "unknown"}</div>
-                            <div><span className={`dot ${broker.live_capable ? "ok" : "warn"}`}></span>{broker.live_capable ? "Live Ready" : "Dry-Run"}</div>
+                            <div><span className={`status-dot ${broker.live_capable ? "running" : "paused"}`}></span>{broker.live_capable ? "Live Ready" : "Dry-Run"}</div>
                             <div>AI {ai.provider || "loading"}</div>
                             <div>Primary {walletAmount(primaryWallet)} USDT</div>
                             <div>Futures {walletAmount(futuresWallet)} USDT</div>
@@ -1371,6 +1861,10 @@
 
                         <section className={tab === "Logs" ? "" : "hidden"}>
                             <Logs logs={logs} raw={raw} status={{ health, status }} />
+                        </section>
+
+                        <section className={tab === "Live Paper" ? "" : "hidden"}>
+                            <LivePaperPanel request={request} addLog={addLog} />
                         </section>
                     </main>
                 </div>
@@ -1802,9 +2296,16 @@
         }
 
         function Kpi({ title, value, caption, tone }) {
+            const iconMap = {
+                ok: "✓",
+                warn: "!",
+                ai: "✦",
+                error: "✕",
+                info: "i",
+            };
             return (
-                <div className="panel span-3">
-                    <div className="panel-title">{title} <span className={`pill ${tone || ""}`}>{tone === "ok" ? "Live" : tone === "ai" ? "AI" : "State"}</span></div>
+                <div className={`kpi-card span-3 tone-${tone || "info"}`}>
+                    <div className="kpi-icon">{iconMap[tone] || "●"}</div>
                     <div className="kpi-value">{value}</div>
                     <div className="kpi-caption">{caption}</div>
                 </div>
@@ -2261,6 +2762,59 @@
                         )}
                     </div>
 
+                    {/* Scout Review Detail Panel */}
+                    <div className="panel span-12">
+                        <div className="panel-title">
+                            <span>AI Review Detail — Latest Signal</span>
+                            {latestTrace && <span className="pill ai">{latestTrace.final_summary?.decision || "UNKNOWN"}</span>}
+                        </div>
+                        {latestTrace && latestTrace.scouts ? (
+                            <div>
+                                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 12, marginBottom: 12 }}>
+                                    {["technical", "sentiment", "risk", "macro"].map(name => {
+                                        const scout = latestTrace.scouts[name] || {};
+                                        const decision = scout.decision || "UNKNOWN";
+                                        const confidence = scout.confidence ?? 0.5;
+                                        const reason = scout.reason || "";
+                                        const weight = (latestTrace.scout_weights || {})[name] ?? 0.5;
+                                        const fillClass = confidence >= 0.7 ? "high" : confidence >= 0.4 ? "medium" : "low";
+                                        const approved = decision === "PROCEED_TO_SIMULATION" || decision === "APPROVE";
+                                        return (
+                                            <div key={name} className={`scout-box ${name}`}>
+                                                <div className="scout-title">
+                                                    <span>{name === "technical" ? "📊" : name === "sentiment" ? "💬" : name === "risk" ? "⚠️" : "🌍"}</span>
+                                                    {name.charAt(0).toUpperCase() + name.slice(1)} Scout
+                                                    <span className={`pill ${approved ? "ok" : "warn"}`} style={{ marginLeft: "auto" }}>{approved ? "APPROVE" : "REJECT"}</span>
+                                                </div>
+                                                <div style={{ marginBottom: 8 }}>
+                                                    <div className="kpi-caption" style={{ display: "flex", justifyContent: "space-between" }}>
+                                                        <span>Confidence</span>
+                                                        <span>{(confidence * 100).toFixed(0)}%</span>
+                                                    </div>
+                                                    <div className="confidence-bar">
+                                                        <div className={`confidence-fill ${fillClass}`} style={{ width: `${confidence * 100}%` }} />
+                                                    </div>
+                                                </div>
+                                                <div className="kpi-caption" style={{ marginBottom: 6 }}>Weight: {(weight * 100).toFixed(0)}% | {reason}</div>
+                                                {scout.risk_flags && scout.risk_flags.length > 0 && (
+                                                    <div style={{ fontSize: 11, color: "var(--rose)" }}>Flags: {scout.risk_flags.join(", ")}</div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                {latestTrace.symbol_context && (
+                                    <details>
+                                        <summary className="kpi-caption">Symbol Context (injected into prompts)</summary>
+                                        <pre style={{ fontSize: 11, marginTop: 8, maxHeight: 200, overflow: "auto", whiteSpace: "pre-wrap" }}>{latestTrace.symbol_context}</pre>
+                                    </details>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="kpi-caption">No AI review trace available yet. Execute a signal through the pipeline to see scout breakdowns.</div>
+                        )}
+                    </div>
+
                     <form className="panel span-7" onSubmit={sendAIMessage}>
                         <div className="panel-title">AI Layer Chat <span className="pill ok">memory on</span></div>
                         <div className="chat">
@@ -2465,7 +3019,9 @@
                             <div className="kpi-caption">No confidence data yet. Submit signals or run backtests to populate the registry.</div>
                         </div>
                     )}
-                    {symbols.map(sym => <SymbolCard key={sym} symbol={sym} data={stats[sym]} />)}
+                    <div className="panel span-12" style={{ display: "flex", flexWrap: "wrap", gap: 12, padding: 12 }}>
+                        {symbols.map(sym => <SymbolCard key={sym} symbol={sym} data={stats[sym]} />)}
+                    </div>
 
                     {selectedSymbol && (
                         <div className="panel span-12" style={{ marginTop: 12 }}>
@@ -2965,6 +3521,256 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                     <circle cx="20" cy="200" r="4" fill="#33a56b" />
                     <text x="20" y="32" fill="#68786d" fontSize="14">Order execution trend</text>
                 </svg>
+            );
+        }
+
+        function LivePaperPanel({ request, addLog }) {
+            const [loopStatus, setLoopStatus] = useState(null);
+            const [watchlist, setWatchlist] = useState([]);
+            const [positions, setPositions] = useState([]);
+            const [performance, setPerformance] = useState(null);
+            const [loading, setLoading] = useState(false);
+            const [newSymbol, setNewSymbol] = useState("");
+            const [newTimeframes, setNewTimeframes] = useState("1h");
+            const [sseConnected, setSseConnected] = useState(false);
+
+            async function refreshLoop() {
+                try {
+                    const data = await request("/loop/status");
+                    setLoopStatus(data);
+                } catch (e) {
+                    addLog("error", "Loop status refresh failed", { error: e.message });
+                }
+            }
+
+            async function refreshWatchlist() {
+                try {
+                    const data = await request("/loop/watchlist");
+                    setWatchlist(data.items || []);
+                } catch (e) {
+                    addLog("error", "Watchlist refresh failed", { error: e.message });
+                }
+            }
+
+            async function refreshPositions() {
+                try {
+                    const data = await request("/live/positions");
+                    setPositions(data || []);
+                } catch (e) {
+                    addLog("error", "Positions refresh failed", { error: e.message });
+                }
+            }
+
+            async function refreshPerformance() {
+                try {
+                    const data = await request("/live/performance?lookback_days=7");
+                    setPerformance(data.metrics || null);
+                } catch (e) {
+                    // Performance may be empty initially
+                }
+            }
+
+            async function controlLoop(action) {
+                setLoading(true);
+                try {
+                    const data = await request("/loop/control", {
+                        method: "POST",
+                        body: JSON.stringify({ action })
+                    });
+                    addLog("system", `Loop ${action}`, data.status);
+                    await refreshLoop();
+                } catch (e) {
+                    addLog("error", `Loop ${action} failed`, { error: e.message });
+                } finally {
+                    setLoading(false);
+                }
+            }
+
+            async function addSymbol() {
+                if (!newSymbol.trim()) return;
+                setLoading(true);
+                try {
+                    console.log("[LivePaper] Adding symbol:", newSymbol.toUpperCase());
+                    const result = await request("/loop/watchlist", {
+                        method: "POST",
+                        body: JSON.stringify({
+                            symbol: newSymbol.toUpperCase(),
+                            timeframes: newTimeframes.split(",").map(s => s.trim()),
+                            active: true
+                        })
+                    });
+                    console.log("[LivePaper] Add success:", result);
+                    addLog("system", `Added ${newSymbol.toUpperCase()} to watchlist`);
+                    setNewSymbol("");
+                    await refreshWatchlist();
+                } catch (e) {
+                    console.error("[LivePaper] Add failed:", e);
+                    addLog("error", `Add symbol failed: ${e.message} (status=${e.status || "?"}, path=${e.path || "?"})`, { error: e.message, status: e.status, path: e.path, response: e.response });
+                } finally {
+                    setLoading(false);
+                }
+            }
+
+            async function removeSymbol(symbol) {
+                setLoading(true);
+                try {
+                    await request(`/loop/watchlist/${symbol}`, { method: "DELETE" });
+                    addLog("system", `Removed ${symbol} from watchlist`);
+                    await refreshWatchlist();
+                } catch (e) {
+                    addLog("error", "Remove symbol failed", { error: e.message });
+                } finally {
+                    setLoading(false);
+                }
+            }
+
+            async function emergencyStop() {
+                if (!confirm("EMERGENCY STOP: Pause loop and close all open positions?")) return;
+                setLoading(true);
+                try {
+                    await request("/live/emergency-stop", {
+                        method: "POST",
+                        body: JSON.stringify({ reason: "Manual emergency stop from UI", halt_duration_minutes: 60, close_open_positions: true })
+                    });
+                    addLog("critical", "Emergency stop executed");
+                    await Promise.all([refreshLoop(), refreshPositions()]);
+                } catch (e) {
+                    addLog("error", "Emergency stop failed", { error: e.message });
+                } finally {
+                    setLoading(false);
+                }
+            }
+
+            function connectSSE() {
+                if (sseConnected) return;
+                try {
+                    const evtSource = new EventSource("/live/stream");
+                    evtSource.onmessage = (event) => {
+                        try {
+                            const msg = JSON.parse(event.data);
+                            if (msg.event === "position_closed") {
+                                addLog("order", `Position closed: ${msg.symbol} ${msg.exit_reason} @ ${msg.exit_price}`, msg);
+                                refreshPositions();
+                            } else if (msg.event === "trade_filled") {
+                                addLog("order", `Trade filled: ${msg.symbol}`, msg);
+                                refreshPositions();
+                            }
+                        } catch (e) {}
+                    };
+                    evtSource.onerror = () => {
+                        setSseConnected(false);
+                    };
+                    setSseConnected(true);
+                } catch (e) {
+                    addLog("error", "SSE connect failed", { error: e.message });
+                }
+            }
+
+            useEffect(() => {
+                refreshLoop();
+                refreshWatchlist();
+                refreshPositions();
+                refreshPerformance();
+                const timer = setInterval(() => {
+                    refreshLoop();
+                    refreshPositions();
+                    refreshPerformance();
+                }, 5000);
+                connectSSE();
+                return () => clearInterval(timer);
+            }, []);
+
+            const loopRunning = loopStatus?.is_running || false;
+            const loopPaused = loopStatus?.is_paused || false;
+
+            return (
+                <div className="grid">
+                    <div className="panel span-12">
+                        <div className="panel-title">Live Paper Control <span className={`pill ${loopRunning ? (loopPaused ? "warn" : "ok") : "error"}`}>{loopRunning ? (loopPaused ? "Paused" : "Running") : "Stopped"}</span></div>
+                        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginTop: 8 }}>
+                            <button className="primary" onClick={() => controlLoop("start")} disabled={loading || loopRunning}>Start Loop</button>
+                            <button className="warning" onClick={() => controlLoop("pause")} disabled={loading || !loopRunning || loopPaused}>Pause</button>
+                            <button className="secondary" onClick={() => controlLoop("resume")} disabled={loading || !loopPaused}>Resume</button>
+                            <button className="danger" onClick={() => controlLoop("stop")} disabled={loading || !loopRunning}>Stop Loop</button>
+                            <button className="danger" onClick={emergencyStop} disabled={loading}>🚨 Emergency Stop</button>
+                            <span className="pill info">{sseConnected ? "SSE Connected" : "SSE Disconnected"}</span>
+                        </div>
+                        {loopStatus && (
+                            <div style={{ marginTop: 12, fontSize: 13, color: "var(--muted)" }}>
+                                Strategy: <b>{loopStatus.current_strategy_id}</b> ·
+                                Poll: <b>{loopStatus.poll_interval_seconds}s</b> ·
+                                Cycles: <b>{loopStatus.loop_stats?.cycles_completed || 0}</b> ·
+                                Signals: <b>{loopStatus.loop_stats?.signals_generated || 0}</b> ·
+                                Trades: <b>{loopStatus.loop_stats?.trades_executed || 0}</b> ·
+                                Errors (5m): <b>{loopStatus.loop_stats?.errors_last_5min || 0}</b>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="panel span-6">
+                        <div className="panel-title">Watchlist <span className="pill">{watchlist.length} symbols</span></div>
+                        <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                            <input placeholder="Symbol (e.g. BTCUSDT)" value={newSymbol} onChange={e => setNewSymbol(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addSymbol(); } }} style={{ flex: 1 }} />
+                            <input placeholder="Timeframes" value={newTimeframes} onChange={e => setNewTimeframes(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addSymbol(); } }} style={{ width: 120 }} />
+                            <button type="button" className="primary" onClick={addSymbol} disabled={loading || !newSymbol.trim()}>{loading ? "Adding…" : "Add"}</button>
+                        </div>
+                        <table className="ordertable">
+                            <thead>
+                                <tr><th>Symbol</th><th>Timeframes</th><th>Active</th><th></th></tr>
+                            </thead>
+                            <tbody>
+                                {watchlist.map(item => (
+                                    <tr key={item.symbol || Math.random()}>
+                                        <td style={{ color: "var(--ink)" }}><b>{item.symbol || "???"}</b></td>
+                                        <td style={{ color: "var(--ink)" }}>{(item.timeframes || []).join(", ") || "—"}</td>
+                                        <td style={{ color: "var(--ink)" }}>{item.active ? "✅" : "⏸️"}</td>
+                                        <td><button className="danger" style={{ padding: "2px 8px", fontSize: 12 }} onClick={() => removeSymbol(item.symbol)} disabled={loading}>Remove</button></td>
+                                    </tr>
+                                ))}
+                                {watchlist.length === 0 && <tr><td colSpan={4} style={{ textAlign: "center", color: "var(--muted)" }}>No symbols in watchlist</td></tr>}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div className="panel span-6">
+                        <div className="panel-title">Open Positions <span className="pill">{positions.length} open</span></div>
+                        <table className="ordertable">
+                            <thead>
+                                <tr><th>Symbol</th><th>Dir</th><th>Entry</th><th>Current</th><th>Size</th><th>Unrealized PnL</th><th>Time</th></tr>
+                            </thead>
+                            <tbody>
+                                {positions.map(p => (
+                                    <tr key={p.trade_id}>
+                                        <td style={{ color: "var(--ink)" }}><b>{p.symbol || "???"}</b></td>
+                                        <td style={{ color: "var(--ink)" }}>{p.direction || "?"}</td>
+                                        <td style={{ color: "var(--ink)" }}>{p.entry_price ?? "—"}</td>
+                                        <td style={{ color: "var(--ink)" }}>{p.current_price ?? "—"}</td>
+                                        <td style={{ color: "var(--ink)" }}>{p.size ?? "—"}</td>
+                                        <td style={{ color: p.unrealized_pnl >= 0 ? "var(--emerald)" : "var(--rose)" }}>{p.unrealized_pnl >= 0 ? "+" : ""}{p.unrealized_pnl?.toFixed?.(4) || p.unrealized_pnl}</td>
+                                        <td style={{ color: "var(--ink)" }}>{p.time_in_trade_minutes?.toFixed?.(1) || "0"}m</td>
+                                    </tr>
+                                ))}
+                                {positions.length === 0 && <tr><td colSpan={7} style={{ textAlign: "center", color: "var(--muted)" }}>No open positions</td></tr>}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div className="panel span-12">
+                        <div className="panel-title">Live Performance <span className="pill">7d</span></div>
+                        {performance ? (
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 12, marginTop: 8 }}>
+                                <Kpi title="Total Trades" value={performance.total_trades || 0} caption="Completed" tone="ok" />
+                                <Kpi title="Winrate" value={`${(performance.winrate_pct || 0).toFixed(1)}%`} caption={`${performance.winning_trades || 0}W / ${performance.losing_trades || 0}L`} tone={performance.winrate_pct >= 50 ? "ok" : "warn"} />
+                                <Kpi title="Total PnL" value={`${(performance.total_pnl || 0).toFixed(2)}`} caption="Quote currency" tone={performance.total_pnl >= 0 ? "ok" : "warn"} />
+                                <Kpi title="Profit Factor" value={`${(performance.profit_factor || 0).toFixed(2)}`} caption="Gross win / gross loss" tone={performance.profit_factor >= 1.5 ? "ok" : "warn"} />
+                                <Kpi title="Sharpe" value={`${(performance.sharpe_ratio || 0).toFixed(2)}`} caption="Risk-adjusted" tone={performance.sharpe_ratio >= 1 ? "ok" : "warn"} />
+                                <Kpi title="Max DD" value={`${(performance.max_drawdown_pct || 0).toFixed(2)}%`} caption="Peak to trough" tone="warn" />
+                            </div>
+                        ) : (
+                            <div style={{ textAlign: "center", color: "var(--muted)", padding: 20 }}>No performance data yet. Execute some trades first.</div>
+                        )}
+                    </div>
+                </div>
             );
         }
 

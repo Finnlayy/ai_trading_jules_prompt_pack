@@ -1,6 +1,7 @@
 """
 Backtest Runner — fetches historical data, generates M8Payloads via CISD scoring,
 and runs them through the full M8 pipeline (AI Review → Risk Engine → Broker → Journal).
+Outcomes are recorded in ConfidenceRegistry for AI learning.
 """
 
 from __future__ import annotations
@@ -11,6 +12,7 @@ from typing import List, Optional
 from app.services.signal_generator import signal_generator_instance
 from app.api.orchestrator import process_signal, reset_broker, _get_broker
 from app.services.risk_engine import risk_engine_instance
+from app.services.confidence_registry import confidence_registry
 from app.core.config import AI_FAILURE_POLICY, AI_PROVIDER, BROKER_MODE
 
 router = APIRouter()
@@ -70,6 +72,7 @@ async def run_backtest(
 
         # Run each payload through the full pipeline
         results = []
+        executed_payloads = []
         for payload in payloads:
             result = await process_signal(payload)
             results.append({
@@ -82,6 +85,50 @@ async def run_backtest(
                 "ai_trace": result.get("ai_trace"),
                 "asset_class": result.get("asset_class"),
             })
+            if result["final_decision"] == "EXECUTED_SIM":
+                executed_payloads.append((payload, result))
+
+        # Record outcomes for executed trades using historical bar simulation
+        raw_bars = getattr(signal_generator_instance, "last_raw_bars", [])
+        bar_index = {getattr(bar, 'ts', 0): idx for idx, bar in enumerate(raw_bars)}
+
+        if executed_payloads and raw_bars:
+            from app.services.shadow_paper_engine import ShadowPaperEngine
+            engine = ShadowPaperEngine()
+
+        for payload, result in executed_payloads:
+            entry_idx = bar_index.get(getattr(payload, 'timestamp', 0))
+            if entry_idx is not None and entry_idx < len(raw_bars) - 1:
+                try:
+                    outcome = engine.simulate_trade(payload, raw_bars, entry_idx, max_holding_bars=50)
+                    win = outcome.win
+                    pnl_pct = outcome.pnl_pct
+                    rr = abs(outcome.r_multiple)
+                    # Record trade outcome
+                    confidence_registry.record_trade_outcome(
+                        symbol=payload.symbol,
+                        direction=payload.direction,
+                        pnl_pct=pnl_pct,
+                        rr=rr,
+                        win=win,
+                    )
+                    # Record scout outcome
+                    ai_trace = result.get("ai_trace") or {}
+                    scout_decisions = ai_trace.get("scout_decisions", {})
+                    if not scout_decisions:
+                        scout_decisions = ai_trace.get("scouts", {})
+                    for scout_name, scout_report in scout_decisions.items():
+                        scout_approved = isinstance(scout_report, dict) and scout_report.get("decision") == "PROCEED_TO_SIMULATION"
+                        if not scout_approved and isinstance(scout_report, str):
+                            scout_approved = "PROCEED" in scout_report.upper() or "APPROVE" in scout_report.upper()
+                        was_correct = (scout_approved and win) or (not scout_approved and not win)
+                        confidence_registry.mark_scout_outcome(
+                            symbol=payload.symbol,
+                            scout_names=[scout_name],
+                            was_correct=was_correct,
+                        )
+                except Exception:
+                    pass
 
         # Summarize
         executed = sum(1 for r in results if r["final_decision"] == "EXECUTED_SIM")

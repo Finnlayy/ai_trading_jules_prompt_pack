@@ -22,9 +22,14 @@ class ScoutStats:
     avg_confidence: float = 0.0
     # Track when scout agreed with eventual outcome
     correct_calls: int = 0
+    # Experience & specialization (new)
+    experience: int = 0
+    specialization_score: float = 0.0
+    last_5_results: list[bool] = field(default_factory=list)
 
     def record_call(self, decision: str, confidence: float, was_correct: bool | None = None) -> None:
         self.calls += 1
+        self.experience += 1
         if decision.upper() in {"PROCEED_TO_SIMULATION", "APPROVE"}:
             self.approvals += 1
         else:
@@ -33,6 +38,15 @@ class ScoutStats:
         self.avg_confidence = (self.avg_confidence * (self.calls - 1) + confidence) / self.calls
         if was_correct is not None and was_correct:
             self.correct_calls += 1
+        # Update last 5 results window
+        if was_correct is not None:
+            self.last_5_results.append(was_correct)
+            if len(self.last_5_results) > 5:
+                self.last_5_results.pop(0)
+        # Specialization = accuracy * log(experience), capped at 1.0
+        import math
+        exp_bonus = min(math.log10(max(self.experience, 1)) / 3.0, 1.0)
+        self.specialization_score = self.accuracy * exp_bonus
 
     @property
     def accuracy(self) -> float:
@@ -45,6 +59,13 @@ class ScoutStats:
         if self.calls == 0:
             return 0.5
         return self.approvals / self.calls
+
+    @property
+    def recent_accuracy(self) -> float:
+        """Accuracy over last 5 calls."""
+        if not self.last_5_results:
+            return self.accuracy
+        return sum(self.last_5_results) / len(self.last_5_results)
 
 
 @dataclass
@@ -229,32 +250,33 @@ class ConfidenceRegistry:
     ) -> None:
         """
         Mark already-recorded scout calls as correct after a paper/live outcome is known.
-
-        Scout calls are recorded when the LLM review runs. Paper replay learns later, when
-        a virtual trade closes, so this method updates correctness without double-counting
-        another scout call.
+        Also updates last_5_results and specialization_score.
         """
         stats = self.get_symbol_stats(symbol)
-        if not was_correct:
-            return
         changed = False
         for scout_name in scout_names:
             sstats = stats.scout_stats.get(scout_name)
             if not sstats or sstats.calls <= 0:
                 continue
-            if sstats.correct_calls < sstats.calls:
-                sstats.correct_calls += 1
-                changed = True
+            if was_correct:
+                if sstats.correct_calls < sstats.calls:
+                    sstats.correct_calls += 1
+                    changed = True
+            # Always update last_5_results and specialization
+            sstats.last_5_results.append(was_correct)
+            if len(sstats.last_5_results) > 5:
+                sstats.last_5_results.pop(0)
+            import math
+            exp_bonus = min(math.log10(max(sstats.experience, 1)) / 3.0, 1.0)
+            sstats.specialization_score = sstats.accuracy * exp_bonus
+            changed = True
         if changed:
             self._save()
 
     def get_symbol_context(self, symbol: str, direction: str) -> str:
         """
         Build a concise context string for injection into scout prompts.
-        Example:
-          "Symbol: BTCUSDT | Direction: LONG | 12 signals reviewed.
-           LONG win rate: 68% (8W/4L), avg RR: 2.3, avg PnL: +1.2%.
-           Technical scout accuracy: 75% (9/12), Risk scout: 67% (8/12)."
+        Includes scout specialization scores and recent accuracy trends.
         """
         stats = self.get_symbol_stats(symbol)
         d = stats.get_direction_stats(direction)
@@ -272,10 +294,19 @@ class ConfidenceRegistry:
         for scout_name in self.SCOUT_NAMES:
             sstats = stats.scout_stats.get(scout_name)
             if sstats and sstats.calls > 0:
+                spec_label = ""
+                if sstats.specialization_score >= 0.7:
+                    spec_label = " [SPECIALIST]"
+                elif sstats.specialization_score >= 0.4:
+                    spec_label = " [TRAINED]"
+                recent = ""
+                if sstats.last_5_results:
+                    recent_pct = sum(sstats.last_5_results) / len(sstats.last_5_results)
+                    recent = f", recent: {recent_pct:.0%}"
                 lines.append(
                     f"  {scout_name.title()} scout: {sstats.accuracy:.0%} accuracy "
                     f"({sstats.correct_calls}/{sstats.calls}), "
-                    f"avg confidence: {sstats.avg_confidence:.2f}"
+                    f"exp: {sstats.experience}{recent}{spec_label}"
                 )
 
         if stats.total_signals > 0:
@@ -288,14 +319,31 @@ class ConfidenceRegistry:
 
     def get_scout_weight(self, symbol: str, scout_name: str) -> float:
         """
-        Return a weight (0.0–1.0) for a scout based on its historical accuracy
-        for this symbol. Default 0.5 if no data.
+        Return a weight (0.0–1.0) for a scout based on:
+        - historical accuracy (base)
+        - specialization score for this symbol (bonus)
+        - recent performance (malus if <20%)
+        Default 0.5 if no data.
         """
         stats = self.get_symbol_stats(symbol)
         sstats = stats.scout_stats.get(scout_name)
         if not sstats or sstats.calls < 3:
             return 0.5
-        return sstats.accuracy
+
+        weight = sstats.accuracy
+
+        # Specialization bonus: up to +0.15 for high specialization
+        weight += min(sstats.specialization_score * 0.15, 0.15)
+
+        # Recent performance malus: if last 5 are terrible, reduce weight
+        if len(sstats.last_5_results) >= 3:
+            recent = sum(sstats.last_5_results) / len(sstats.last_5_results)
+            if recent < 0.2:
+                weight -= 0.2
+            elif recent < 0.4:
+                weight -= 0.1
+
+        return max(0.1, min(1.0, weight))
 
     def reset_symbol(self, symbol: str) -> None:
         symbol = symbol.upper()

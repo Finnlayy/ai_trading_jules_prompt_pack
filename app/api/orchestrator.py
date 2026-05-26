@@ -136,6 +136,7 @@ async def process_signal(payload: M8Payload):
         target_price=payload.target_price,
         decision=decision_result["decision"],
         strategy_id=payload.strategy_id,
+        ai_trace=ai_review.audit_trace,
     )
 
     # 5. Journaling

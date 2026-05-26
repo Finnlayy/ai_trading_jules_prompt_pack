@@ -102,15 +102,27 @@ class PerformanceCalculator:
         )
 
     @staticmethod
-    def _extract_pnl(entry: TradeJournalEntry) -> float | None:
+    def _extract_pnl(entry: TradeJournalEntry | dict) -> float | None:
         """Best-effort PnL extraction from journal entry."""
+        # Handle dict entries from JSON deserialization
+        if isinstance(entry, dict):
+            result = entry.get("result") or {}
+            if "pnl" in result:
+                return float(result["pnl"])
+            sim_fill = entry.get("simulated_fill") or {}
+            if "pnl" in sim_fill:
+                return float(sim_fill["pnl"])
+            entry_price = entry.get("entry_price")
+            exit_price = entry.get("exit_price")
+            if entry_price and exit_price:
+                return None
+            return None
+        # Handle object entries
         if entry.result and "pnl" in entry.result:
             return float(entry.result["pnl"])
         if entry.simulated_fill and "pnl" in entry.simulated_fill:
             return float(entry.simulated_fill["pnl"])
-        # Approximate from prices if available
         if entry.entry_price and entry.exit_price:
-            # Direction unknown in journal; try to infer from payload if present
             return None
         return None
 

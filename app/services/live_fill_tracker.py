@@ -53,6 +53,7 @@ class PositionIntent:
     size: float | None
     strategy_id: str | None
     decision: str
+    ai_trace: dict | None = None
     timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
@@ -133,7 +134,7 @@ class LiveFillTracker:
     def record_intent(self, trade_id: str, symbol: str, direction: str,
                       entry_price: float, stop_price: float, target_price: float,
                       decision: str, strategy_id: str | None = None,
-                      size: float | None = None) -> None:
+                      size: float | None = None, ai_trace: dict | None = None) -> None:
         """Record a trade intent before execution."""
         self._intents[trade_id] = PositionIntent(
             trade_id=trade_id,
@@ -145,6 +146,7 @@ class LiveFillTracker:
             size=size,
             strategy_id=strategy_id,
             decision=decision,
+            ai_trace=ai_trace,
         )
 
     def record_fill(self, trade_id: str, fill_data: FillData) -> None:
@@ -223,6 +225,36 @@ class LiveFillTracker:
             "timestamp": exit.isoformat(),
         })
         self._persist()
+        # Record outcome in ConfidenceRegistry for learning loop
+        try:
+            from app.services.confidence_registry import confidence_registry
+            pnl_pct = (pnl / (pos.entry_price * pos.size)) * 100.0 if pos.entry_price and pos.size else 0.0
+            risk = abs(pos.entry_price - pos.stop_price) if pos.stop_price else abs(pnl_pct)
+            rr = abs(pnl_pct / risk) if risk else 0.0
+            win = pnl > 0
+            confidence_registry.record_trade_outcome(
+                symbol=pos.symbol,
+                direction=pos.direction,
+                pnl_pct=pnl_pct,
+                rr=rr,
+                win=win,
+            )
+            # Record scout outcomes if ai_trace is available
+            intent = self._intents.pop(trade_id, None)
+            if intent and intent.ai_trace:
+                scout_decisions = intent.ai_trace.get("scouts", {})
+                for scout_name, scout_report in scout_decisions.items():
+                    scout_approved = isinstance(scout_report, dict) and scout_report.get("decision") == "PROCEED_TO_SIMULATION"
+                    if not scout_approved and isinstance(scout_report, str):
+                        scout_approved = "PROCEED" in scout_report.upper() or "APPROVE" in scout_report.upper()
+                    was_correct = (scout_approved and win) or (not scout_approved and not win)
+                    confidence_registry.mark_scout_outcome(
+                        symbol=pos.symbol,
+                        scout_names=[scout_name],
+                        was_correct=was_correct,
+                    )
+        except Exception:
+            pass
         # Also update SQLite
         try:
             from app.db import SessionLocal

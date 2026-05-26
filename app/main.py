@@ -118,24 +118,30 @@ async def _autonomous_loop_auto_start():
 
 _news_poll_task = None
 _autostart_task = None
+_price_poller_task = None
 
 
 @app.on_event("startup")
 def startup_event():
-    global _heartbeat_task, _news_poll_task, _autostart_task
+    global _heartbeat_task, _news_poll_task, _autostart_task, _price_poller_task
     # Create DB tables
     from app.db import Base, engine
     Base.metadata.create_all(bind=engine)
     _heartbeat_task = asyncio.create_task(_heartbeat_loop())
     _news_poll_task = asyncio.create_task(_news_poll_loop())
     _autostart_task = asyncio.create_task(_autonomous_loop_auto_start())
+    # Start price poller for live position monitoring
+    from app.services.price_poller import price_poller
+    price_poller.start()
 
 
 @app.on_event("shutdown")
 def shutdown_event():
-    global _heartbeat_task, _news_poll_task, _autostart_task
+    global _heartbeat_task, _news_poll_task, _autostart_task, _price_poller_task
     from app.services.autonomous_loop import autonomous_loop_instance
+    from app.services.price_poller import price_poller
     autonomous_loop_instance.stop()
+    price_poller.stop()
     if _heartbeat_task:
         _heartbeat_task.cancel()
     if _news_poll_task:

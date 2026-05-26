@@ -57,7 +57,12 @@ def test_scout_weight_with_enough_calls(registry):
         registry.record_scout_review("BTCUSDT", "risk", "LONG", "PROCEED_TO_SIMULATION", 0.7, i < 4)
 
     weight = registry.get_scout_weight("BTCUSDT", "risk")
-    assert weight == pytest.approx(0.8)  # 4/5 correct
+    # 4/5 = 0.8 accuracy + specialization bonus for 5 calls
+    import math
+    exp_bonus = min(math.log10(5) / 3.0, 1.0)
+    spec_score = 0.8 * exp_bonus
+    expected = 0.8 + min(spec_score * 0.15, 0.15)
+    assert weight == pytest.approx(expected)
 
 
 def test_record_signal_review(registry):
