@@ -104,7 +104,7 @@
         body {
             margin: 0;
             min-height: 100vh;
-            color: var(--ink);
+            color: #142118;
             font-family: "IBM Plex Sans", sans-serif;
             background:
                 linear-gradient(135deg, rgba(201, 243, 221, 0.72), transparent 30%),
@@ -125,7 +125,7 @@
             padding: 8px 18px;
             border: 1.5px solid var(--line);
             border-radius: var(--radius-sm);
-            color: var(--ink);
+            color: #142118;
             background: var(--surface);
             cursor: pointer;
             font-weight: 600;
@@ -167,7 +167,7 @@
         button.secondary {
             background: var(--surface-soft);
             border-color: var(--line);
-            color: var(--ink);
+            color: #142118;
         }
         button.secondary:hover:not(:disabled) {
             background: var(--hover-overlay);
@@ -200,7 +200,7 @@
         }
         button.ghost:hover:not(:disabled) {
             background: var(--hover-overlay);
-            color: var(--ink);
+            color: #142118;
         }
 
         /* Loading spinner on buttons */
@@ -214,7 +214,7 @@
             width: 16px;
             height: 16px;
             border: 2px solid var(--line);
-            border-top-color: var(--ink);
+            border-top-color: #142118;
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
         }
@@ -226,7 +226,7 @@
             border: 1.5px solid var(--line);
             border-radius: var(--radius-sm);
             background: var(--surface);
-            color: var(--ink);
+            color: #142118;
             padding: 9px 12px;
             outline: none;
             font-size: 14px;
@@ -597,7 +597,7 @@
             color: var(--muted);
         }
         .signal-card .signal-metric strong {
-            color: var(--ink);
+            color: #142118;
             font-weight: 600;
         }
 
@@ -754,7 +754,7 @@
             min-height: 24px;
             padding: 4px 9px;
             border-radius: 999px;
-            color: var(--ink);
+            color: #142118;
             background: var(--sky);
             font-size: 11px;
             font-weight: 700;
@@ -912,8 +912,8 @@
         }
 
         .wallet-tab.active {
-            background: var(--ink);
-            border-color: var(--ink);
+            background: #142118;
+            border-color: #142118;
             color: #ffffff;
         }
 
@@ -2207,7 +2207,7 @@
         }
 
         function SignedMoney({ value }) {
-            const tone = value > 0 ? "var(--mint-strong)" : value < 0 ? "var(--peach-strong)" : "var(--ink)";
+            const tone = value > 0 ? "var(--mint-strong)" : value < 0 ? "var(--peach-strong)" : "#142118";
             const prefix = value > 0 ? "+" : value < 0 ? "-" : "";
             return <span style={{ color: tone }}>{prefix}${money(Math.abs(value))}</span>;
         }
@@ -3721,9 +3721,9 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                             <tbody>
                                 {watchlist.map(item => (
                                     <tr key={item.symbol || Math.random()}>
-                                        <td style={{ color: "var(--ink)" }}><b>{item.symbol || "???"}</b></td>
-                                        <td style={{ color: "var(--ink)" }}>{(item.timeframes || []).join(", ") || "—"}</td>
-                                        <td style={{ color: "var(--ink)" }}>{item.active ? "✅" : "⏸️"}</td>
+                                        <td style={{ color: "#142118" }}><b>{item.symbol || "???"}</b></td>
+                                        <td style={{ color: "#142118" }}>{(item.timeframes || []).join(", ") || "—"}</td>
+                                        <td style={{ color: "#142118" }}>{item.active ? "✅" : "⏸️"}</td>
                                         <td><button className="danger" style={{ padding: "2px 8px", fontSize: 12 }} onClick={() => removeSymbol(item.symbol)} disabled={loading}>Remove</button></td>
                                     </tr>
                                 ))}
@@ -3741,13 +3741,13 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                             <tbody>
                                 {positions.map(p => (
                                     <tr key={p.trade_id}>
-                                        <td style={{ color: "var(--ink)" }}><b>{p.symbol || "???"}</b></td>
-                                        <td style={{ color: "var(--ink)" }}>{p.direction || "?"}</td>
-                                        <td style={{ color: "var(--ink)" }}>{p.entry_price ?? "—"}</td>
-                                        <td style={{ color: "var(--ink)" }}>{p.current_price ?? "—"}</td>
-                                        <td style={{ color: "var(--ink)" }}>{p.size ?? "—"}</td>
+                                        <td style={{ color: "#142118" }}><b>{p.symbol || "???"}</b></td>
+                                        <td style={{ color: "#142118" }}>{p.direction || "?"}</td>
+                                        <td style={{ color: "#142118" }}>{p.entry_price ?? "—"}</td>
+                                        <td style={{ color: "#142118" }}>{p.current_price ?? "—"}</td>
+                                        <td style={{ color: "#142118" }}>{p.size ?? "—"}</td>
                                         <td style={{ color: p.unrealized_pnl >= 0 ? "var(--emerald)" : "var(--rose)" }}>{p.unrealized_pnl >= 0 ? "+" : ""}{p.unrealized_pnl?.toFixed?.(4) || p.unrealized_pnl}</td>
-                                        <td style={{ color: "var(--ink)" }}>{p.time_in_trade_minutes?.toFixed?.(1) || "0"}m</td>
+                                        <td style={{ color: "#142118" }}>{p.time_in_trade_minutes?.toFixed?.(1) || "0"}m</td>
                                     </tr>
                                 ))}
                                 {positions.length === 0 && <tr><td colSpan={7} style={{ textAlign: "center", color: "var(--muted)" }}>No open positions</td></tr>}
