@@ -13,14 +13,10 @@
       "cautious": 0.4,
       "momentum_driven": 0.8
     },
-    "total_calls": 2,
-    "correct_calls": 2,
+    "total_calls": 4,
+    "correct_calls": 4,
     "accuracy": 1.0,
-    "current_streak": 2
-    "total_calls": 3,
-    "correct_calls": 3,
-    "accuracy": 1.0,
-    "current_streak": 3
+    "current_streak": 4
   },
   {
     "scout_id": "8589bbb2-ddcc-410e-8bb9-45717a852987",
@@ -36,14 +32,10 @@
       "cautious": 0.5,
       "momentum_driven": 0.9
     },
-    "total_calls": 2,
-    "correct_calls": 2,
+    "total_calls": 4,
+    "correct_calls": 4,
     "accuracy": 1.0,
-    "current_streak": 2
-    "total_calls": 3,
-    "correct_calls": 3,
-    "accuracy": 1.0,
-    "current_streak": 3
+    "current_streak": 4
   },
   {
     "scout_id": "0d4342f0-4031-4334-9b90-0013bf190452",
@@ -59,14 +51,10 @@
       "cautious": 0.95,
       "momentum_driven": 0.1
     },
-    "total_calls": 2,
-    "correct_calls": 2,
+    "total_calls": 4,
+    "correct_calls": 4,
     "accuracy": 1.0,
-    "current_streak": 2
-    "total_calls": 3,
-    "correct_calls": 3,
-    "accuracy": 1.0,
-    "current_streak": 3
+    "current_streak": 4
   },
   {
     "scout_id": "34059d23-47bf-4280-ba75-dea7348866eb",
@@ -82,13 +70,9 @@
       "cautious": 0.7,
       "momentum_driven": 0.5
     },
-    "total_calls": 2,
-    "correct_calls": 2,
+    "total_calls": 4,
+    "correct_calls": 4,
     "accuracy": 1.0,
-    "current_streak": 2
-    "total_calls": 3,
-    "correct_calls": 3,
-    "accuracy": 1.0,
-    "current_streak": 3
+    "current_streak": 4
   }
 ]

@@ -65,3 +65,24 @@ def get_ab_tests():
 def get_curriculum(scout_name: str):
     progress = academy_curriculum.get_all_for_scout(scout_name)
     return {"curriculum": [p.model_dump() for p in progress]}
+
+from app.services.training_loop import training_loop
+
+@router.get("/status")
+def get_academy_status():
+    return training_loop.get_status()
+
+@router.post("/train/start")
+async def start_training():
+    await training_loop.start()
+    return {"status": "started"}
+
+@router.post("/train/stop")
+async def stop_training():
+    await training_loop.stop()
+    return {"status": "stopped"}
+
+@router.post("/drill/start")
+async def trigger_manual_drill():
+    await training_loop.trigger_manual_cycle()
+    return {"status": "drill_cycle_completed"}

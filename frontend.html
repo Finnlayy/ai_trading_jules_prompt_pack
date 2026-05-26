@@ -1591,7 +1591,6 @@
                     aiLayer: "AI Layer",
                     logs: "Logs & System",
                     news: "News Feed",
-                    agents: "Agent Registry"
                     agents: "Agent Registry",
                     training: "Training Academy"
                 };
@@ -1612,7 +1611,6 @@
                             aiLayer: true,
                             logs: true,
                             news: true,
-                        agents: true
                         agents: true,
                         training: true
                         }
@@ -1696,7 +1694,6 @@
                         aiLayer: true,
                         logs: true,
                         news: true,
-                        agents: true
                         agents: true,
                         training: true
                     }
@@ -1722,6 +1719,14 @@
 
             const [curriculum, setCurriculum] = useState([]);
             const [abTests, setAbTests] = useState([]);
+
+            const [academyStatus, setAcademyStatus] = useState({
+                is_running: false,
+                is_night_time: false,
+                recent_drills: [],
+                diversity: { status: 'optimal', agreement_rate: 0 }
+            });
+
 
 
             const [aiLayer, setAiLayer] = useState({ provider: "", profile: null, memory: [], behavior_prompt: "" });
@@ -1770,6 +1775,21 @@
             }
 
 
+
+            async function toggleTrainingLoop() {
+                try {
+                    await fetch(academyStatus.is_running ? "/academy/train/stop" : "/academy/train/start", { method: "POST" });
+                    refreshStatus();
+                } catch(e) {}
+            }
+
+            async function triggerManualDrill() {
+                try {
+                    await fetch("/academy/drill/start", { method: "POST" });
+                    refreshStatus();
+                } catch(e) {}
+            }
+
             async function fetchAgents() {
                 try {
                     const res = await fetch("/academy/agents/registry");
@@ -1793,6 +1813,13 @@
                         const data4 = await res4.json();
                         setCurriculum(data4.curriculum || []);
                     }
+
+                    const res5 = await fetch("/academy/status");
+                    if (res5.ok) {
+                        const data5 = await res5.json();
+                        setAcademyStatus(data5);
+                    }
+
 
                 } catch (e) {
                     console.error("Failed to fetch academy data", e);
@@ -2175,18 +2202,6 @@
                                 ⚙ Layout
                             </button>
                         </div>
-                        </div>
-                        <div className="header-actions" style={{display: "flex", gap: "8px", alignItems: "center"}}>
-                            <button onClick={() => { refreshStatus(); refreshAIProfile(); }} disabled={loading}>Refresh</button>
-                            <button className="warning" onClick={resetBot} disabled={loading}>Reset</button>
-                            <button className="danger" onClick={clearLocalHistory} disabled={loading}>Clear</button>
-                            <button
-                                className={layoutConfig.showSettings ? "primary" : ""}
-                                onClick={() => setLayoutConfig({...layoutConfig, showSettings: !layoutConfig.showSettings})}
-                            >
-                                ⚙ Layout
-                            </button>
-                        </div>
                     </div>
 
                     <div className="panel-main">
@@ -2264,14 +2279,8 @@
                             <AgentsPanel agents={agents} leaderboard={leaderboard} />
                         </section>)}
 
-
-
-                        {layoutConfig.panels.agents && (<section className={tab === "Agents" ? "" : "hidden"}>
-                            <AgentsPanel agents={agents} leaderboard={leaderboard} />
-                        </section>)}
-
                         {layoutConfig.panels.training && (<section className={tab === "Training" ? "" : "hidden"}>
-                            <TrainingPanel curriculum={curriculum} abTests={abTests} />
+                            <TrainingPanel curriculum={curriculum} abTests={abTests} academyStatus={academyStatus} onToggleLoop={toggleTrainingLoop} onTriggerDrill={triggerManualDrill} />
                         </section>)}
 
                         {layoutConfig.panels.logs && (<section className={tab === "Logs" ? "" : "hidden"}>
@@ -2294,7 +2303,7 @@
 
 
 
-        function TrainingPanel({ curriculum, abTests }) {
+        function TrainingPanel({ curriculum, abTests, academyStatus, onToggleLoop, onTriggerDrill }) {
             return (
                 <div className="grid">
                     <div className="card span-6">
@@ -2357,26 +2366,57 @@
                     </div>
 
                     <div className="card span-12" style={{marginTop: '20px'}}>
-                        <h2>Synthetic Drills (Night Academy)</h2>
-                        <p className="text-muted" style={{marginBottom: '16px'}}>
-                            The Night Academy automatically generates and scores synthetic historical scenarios
-                            when markets are slow, ensuring agents continue to learn and adapt without live risk.
-                        </p>
+                        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px'}}>
+                            <h2>Synthetic Drills (Night Academy)</h2>
+                            <div style={{display: 'flex', gap: '8px'}}>
+                                <button onClick={onToggleLoop} className={academyStatus.is_running ? 'warning' : 'primary'}>
+                                    {academyStatus.is_running ? 'Stop Loop' : 'Start Loop'}
+                                </button>
+                                <button onClick={onTriggerDrill}>Run Manual Cycle</button>
+                            </div>
+                        </div>
 
-                        <div style={{
-                            border: '1px solid var(--line)',
-                            padding: '30px',
-                            borderRadius: '8px',
-                            textAlign: 'center',
-                            background: 'var(--bg)'
-                        }}>
-                            <div style={{fontSize: '36px', marginBottom: '10px'}}>🌙</div>
-                            <h3 style={{marginBottom: '8px'}}>Night Academy is Standby</h3>
-                            <p style={{color: 'var(--muted)', fontSize: '13px', maxWidth: '400px', margin: '0 auto'}}>
-                                Training loops are currently paused as live market volatility is sufficient.
-                                To force a training cycle, use the API or enable continuous training in settings.
-                            </p>
-                            <button className="primary" style={{marginTop: '20px'}} onClick={() => alert('Manual drill execution will be available in Phase 3!')}>Start Manual Drill</button>
+                        <div style={{display: 'flex', gap: '20px'}}>
+                            <div style={{flex: 1, border: '1px solid var(--line)', padding: '20px', borderRadius: '8px', background: 'var(--bg)', textAlign: 'center'}}>
+                                <div style={{fontSize: '36px', marginBottom: '10px'}}>{academyStatus.is_running ? '🔥' : '🌙'}</div>
+                                <h3 style={{marginBottom: '8px'}}>Status: {academyStatus.is_running ? 'Running' : 'Standby'}</h3>
+                                <p style={{color: 'var(--muted)', fontSize: '13px'}}>
+                                    {academyStatus.is_night_time ? 'Night mode active.' : 'Daytime mode active.'}
+                                </p>
+                            </div>
+
+                            <div style={{flex: 1, border: '1px solid var(--line)', padding: '20px', borderRadius: '8px', background: 'var(--surface-soft)'}}>
+                                <h3 style={{marginBottom: '12px'}}>Ensemble Diversity</h3>
+                                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                                    <div style={{fontSize: '24px', fontWeight: 'bold'}}>{(academyStatus.diversity.agreement_rate * 100).toFixed(1)}%</div>
+                                    <span className={`pill ${academyStatus.diversity.status === 'optimal' ? 'ok' : 'warn'}`}>
+                                        {academyStatus.diversity.status}
+                                    </span>
+                                </div>
+                                <div style={{width: '100%', height: '6px', background: 'var(--line)', borderRadius: '3px', marginTop: '12px', overflow: 'hidden'}}>
+                                    <div style={{
+                                        width: `${academyStatus.diversity.agreement_rate * 100}%`,
+                                        height: '100%',
+                                        background: academyStatus.diversity.status === 'optimal' ? 'var(--emerald)' : 'var(--coral)'
+                                    }}></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <h3 style={{marginTop: '24px', marginBottom: '12px'}}>Recent Drills</h3>
+                        <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
+                            {academyStatus.recent_drills && academyStatus.recent_drills.length > 0 ? academyStatus.recent_drills.slice(0, 5).map(drill => (
+                                <div key={drill.result_id} style={{display: 'flex', justifyContent: 'space-between', padding: '12px', border: '1px solid var(--line)', borderRadius: '6px', background: 'var(--surface)'}}>
+                                    <div>
+                                        <strong style={{textTransform: 'capitalize'}}>{drill.scout_name}</strong>
+                                        <span style={{color: 'var(--muted)', fontSize: '12px', marginLeft: '8px'}}>{drill.drill_id.split('-')[0]}</span>
+                                    </div>
+                                    <div style={{display: 'flex', gap: '16px', alignItems: 'center'}}>
+                                        <span style={{fontSize: '12px', color: 'var(--muted)'}}>Conf: {(drill.confidence * 100).toFixed(0)}%</span>
+                                        <span className={`pill ${drill.is_correct ? 'ok' : 'bad'}`}>{drill.is_correct ? 'PASSED' : 'FAILED'}</span>
+                                    </div>
+                                </div>
+                            )) : <p className="text-muted">No drills executed yet.</p>}
                         </div>
                     </div>
                 </div>
