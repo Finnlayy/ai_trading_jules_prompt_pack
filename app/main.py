@@ -22,6 +22,7 @@ from app.api.news_impact import router as news_impact_router
 from app.api.autonomous_loop import router as autonomous_loop_router
 from app.api.live_trading import router as live_trading_router
 from app.api.db_insight import router as db_insight_router
+from app.api.academy import router as academy_router
 
 app = FastAPI(
     title="Agent-Reflex Hybrid Trader API",

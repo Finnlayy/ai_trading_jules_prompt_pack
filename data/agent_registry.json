@@ -1,0 +1,78 @@
+[
+  {
+    "scout_id": "859a312f-b79a-443e-a9f2-26744100a3ab",
+    "name": "technical",
+    "archetype": "Analyst",
+    "created_at": "2026-05-26T22:01:25.908945",
+    "born_from": "v1_base",
+    "generation": 1,
+    "specialization_symbols": [],
+    "badges": [],
+    "personality_vector": {
+      "analytical": 0.9,
+      "cautious": 0.4,
+      "momentum_driven": 0.8
+    },
+    "total_calls": 3,
+    "correct_calls": 3,
+    "accuracy": 1.0,
+    "current_streak": 3
+  },
+  {
+    "scout_id": "8589bbb2-ddcc-410e-8bb9-45717a852987",
+    "name": "sentiment",
+    "archetype": "Diplomat",
+    "created_at": "2026-05-26T22:01:25.909119",
+    "born_from": "v1_base",
+    "generation": 1,
+    "specialization_symbols": [],
+    "badges": [],
+    "personality_vector": {
+      "analytical": 0.3,
+      "cautious": 0.5,
+      "momentum_driven": 0.9
+    },
+    "total_calls": 3,
+    "correct_calls": 3,
+    "accuracy": 1.0,
+    "current_streak": 3
+  },
+  {
+    "scout_id": "0d4342f0-4031-4334-9b90-0013bf190452",
+    "name": "risk",
+    "archetype": "W\u00e4chter",
+    "created_at": "2026-05-26T22:01:25.909147",
+    "born_from": "v1_base",
+    "generation": 1,
+    "specialization_symbols": [],
+    "badges": [],
+    "personality_vector": {
+      "analytical": 0.8,
+      "cautious": 0.95,
+      "momentum_driven": 0.1
+    },
+    "total_calls": 3,
+    "correct_calls": 3,
+    "accuracy": 1.0,
+    "current_streak": 3
+  },
+  {
+    "scout_id": "34059d23-47bf-4280-ba75-dea7348866eb",
+    "name": "macro",
+    "archetype": "Stratege",
+    "created_at": "2026-05-26T22:01:25.909169",
+    "born_from": "v1_base",
+    "generation": 1,
+    "specialization_symbols": [],
+    "badges": [],
+    "personality_vector": {
+      "analytical": 0.7,
+      "cautious": 0.7,
+      "momentum_driven": 0.5
+    },
+    "total_calls": 3,
+    "correct_calls": 3,
+    "accuracy": 1.0,
+    "current_streak": 3
+  }
+]

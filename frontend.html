@@ -275,6 +275,189 @@
             color: var(--indigo);
         }
 
+
+        /* ============================================
+           Pionex Layout System
+           ============================================ */
+
+        .metricflow-layout {
+            display: grid;
+            grid-template-areas:
+                "sidebar header settings"
+                "sidebar main settings";
+            grid-template-columns: 248px 1fr 280px;
+            grid-template-rows: auto 1fr;
+            height: 100vh;
+            overflow: hidden;
+            background: var(--bg);
+        }
+
+        .metricflow-layout.right-mode {
+            grid-template-areas:
+                "header settings sidebar"
+                "main settings sidebar";
+            grid-template-columns: 1fr 280px 248px;
+        }
+
+        .metricflow-layout.no-sidebar {
+            grid-template-columns: 1fr 280px;
+            grid-template-areas:
+                "header settings"
+                "main settings";
+        }
+
+        .metricflow-layout.no-settings {
+            grid-template-columns: 248px 1fr;
+            grid-template-areas:
+                "sidebar header"
+                "sidebar main";
+        }
+
+        .metricflow-layout.no-sidebar.no-settings {
+            grid-template-columns: 1fr;
+            grid-template-areas:
+                "header"
+                "main";
+        }
+
+        .panel-sidebar {
+            grid-area: sidebar;
+            background: rgba(255, 255, 255, 0.76);
+            border-right: 1px solid var(--line);
+            padding: 22px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            overflow-y: auto;
+        }
+
+        .metricflow-layout.right-mode .panel-sidebar {
+            border-right: none;
+            border-left: 1px solid var(--line);
+        }
+
+        .panel-header {
+            grid-area: header;
+            padding: 20px 40px;
+            border-bottom: 1px solid var(--line);
+            background: var(--surface);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-main {
+            grid-area: main;
+            padding: 30px 40px;
+            overflow-y: auto;
+            width: 100%;
+        }
+
+        .panel-settings {
+            grid-area: settings;
+            background: var(--surface);
+            border-left: 1px solid var(--line);
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .layout-settings {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .settings-header h3 {
+            margin: 0 0 16px 0;
+            font-size: 16px;
+        }
+
+        .trading-mode {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .trading-mode label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+        }
+
+        .mode-selector {
+            display: flex;
+            gap: 8px;
+        }
+
+        .mode-selector button {
+            flex: 1;
+            padding: 8px;
+        }
+
+        .mode-selector button.active {
+            border-color: var(--indigo);
+            background: var(--indigo-soft);
+            color: var(--indigo);
+        }
+
+        .panel-toggles {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .panel-toggles > label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .toggle-switch {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .toggle-label {
+            font-size: 14px;
+            color: var(--ink);
+        }
+
+        .toggle-track {
+            width: 36px;
+            height: 20px;
+            border-radius: 10px;
+            background: var(--line);
+            position: relative;
+            transition: background 0.2s;
+        }
+
+        .toggle-track.on {
+            background: var(--emerald);
+        }
+
+        .toggle-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: white;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.2s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+
+        .toggle-track.on .toggle-thumb {
+            transform: translateX(16px);
+        }
+
         .app {
             display: grid;
             grid-template-columns: 248px minmax(0, 1fr);
@@ -723,8 +906,12 @@
 
         /* Responsive breakpoints */
         @media (max-width: 1024px) {
-            .app {
+            .app,
+            .metricflow-layout {
                 grid-template-columns: 1fr;
+                grid-template-areas: "header" "main" "settings";
+                overflow-y: auto;
+                height: auto;
             }
             aside {
                 display: none;
@@ -1149,7 +1336,7 @@
         .hidden { display: none; }
 
         @media (max-width: 1100px) {
-            .app { grid-template-columns: 1fr; }
+            .app, .metricflow-layout { grid-template-columns: 1fr; grid-template-areas: "header" "main" "settings"; height: auto; overflow-y: auto; }
             aside {
                 position: static;
                 height: auto;
@@ -1380,8 +1567,143 @@
             return "pill warn";
         }
 
+
+        function Toggle({ label, value, onChange }) {
+            return (
+                <label className="toggle-switch">
+                    <span className="toggle-label">{label}</span>
+                    <div className={`toggle-track ${value ? "on" : "off"}`} onClick={() => onChange(!value)}>
+                        <div className="toggle-thumb" />
+                    </div>
+                </label>
+            );
+        }
+
+
+        function LayoutSettingsPanel({ layout, onChange }) {
+            const formatLabel = (key) => {
+                const map = {
+                    sidebar: "Navigation Sidebar",
+                    chart: "TradingView Chart",
+                    overview: "Overview Panel",
+                    wallets: "Wallets & Positions",
+                    control: "Control Panel",
+                    aiLayer: "AI Layer",
+                    logs: "Logs & System",
+                    news: "News Feed",
+                    agents: "Agent Registry",
+                    training: "Training Academy"
+                };
+                return map[key] || key;
+            };
+
+            const resetLayout = () => {
+                if (confirm("Reset layout to default?")) {
+                    onChange({
+                        mode: "left",
+                        locked: false,
+                        panels: {
+                            sidebar: true,
+                            chart: true,
+                            overview: true,
+                            wallets: true,
+                            control: true,
+                            aiLayer: true,
+                            logs: true,
+                            news: true,
+                        agents: true,
+                        training: true
+                        }
+                    });
+                }
+            };
+
+            return (
+                <div className="layout-settings">
+                    <div className="settings-header">
+                        <h3>Layout Settings</h3>
+                    </div>
+
+                    <button onClick={resetLayout} style={{width: '100%'}}>
+                        Reset to Default
+                    </button>
+
+                    <div style={{height: '1px', background: 'var(--line)', margin: '10px 0'}}></div>
+
+                    <Toggle
+                        label="Lock Current Layout"
+                        value={layout.locked}
+                        onChange={v => onChange({...layout, locked: v})}
+                    />
+
+                    <div className="trading-mode" style={{marginTop: '10px', marginBottom: '10px'}}>
+                        <label>Trading Mode</label>
+                        <div className="mode-selector">
+                            <button
+                                type="button"
+                                className={layout.mode === "left" ? "active" : ""}
+                                onClick={() => onChange({...layout, mode: "left"})}
+                            >
+                                Left
+                            </button>
+                            <button
+                                type="button"
+                                className={layout.mode === "right" ? "active" : ""}
+                                onClick={() => onChange({...layout, mode: "right"})}
+                            >
+                                Right
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style={{height: '1px', background: 'var(--line)', margin: '10px 0'}}></div>
+
+                    <div className="panel-toggles">
+                        <label>Panels</label>
+                        {Object.entries(layout.panels).map(([key, value]) => (
+                            <Toggle
+                                key={key}
+                                label={formatLabel(key)}
+                                value={value}
+                                onChange={v => onChange({
+                                    ...layout,
+                                    panels: {...layout.panels, [key]: v}
+                                })}
+                            />
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
         function App() {
             const [tab, setTab] = useState("Overview");
+
+            const [layoutConfig, setLayoutConfig] = useState(() => {
+                const saved = localStorage.getItem("metricflow_layout");
+                return saved ? JSON.parse(saved) : {
+                    mode: "left",
+                    locked: false,
+                    showSettings: false,
+                    panels: {
+                        sidebar: true,
+                        chart: true,
+                        overview: true,
+                        wallets: true,
+                        control: true,
+                        aiLayer: true,
+                        logs: true,
+                        news: true,
+                        agents: true,
+                        training: true
+                    }
+                };
+            });
+
+            useEffect(() => {
+                localStorage.setItem("metricflow_layout", JSON.stringify(layoutConfig));
+            }, [layoutConfig]);
+
             const [health, setHealth] = useState({ status: "checking" });
             const [status, setStatus] = useState(null);
             const [signal, setSignal] = useState(freshSignal());
@@ -1391,6 +1713,14 @@
             const [raw, setRaw] = useState("Waiting for bot activity.");
             const [loading, setLoading] = useState(false);
             const [filters, setFilters] = useState({ date: "all", segment: "all", symbol: "" });
+
+            const [agents, setAgents] = useState([]);
+            const [leaderboard, setLeaderboard] = useState([]);
+
+            const [curriculum, setCurriculum] = useState([]);
+            const [abTests, setAbTests] = useState([]);
+
+
             const [aiLayer, setAiLayer] = useState({ provider: "", profile: null, memory: [], behavior_prompt: "" });
             const [aiMessage, setAiMessage] = useState("");
             const [chartState, setChartState] = useState({ symbol: "BTCUSDT", timeframe: "1h", bars: [], indicators: [], loading: false });
@@ -1434,6 +1764,36 @@
                     throw err;
                 }
                 return data;
+            }
+
+
+            async function fetchAgents() {
+                try {
+                    const res = await fetch("/academy/agents/registry");
+                    if (res.ok) {
+                        const data = await res.json();
+                        setAgents(data.agents || []);
+                    }
+                    const res2 = await fetch("/academy/agents/leaderboard");
+                    if (res2.ok) {
+                        const data2 = await res2.json();
+                        setLeaderboard(data2.leaderboard || []);
+                    }
+
+                    const res3 = await fetch("/academy/ab-tests");
+                    if (res3.ok) {
+                        const data3 = await res3.json();
+                        setAbTests(data3.ab_tests || []);
+                    }
+                    const res4 = await fetch("/academy/curriculum/technical"); // Hardcoded MVP
+                    if (res4.ok) {
+                        const data4 = await res4.json();
+                        setCurriculum(data4.curriculum || []);
+                    }
+
+                } catch (e) {
+                    console.error("Failed to fetch academy data", e);
+                }
             }
 
             async function refreshStatus() {
@@ -1731,9 +2091,18 @@
             const positions = broker.positions || { positions: [] };
             const bots = broker.bots || { bots: [] };
 
+
+            const layoutClasses = [
+                "metricflow-layout",
+                layoutConfig.mode === "right" ? "right-mode" : "",
+                !layoutConfig.panels.sidebar ? "no-sidebar" : "",
+                !layoutConfig.showSettings ? "no-settings" : ""
+            ].filter(Boolean).join(" ");
+
             return (
-                <div className="app">
-                    <aside>
+                <div className={layoutClasses}>
+                    {layoutConfig.panels.sidebar && (
+                    <aside className="panel-sidebar">
                         <div className="brand">
                             <div className="brand-mark">MF</div>
                             <div className="brand-title">MetricFlow Bot</div>
@@ -1765,6 +2134,14 @@
                                     <span>{tab === item ? "●" : ""}</span>
                                 </button>
                             ))}
+                            <div className="nav-category">Academy</div>
+                            {["Agents", "Training"].map(item => (
+                                <button type="button" key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)}>
+                                    <span className="nav-icon">{item === "Agents" ? "◉" : "◊"}</span>
+                                    <span>{item}</span>
+                                    <span>{tab === item ? "●" : ""}</span>
+                                </button>
+                            ))}
                         </nav>
 
                         <div className="side-status">
@@ -1777,19 +2154,27 @@
                             <div>Futures {walletAmount(futuresWallet)} USDT</div>
                         </div>
                     </aside>
+                    )}
 
-                    <main>
-                        <div className="header">
-                            <div>
-                                <h1>Bot Command Center</h1>
-                                <div className="subtitle">Live operational view for AI review, deterministic risk gates, Pionex execution, backtests, orders, and local activity logs.</div>
-                            </div>
-                            <div className="header-actions">
-                                <button onClick={() => { refreshStatus(); refreshAIProfile(); }} disabled={loading}>Refresh</button>
-                                <button className="warning" onClick={resetBot} disabled={loading}>Reset Bot</button>
-                                <button className="danger" onClick={clearLocalHistory} disabled={loading}>Clear UI History</button>
-                            </div>
+                    <div className="panel-header">
+                        <div>
+                            <h1 style={{margin:0, fontSize: "20px"}}>Bot Command Center</h1>
+                            <div className="subtitle" style={{margin:0, fontSize: "13px", marginTop: "4px"}}>Live operational view for AI review, deterministic risk gates, Pionex execution, backtests, orders, and local activity logs.</div>
                         </div>
+                        <div className="header-actions" style={{display: "flex", gap: "8px", alignItems: "center"}}>
+                            <button onClick={() => { refreshStatus(); refreshAIProfile(); }} disabled={loading}>Refresh</button>
+                            <button className="warning" onClick={resetBot} disabled={loading}>Reset</button>
+                            <button className="danger" onClick={clearLocalHistory} disabled={loading}>Clear</button>
+                            <button
+                                className={layoutConfig.showSettings ? "primary" : ""}
+                                onClick={() => setLayoutConfig({...layoutConfig, showSettings: !layoutConfig.showSettings})}
+                            >
+                                ⚙ Layout
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="panel-main">
 
                         <div className="filterbar">
                             <select value={filters.date} onChange={e => setFilters({ ...filters, date: e.target.value })}>
@@ -1808,23 +2193,23 @@
                             <button className="primary" onClick={() => setTab("Control")}>New Order</button>
                         </div>
 
-                        <section className={tab === "Overview" ? "" : "hidden"}>
+                        {layoutConfig.panels.overview && (<section className={tab === "Overview" ? "" : "hidden"}>
                             <Overview stats={stats} broker={broker} ai={ai} risk={risk} primaryWallet={primaryWallet} futuresWallet={futuresWallet} orders={filteredOrders} logs={logs} />
-                        </section>
+                        </section>)}
 
-                        <section className={tab === "Wallets" ? "" : "hidden"}>
+                        {layoutConfig.panels.wallets && (<section className={tab === "Wallets" ? "" : "hidden"}>
                             <Wallets primaryWallet={primaryWallet} futuresWallet={futuresWallet} positions={positions} bots={bots} orders={filteredOrders} />
-                        </section>
+                        </section>)}
 
-                        <section className={tab === "Charts" ? "" : "hidden"}>
+                        {layoutConfig.panels.chart && (<section className={tab === "Charts" ? "" : "hidden"}>
                             <ChartPanel chartState={chartState} setChartState={setChartState} chartRef={chartRef} chartContainerRef={chartContainerRef} orders={filteredOrders} />
-                        </section>
+                        </section>)}
 
-                        <section className={tab === "Control" ? "" : "hidden"}>
+                        {layoutConfig.panels.control && (<section className={tab === "Control" ? "" : "hidden"}>
                             <Control signal={signal} setSignal={setSignal} submitSignal={submitSignal} loading={loading} addLog={addLog} setRaw={setRaw} request={request} />
-                        </section>
+                        </section>)}
 
-                        <section className={tab === "AI Layer" ? "" : "hidden"}>
+                        {layoutConfig.panels.aiLayer && (<section className={tab === "AI Layer" ? "" : "hidden"}>
                             <AILayer
                                 aiLayer={aiLayer}
                                 aiMessage={aiMessage}
@@ -1841,7 +2226,7 @@
                                 setRaw={setRaw}
                                 setAiLayer={setAiLayer}
                             />
-                        </section>
+                        </section>)}
 
                         <section className={tab === "Confidence" ? "" : "hidden"}>
                             <ConfidencePanel request={request} addLog={addLog} />
@@ -1855,18 +2240,189 @@
                             <Backtest backtest={backtest} setBacktest={setBacktest} runBacktest={runBacktest} loading={loading} orders={filteredOrders} />
                         </section>
 
-                        <section className={tab === "News" ? "" : "hidden"}>
+                        {layoutConfig.panels.news && (<section className={tab === "News" ? "" : "hidden"}>
                             <NewsPanel request={request} addLog={addLog} />
-                        </section>
+                        </section>)}
 
-                        <section className={tab === "Logs" ? "" : "hidden"}>
+
+                        {layoutConfig.panels.agents && (<section className={tab === "Agents" ? "" : "hidden"}>
+                            <AgentsPanel agents={agents} leaderboard={leaderboard} />
+                        </section>)}
+
+                        {layoutConfig.panels.training && (<section className={tab === "Training" ? "" : "hidden"}>
+                            <TrainingPanel curriculum={curriculum} abTests={abTests} />
+                        </section>)}
+
+                        {layoutConfig.panels.logs && (<section className={tab === "Logs" ? "" : "hidden"}>
                             <Logs logs={logs} raw={raw} status={{ health, status }} />
-                        </section>
+                        </section>)}
 
                         <section className={tab === "Live Paper" ? "" : "hidden"}>
                             <LivePaperPanel request={request} addLog={addLog} />
                         </section>
-                    </main>
+                    </div>
+
+                    {layoutConfig.showSettings && (
+                        <aside className="panel-settings">
+                            <LayoutSettingsPanel layout={layoutConfig} onChange={setLayoutConfig} />
+                        </aside>
+                    )}
+                </div>
+            );
+        }
+
+
+
+        function TrainingPanel({ curriculum, abTests }) {
+            return (
+                <div className="grid">
+                    <div className="card span-6">
+                        <h2>Curriculum Progress (Technical Scout)</h2>
+                        <div style={{marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px'}}>
+                            {curriculum.length > 0 ? curriculum.map(c => (
+                                <div key={c.curriculum_level} style={{
+                                    border: '1px solid var(--line)',
+                                    padding: '12px',
+                                    borderRadius: '6px',
+                                    background: 'var(--surface-soft)'
+                                }}>
+                                    <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '8px'}}>
+                                        <strong>{c.curriculum_level} Curriculum</strong>
+                                        <span>{c.completed_drills} / {c.required_drills} Drills</span>
+                                    </div>
+                                    <div style={{width: '100%', height: '8px', background: 'var(--line)', borderRadius: '4px', overflow: 'hidden'}}>
+                                        <div style={{
+                                            width: `${Math.min(100, (c.completed_drills / c.required_drills) * 100)}%`,
+                                            height: '100%',
+                                            background: 'var(--indigo)'
+                                        }}></div>
+                                    </div>
+                                    <div style={{display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '12px', color: 'var(--muted)'}}>
+                                        <span>Passed: {c.passed_drills}</span>
+                                        <span>Avg. Confidence: {(c.average_confidence * 100).toFixed(1)}%</span>
+                                    </div>
+                                </div>
+                            )) : <p className="text-muted">No curriculum data yet.</p>}
+                        </div>
+                    </div>
+
+                    <div className="card span-6">
+                        <h2>Active A/B Tests</h2>
+                        <div style={{marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px'}}>
+                            {abTests.length > 0 ? abTests.map(t => (
+                                <div key={t.test_id} style={{
+                                    border: '1px solid var(--line)',
+                                    padding: '12px',
+                                    borderRadius: '6px',
+                                    background: 'var(--surface-soft)'
+                                }}>
+                                    <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '8px'}}>
+                                        <strong>{t.scout_name} Scout: A/B Test</strong>
+                                        <span className={`pill ${t.status === 'running' ? 'warn' : 'ok'}`}>{t.status}</span>
+                                    </div>
+                                    <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--ink)'}}>
+                                        <div>
+                                            <div style={{color: 'var(--muted)'}}>Variant A ({t.variant_a_version})</div>
+                                            <div>{t.calls_a > 0 ? ((t.correct_a / t.calls_a)*100).toFixed(1) : 0}% Acc. ({t.calls_a} calls)</div>
+                                        </div>
+                                        <div style={{textAlign: 'right'}}>
+                                            <div style={{color: 'var(--muted)'}}>Variant B ({t.variant_b_version})</div>
+                                            <div>{t.calls_b > 0 ? ((t.correct_b / t.calls_b)*100).toFixed(1) : 0}% Acc. ({t.calls_b} calls)</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )) : <p className="text-muted">No active A/B tests.</p>}
+                        </div>
+                    </div>
+
+                    <div className="card span-12" style={{marginTop: '20px'}}>
+                        <h2>Synthetic Drills (Night Academy)</h2>
+                        <p className="text-muted" style={{marginBottom: '16px'}}>
+                            The Night Academy automatically generates and scores synthetic historical scenarios
+                            when markets are slow, ensuring agents continue to learn and adapt without live risk.
+                        </p>
+
+                        <div style={{
+                            border: '1px solid var(--line)',
+                            padding: '30px',
+                            borderRadius: '8px',
+                            textAlign: 'center',
+                            background: 'var(--bg)'
+                        }}>
+                            <div style={{fontSize: '36px', marginBottom: '10px'}}>🌙</div>
+                            <h3 style={{marginBottom: '8px'}}>Night Academy is Standby</h3>
+                            <p style={{color: 'var(--muted)', fontSize: '13px', maxWidth: '400px', margin: '0 auto'}}>
+                                Training loops are currently paused as live market volatility is sufficient.
+                                To force a training cycle, use the API or enable continuous training in settings.
+                            </p>
+                            <button className="primary" style={{marginTop: '20px'}} onClick={() => alert('Manual drill execution will be available in Phase 3!')}>Start Manual Drill</button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function AgentsPanel({ agents, leaderboard }) {
+            return (
+                <div className="grid">
+                    <div className="card span-12">
+                        <h2>Agent Registry & Leaderboard</h2>
+                        <div style={{display: 'flex', gap: '20px', flexWrap: 'wrap', marginTop: '16px'}}>
+                            {agents.map(agent => (
+                                <div key={agent.name} style={{
+                                    border: '1px solid var(--line)',
+                                    padding: '16px',
+                                    borderRadius: '8px',
+                                    width: '300px',
+                                    background: 'var(--surface)'
+                                }}>
+                                    <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                                        <h3 style={{margin:0, textTransform: 'capitalize'}}>{agent.name} Scout</h3>
+                                        <span className="pill ok">{agent.archetype}</span>
+                                    </div>
+                                    <p style={{fontSize: '12px', color: 'var(--muted)', marginTop: '4px'}}>
+                                        Gen {agent.generation} • Born {new Date(agent.created_at).toISOString().split('T')[0]}
+                                    </p>
+
+                                    <div style={{display: 'flex', justifyContent: 'space-between', marginTop: '16px'}}>
+                                        <div>
+                                            <div style={{fontSize: '11px', color: 'var(--muted)'}}>ACCURACY</div>
+                                            <div style={{fontSize: '18px', fontWeight: 'bold'}}>
+                                                {(agent.accuracy * 100).toFixed(1)}%
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div style={{fontSize: '11px', color: 'var(--muted)'}}>CALLS</div>
+                                            <div style={{fontSize: '18px', fontWeight: 'bold'}}>{agent.total_calls}</div>
+                                        </div>
+                                        <div>
+                                            <div style={{fontSize: '11px', color: 'var(--muted)'}}>STREAK</div>
+                                            <div style={{fontSize: '18px', fontWeight: 'bold', color: 'var(--emerald)'}}>
+                                                {agent.current_streak}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div style={{marginTop: '16px'}}>
+                                        <div style={{fontSize: '11px', color: 'var(--muted)', marginBottom: '8px'}}>BADGES</div>
+                                        <div style={{display: 'flex', gap: '4px', flexWrap: 'wrap'}}>
+                                            {agent.badges && agent.badges.length > 0 ? agent.badges.map((b, i) => (
+                                                <div key={i} title={b.description} style={{
+                                                    padding: '4px 8px',
+                                                    background: 'var(--surface-soft)',
+                                                    border: '1px solid var(--line)',
+                                                    borderRadius: '12px',
+                                                    fontSize: '12px'
+                                                }}>
+                                                    {b.icon} {b.name}
+                                                </div>
+                                            )) : <span style={{fontSize: '12px', color: 'var(--muted)'}}>No badges yet</span>}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 </div>
             );
         }

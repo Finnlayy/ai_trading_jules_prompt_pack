@@ -11,6 +11,9 @@ import json
 from pathlib import Path
 from dataclasses import dataclass, field, asdict
 from typing import Any
+from app.schemas.academy import CareerEntry
+from app.services.agent_registry import agent_registry
+import asyncio
 
 
 @dataclass
@@ -270,6 +273,23 @@ class ConfidenceRegistry:
             exp_bonus = min(math.log10(max(sstats.experience, 1)) / 3.0, 1.0)
             sstats.specialization_score = sstats.accuracy * exp_bonus
             changed = True
+
+            # Integrate with Agent Registry
+            career_entry = CareerEntry(
+                scout_name=scout_name,
+                event_type="prediction_result",
+                details={
+                    "symbol": symbol,
+                    "is_correct": was_correct,
+                    "accuracy": sstats.accuracy,
+                    "specialization": sstats.specialization_score
+                }
+            )
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(agent_registry.log_career_event(career_entry))
+            except RuntimeError:
+                asyncio.run(agent_registry.log_career_event(career_entry))
         if changed:
             self._save()
 
