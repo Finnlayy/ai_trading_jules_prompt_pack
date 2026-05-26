@@ -13,6 +13,10 @@
       "cautious": 0.4,
       "momentum_driven": 0.8
     },
+    "total_calls": 2,
+    "correct_calls": 2,
+    "accuracy": 1.0,
+    "current_streak": 2
     "total_calls": 3,
     "correct_calls": 3,
     "accuracy": 1.0,
@@ -32,6 +36,10 @@
       "cautious": 0.5,
       "momentum_driven": 0.9
     },
+    "total_calls": 2,
+    "correct_calls": 2,
+    "accuracy": 1.0,
+    "current_streak": 2
     "total_calls": 3,
     "correct_calls": 3,
     "accuracy": 1.0,
@@ -51,6 +59,10 @@
       "cautious": 0.95,
       "momentum_driven": 0.1
     },
+    "total_calls": 2,
+    "correct_calls": 2,
+    "accuracy": 1.0,
+    "current_streak": 2
     "total_calls": 3,
     "correct_calls": 3,
     "accuracy": 1.0,
@@ -70,6 +82,10 @@
       "cautious": 0.7,
       "momentum_driven": 0.5
     },
+    "total_calls": 2,
+    "correct_calls": 2,
+    "accuracy": 1.0,
+    "current_streak": 2
     "total_calls": 3,
     "correct_calls": 3,
     "accuracy": 1.0,

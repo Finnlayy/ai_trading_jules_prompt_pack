@@ -1591,6 +1591,7 @@
                     aiLayer: "AI Layer",
                     logs: "Logs & System",
                     news: "News Feed",
+                    agents: "Agent Registry"
                     agents: "Agent Registry",
                     training: "Training Academy"
                 };
@@ -1611,6 +1612,7 @@
                             aiLayer: true,
                             logs: true,
                             news: true,
+                        agents: true
                         agents: true,
                         training: true
                         }
@@ -1694,6 +1696,7 @@
                         aiLayer: true,
                         logs: true,
                         news: true,
+                        agents: true
                         agents: true,
                         training: true
                     }
@@ -2172,6 +2175,18 @@
                                 ⚙ Layout
                             </button>
                         </div>
+                        </div>
+                        <div className="header-actions" style={{display: "flex", gap: "8px", alignItems: "center"}}>
+                            <button onClick={() => { refreshStatus(); refreshAIProfile(); }} disabled={loading}>Refresh</button>
+                            <button className="warning" onClick={resetBot} disabled={loading}>Reset</button>
+                            <button className="danger" onClick={clearLocalHistory} disabled={loading}>Clear</button>
+                            <button
+                                className={layoutConfig.showSettings ? "primary" : ""}
+                                onClick={() => setLayoutConfig({...layoutConfig, showSettings: !layoutConfig.showSettings})}
+                            >
+                                ⚙ Layout
+                            </button>
+                        </div>
                     </div>
 
                     <div className="panel-main">
@@ -2243,6 +2258,12 @@
                         {layoutConfig.panels.news && (<section className={tab === "News" ? "" : "hidden"}>
                             <NewsPanel request={request} addLog={addLog} />
                         </section>)}
+
+
+                        {layoutConfig.panels.agents && (<section className={tab === "Agents" ? "" : "hidden"}>
+                            <AgentsPanel agents={agents} leaderboard={leaderboard} />
+                        </section>)}
+
 
 
                         {layoutConfig.panels.agents && (<section className={tab === "Agents" ? "" : "hidden"}>
