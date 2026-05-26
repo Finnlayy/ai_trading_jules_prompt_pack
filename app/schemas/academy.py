@@ -88,3 +88,10 @@ class CurriculumProgress(BaseModel):
     required_drills: int = 10
     passed_drills: int = 0
     average_confidence: float = 0.0
+
+class DiversityMonitorStats(BaseModel):
+    agreement_rate: float = 0.0
+    total_evaluations: int = 0
+    high_agreement_warnings: int = 0
+    low_agreement_warnings: int = 0
+    status: str = "optimal" # "optimal", "echo_chamber", "divergent"
