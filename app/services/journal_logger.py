@@ -1,4 +1,5 @@
 import json
+import asyncio
 import os
 from datetime import datetime, timezone
 from typing import Dict, Any, List
@@ -49,6 +50,12 @@ class JournalLogger:
         archive = f"{self.filepath}.1"
         os.rename(self.filepath, archive)
 
+    def _write_entry(self, entry: TradeJournalEntry):
+        with open(self.filepath, "a", encoding="utf-8") as f:
+            f.write(entry.model_dump_json() + "\n")
+
+    async def log(self, entry: TradeJournalEntry):
+        await asyncio.to_thread(self._write_entry, entry)
     def log(self, entry: TradeJournalEntry):
         if self._should_rotate():
             self._rotate()

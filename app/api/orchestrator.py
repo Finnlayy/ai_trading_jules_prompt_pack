@@ -147,6 +147,10 @@ async def process_signal(payload: M8Payload):
         strategy_id=payload.strategy_id,
         ai_trace=ai_review.audit_trace,
     )
+    
+    # 4. Journaling
+    await journal_logger_instance.log(journal_entry)
+    
 
     # 5. Journaling
     journal_logger_instance.log(journal_entry)
