@@ -62,10 +62,11 @@ class TrainingDrillsService:
             feedback_notes=f"Expected {drill.expected_outcome}, got {scout_decision}."
         )
 
+
         # Log to agent registry
         career_entry = CareerEntry(
             scout_name=drill.scout_target,
-            event_type="prediction_result", # using the same event to naturally increase accuracy and total_calls
+            event_type="prediction_result",
             details={
                 "symbol": drill.scenario_data.get("symbol", "UNKNOWN"),
                 "is_correct": is_correct,
@@ -74,6 +75,14 @@ class TrainingDrillsService:
             }
         )
         await agent_registry.log_career_event(career_entry)
+
+        # Log specific drill result
+        def _write_drill():
+            with open(DRILL_RESULTS_FILE, "a") as f:
+                f.write(result.model_dump_json() + "\n")
+
+        await asyncio.to_thread(_write_drill)
+
 
         return result
 

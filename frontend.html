@@ -2337,7 +2337,7 @@
                     </div>
 
                     <div className="card span-6">
-                        <h2>Active A/B Tests</h2>
+                        <h2>Evolution & A/B Tests</h2>
                         <div style={{marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px'}}>
                             {abTests.length > 0 ? abTests.map(t => (
                                 <div key={t.test_id} style={{
@@ -2403,6 +2403,24 @@
                             </div>
                         </div>
 
+
+                    <div className="card span-12" style={{marginTop: '20px'}}>
+                        <h3 style={{marginBottom: '12px'}}>Global Scout Evolution Timeline</h3>
+                        <div style={{display: 'flex', overflowX: 'auto', gap: '16px', paddingBottom: '8px'}}>
+                            {/* Placeholder for evolution timeline. In a full implementation, this maps over prompt_registry. */}
+                            <div style={{minWidth: '200px', borderLeft: '2px solid var(--indigo)', paddingLeft: '12px'}}>
+                                <div style={{fontSize: '11px', color: 'var(--muted)'}}>v1_base</div>
+                                <strong>Technical Scout</strong>
+                                <p style={{fontSize: '12px', margin: '4px 0 0 0'}}>Initial deployment.</p>
+                            </div>
+                            <div style={{minWidth: '200px', borderLeft: '2px solid var(--emerald)', paddingLeft: '12px'}}>
+                                <div style={{fontSize: '11px', color: 'var(--muted)'}}>v2_auto_evolved</div>
+                                <strong>Technical Scout</strong>
+                                <p style={{fontSize: '12px', margin: '4px 0 0 0'}}>Added range-break focus after failed drills.</p>
+                            </div>
+                        </div>
+                    </div>
+
                         <h3 style={{marginTop: '24px', marginBottom: '12px'}}>Recent Drills</h3>
                         <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
                             {academyStatus.recent_drills && academyStatus.recent_drills.length > 0 ? academyStatus.recent_drills.slice(0, 5).map(drill => (
@@ -2437,8 +2455,23 @@
                                     width: '300px',
                                     background: 'var(--surface)'
                                 }}>
+
+            const getAvatar = (archetype) => {
+                const map = {
+                    "Analyst": "🧠",
+                    "Diplomat": "⚖️",
+                    "Wächter": "🛡️",
+                    "Stratege": "♟️",
+                    "Operateur": "⚙️",
+                    "Architekt": "🏗️"
+                };
+                return map[archetype] || "🤖";
+            };
                                     <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-                                        <h3 style={{margin:0, textTransform: 'capitalize'}}>{agent.name} Scout</h3>
+                                        <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                                            <div style={{fontSize: '24px'}}>{getAvatar(agent.archetype)}</div>
+                                            <h3 style={{margin:0, textTransform: 'capitalize'}}>{agent.name}</h3>
+                                        </div>
                                         <span className="pill ok">{agent.archetype}</span>
                                     </div>
                                     <p style={{fontSize: '12px', color: 'var(--muted)', marginTop: '4px'}}>
