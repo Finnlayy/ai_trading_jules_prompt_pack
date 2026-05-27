@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -26,6 +27,8 @@ from app.services.journal_logger import journal_logger_instance
 
 router = APIRouter()
 
+LIVE_ACTIVE_MODES = {"paper", "ctrader", "ctrader_direct"}
+
 
 # In-memory emergency state
 _emergency_halt_until: datetime | None = None
@@ -41,10 +44,51 @@ def _is_emergency_active() -> bool:
     return True
 
 
+def _local_position_response(p) -> PositionResponse:
+    return PositionResponse(
+        trade_id=p.trade_id,
+        symbol=p.symbol,
+        direction=p.direction,
+        entry_price=p.entry_price,
+        current_price=p.current_price,
+        size=p.size,
+        unrealized_pnl=round(p.unrealized_pnl, 4),
+        unrealized_pnl_pct=round(
+            (p.unrealized_pnl / (p.entry_price * p.size)) * 100 if p.entry_price * p.size != 0 else 0, 2
+        ),
+        open_time=p.open_time,
+        strategy_id=p.strategy_id,
+        stop_price=p.stop_price,
+        target_price=p.target_price,
+        time_in_trade_minutes=round(p.time_in_trade_minutes, 2),
+    )
+
+
+async def _broker_positions_for_live_mode() -> list[PositionResponse] | None:
+    if BROKER_MODE not in {"ctrader", "ctrader_direct"}:
+        return None
+    try:
+        from app.api import orchestrator
+
+        broker = orchestrator.broker_instance
+        if getattr(broker, "get_broker_type", lambda: "")() != "ctrader":
+            return None
+        result = await asyncio.to_thread(broker.get_positions)
+        if result.get("error"):
+            return None
+        return [PositionResponse(**position) for position in result.get("positions", [])]
+    except Exception:
+        return None
+
+
 @router.get("/status", response_model=LiveTradingStatus)
 async def get_live_status():
     """Return live trading system status."""
-    positions = live_fill_tracker.get_open_positions()
+    broker_positions = await _broker_positions_for_live_mode()
+    if broker_positions is None:
+        positions = [_local_position_response(p) for p in live_fill_tracker.get_open_positions()]
+    else:
+        positions = broker_positions
     total_exposure = sum(p.size * p.current_price for p in positions)
     today_pnl = live_fill_tracker.get_daily_pnl()
 
@@ -52,7 +96,7 @@ async def get_live_status():
     loop_status = autonomous_loop_instance.get_status()
 
     return LiveTradingStatus(
-        is_active=BROKER_MODE == "paper",
+        is_active=BROKER_MODE in LIVE_ACTIVE_MODES,
         broker_mode=BROKER_MODE,
         loop_running=loop_status["is_running"],
         open_positions_count=len(positions),
@@ -68,27 +112,10 @@ async def get_live_status():
 @router.get("/positions")
 async def get_open_positions():
     """Return all currently open positions."""
-    positions = live_fill_tracker.get_open_positions()
-    return [
-        PositionResponse(
-            trade_id=p.trade_id,
-            symbol=p.symbol,
-            direction=p.direction,
-            entry_price=p.entry_price,
-            current_price=p.current_price,
-            size=p.size,
-            unrealized_pnl=round(p.unrealized_pnl, 4),
-            unrealized_pnl_pct=round(
-                (p.unrealized_pnl / (p.entry_price * p.size)) * 100 if p.entry_price * p.size != 0 else 0, 2
-            ),
-            open_time=p.open_time,
-            strategy_id=p.strategy_id,
-            stop_price=p.stop_price,
-            target_price=p.target_price,
-            time_in_trade_minutes=round(p.time_in_trade_minutes, 2),
-        )
-        for p in positions
-    ]
+    broker_positions = await _broker_positions_for_live_mode()
+    if broker_positions is not None:
+        return broker_positions
+    return [_local_position_response(p) for p in live_fill_tracker.get_open_positions()]
 
 
 @router.get("/positions/{trade_id}")

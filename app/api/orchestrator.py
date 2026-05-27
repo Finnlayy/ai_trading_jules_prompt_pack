@@ -52,6 +52,11 @@ def _is_live_capable_broker(broker) -> bool:
     return False
 
 
+def _should_execute_broker_in_thread(broker) -> bool:
+    broker_type = getattr(broker, "get_broker_type", lambda: "")()
+    return broker_type == "ctrader"
+
+
 async def _check_regime(payload: M8Payload) -> dict:
     """
     Check market regime before trading.
@@ -116,12 +121,16 @@ async def process_signal(payload: M8Payload):
         }
 
     # 3. Execution via selected Broker
-    journal_entry = broker_instance.execute_trade(
-        payload=payload,
-        decision=decision_result["decision"],
-        reject_reason=decision_result["reject_reason"],
-        ai_decision=ai_review.decision,
-    )
+    execute_kwargs = {
+        "payload": payload,
+        "decision": decision_result["decision"],
+        "reject_reason": decision_result["reject_reason"],
+        "ai_decision": ai_review.decision,
+    }
+    if _should_execute_broker_in_thread(broker_instance):
+        journal_entry = await asyncio.to_thread(broker_instance.execute_trade, **execute_kwargs)
+    else:
+        journal_entry = broker_instance.execute_trade(**execute_kwargs)
 
     # 4. Live Fill Tracking
     from app.services.live_fill_tracker import live_fill_tracker, FillData

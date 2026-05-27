@@ -7,3 +7,4 @@ openai
 pytest-asyncio
 python-dotenv
 requests
+ctrader-open-api

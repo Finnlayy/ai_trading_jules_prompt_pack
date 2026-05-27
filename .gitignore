@@ -10,3 +10,4 @@ logs/
 # Local secrets
 .env*
 !.env.example
+ctrader_symbols.json
