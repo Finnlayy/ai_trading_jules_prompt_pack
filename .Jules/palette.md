@@ -1,6 +1,3 @@
-## 2026-05-22 - Add ARIA Labels to Navigation
-**Learning:** Single-page React CDNs apps require manual tracking of accessibility attributes like `aria-label` since they bypass static site generators that might enforce a11y rules.
-**Action:** Always verify `aria-label` presence on custom tab navigation buttons mapped from arrays.
-## 2026-05-22 - Explicit Focus States in Custom Tailwind Dark Mode
-**Learning:** Default Tailwind focus rings (usually blue) completely clash with the "Anti-Casino" custom dark palette and are often invisible against dark gray backgrounds.
-**Action:** When building custom dark themes, always override the default focus rings on inputs and buttons with custom thematic rings (e.g., `focus-visible:ring-2 focus-visible:ring-matteMint focus:outline-none`) to ensure keyboard users have high-visibility feedback.
+## 2026-05-27 - Frontend.html Dashboard Overhaul
+**Learning:** React standalone files (no build step) require careful regex patching or manual sed when modifying. I should be extremely careful to not break existing nested structures. I successfully replaced multiple placeholder/local-storage UI elements with data-driven API elements. Dark mode is now strict CSS variables and does not rely on `localStorage`.
+**Action:** When working on standalone React files like this again, it's very easy to miss a closing tag or break a hook dependency array when using regex replacements. I should probably use AST-based tools or very precise manual edits if regex gets too hairy.
