@@ -59,7 +59,7 @@ class TrainingLoopService:
 
     async def _run_cycle(self):
         self.last_run_time = datetime.utcnow().isoformat()
-        scouts = ["technical", "sentiment", "risk", "macro"]
+        scouts = ["technical", "sentiment", "risk", "macro", "execution", "correlation"]
 
         # Track agreements for diversity monitor
         decisions = []

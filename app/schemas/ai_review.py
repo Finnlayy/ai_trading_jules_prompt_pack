@@ -8,6 +8,8 @@ class DecisionEnum(str, Enum):
     HUMAN_REVIEW = "HUMAN_REVIEW"
 
 class SignalReview(BaseModel):
+    explanation: str = ""
+    scout_explanations: dict = Field(default_factory=dict)
     schema_version: str
     signal_id: str
     decision: DecisionEnum

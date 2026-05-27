@@ -31,6 +31,16 @@ SCOUT_DEFAULTS = [
         "name": "macro",
         "archetype": "Stratege",
         "personality_vector": {"analytical": 0.7, "cautious": 0.7, "momentum_driven": 0.5}
+    },
+    {
+        "name": "execution",
+        "archetype": "Operateur",
+        "personality_vector": {"analytical": 0.9, "cautious": 0.8, "momentum_driven": 0.2}
+    },
+    {
+        "name": "correlation",
+        "archetype": "Architekt",
+        "personality_vector": {"analytical": 0.85, "cautious": 0.85, "momentum_driven": 0.1}
     }
 ]
 
