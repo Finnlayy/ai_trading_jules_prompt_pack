@@ -1,0 +1,3 @@
+## 2026-05-27 - Frontend.html Dashboard Overhaul
+**Learning:** React standalone files (no build step) require careful regex patching or manual sed when modifying. I should be extremely careful to not break existing nested structures. I successfully replaced multiple placeholder/local-storage UI elements with data-driven API elements. Dark mode is now strict CSS variables and does not rely on `localStorage`.
+**Action:** When working on standalone React files like this again, it's very easy to miss a closing tag or break a hook dependency array when using regex replacements. I should probably use AST-based tools or very precise manual edits if regex gets too hairy.

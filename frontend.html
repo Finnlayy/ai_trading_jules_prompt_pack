@@ -426,7 +426,7 @@
 
         .toggle-label {
             font-size: 14px;
-            color: var(--ink);
+            color: var(--text);
         }
 
         .toggle-track {
@@ -1676,6 +1676,33 @@
             );
         }
 
+
+        // --- Toast System ---
+        function ToastContainer({ toasts, removeToast }) {
+            return (
+                <div style={{ position: "fixed", top: 16, right: 16, zIndex: 9999, display: "flex", flexDirection: "column", gap: 8, pointerEvents: "none" }}>
+                    {toasts.map(t => (
+                        <div key={t.id} onClick={() => removeToast(t.id)} style={{
+                            background: "var(--panel)",
+                            border: `1px solid var(--border)`,
+                            borderLeft: `4px solid ${t.type === 'success' ? 'var(--success)' : t.type === 'error' ? 'var(--danger)' : t.type === 'warning' ? 'var(--warning)' : 'var(--info)'}`,
+                            color: "var(--text)",
+                            padding: "12px 16px",
+                            borderRadius: 6,
+                            boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
+                            pointerEvents: "auto",
+                            cursor: "pointer",
+                            minWidth: 250,
+                            maxWidth: 350,
+                            animation: "slideIn 0.3s ease-out"
+                        }}>
+                            <div style={{ fontSize: 13, fontWeight: 600 }}>{t.message}</div>
+                        </div>
+                    ))}
+                </div>
+            );
+        }
+
         function App() {
             const [tab, setTab] = useState("Overview");
 
@@ -1710,9 +1737,51 @@
             const [backtest, setBacktest] = useState({ symbol: "HYPEUSDT", timeframe: "1m", bars: 500, max_signals: 10, min_confluence: "" });
             const [orders, setOrders] = useState(() => readStorage(ORDER_KEY, []));
             const [logs, setLogs] = useState(() => readStorage(LOG_KEY, []));
-            const [raw, setRaw] = useState("Waiting for bot activity.");
-            const [loading, setLoading] = useState(false);
+                        const [loading, setLoading] = useState(false);
             const [filters, setFilters] = useState({ date: "all", segment: "all", symbol: "" });
+
+            const [toasts, setToasts] = useState([]);
+
+            const addToast = (message, type = 'info') => {
+                const id = Date.now() + Math.random();
+                setToasts(current => [{ id, message, type }, ...current].slice(0, 5));
+                setTimeout(() => {
+                    setToasts(current => current.filter(t => t.id !== id));
+                }, 5000);
+            };
+
+            const removeToast = (id) => {
+                setToasts(current => current.filter(t => t.id !== id));
+            };
+
+
+            const [availableStrategies, setAvailableStrategies] = useState([]);
+            const [activeStrategy, setActiveStrategy] = useState("unknown");
+
+            useEffect(() => {
+                const fetchStrats = async () => {
+                    try {
+                        const strats = await fetch("/strategies").then(r => r.json());
+                        if (strats.strategies) setAvailableStrategies(strats.strategies);
+
+                        const loopStat = await fetch("/loop/status").then(r => r.json());
+                        if (loopStat.current_strategy_id) setActiveStrategy(loopStat.current_strategy_id);
+                    } catch (e) {}
+                };
+                fetchStrats();
+            }, []);
+
+            const switchStrategy = async (stratId) => {
+                if(confirm(`Are you sure you want to switch to strategy: ${stratId}?`)) {
+                    await fetch("/strategies/switch", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ strategy_id: stratId })
+                    });
+                    setActiveStrategy(stratId);
+                }
+            };
+
 
             const [agents, setAgents] = useState([]);
             const [leaderboard, setLeaderboard] = useState([]);
@@ -1974,12 +2043,10 @@
                     const response = await request("/webhook/m8", { method: "POST", body: JSON.stringify(payload) });
                     const order = orderFromSignal(payload, response);
                     addOrders([order]);
-                    setRaw(pretty(response));
-                    addLog("order", `${order.final_decision} ${order.symbol} ${order.intent}`, order);
+                                        addLog("order", `${order.final_decision} ${order.symbol} ${order.intent}`, order);
                     await refreshStatus();
                 } catch (error) {
-                    setRaw(`ERROR: ${error.message}`);
-                    addLog("error", "Manual signal failed", { error: error.message });
+                                        addLog("error", "Manual signal failed", { error: error.message });
                 } finally {
                     setLoading(false);
                 }
@@ -1999,12 +2066,10 @@
                     const response = await request(`/backtest/run?${params.toString()}`, { method: "POST" });
                     const backtestOrders = ordersFromBacktest(response);
                     addOrders(backtestOrders);
-                    setRaw(pretty(response));
-                    addLog("backtest", `${response.signals_generated || 0} signals on ${response.symbol}`, response);
+                                        addLog("backtest", `${response.signals_generated || 0} signals on ${response.symbol}`, response);
                     await refreshStatus();
                 } catch (error) {
-                    setRaw(`ERROR: ${error.message}`);
-                    addLog("error", "Backtest failed", { error: error.message });
+                                        addLog("error", "Backtest failed", { error: error.message });
                 } finally {
                     setLoading(false);
                 }
@@ -2014,12 +2079,10 @@
                 setLoading(true);
                 try {
                     const response = await request("/backtest/reset", { method: "POST" });
-                    setRaw(pretty(response));
-                    addLog("system", "Bot state reset", response);
+                                        addLog("system", "Bot state reset", response);
                     await refreshStatus();
                 } catch (error) {
-                    setRaw(`ERROR: ${error.message}`);
-                    addLog("error", "Reset failed", { error: error.message });
+                                        addLog("error", "Reset failed", { error: error.message });
                 } finally {
                     setLoading(false);
                 }
@@ -2034,12 +2097,10 @@
                         body: JSON.stringify(normalizeProfile(aiLayer.profile))
                     });
                     setAiLayer(current => ({ ...current, ...response, memory: current.memory || [] }));
-                    setRaw(pretty(response));
-                    addLog("ai", "AI behavior profile saved", response.profile);
+                                        addLog("ai", "AI behavior profile saved", response.profile);
                     await refreshAIProfile();
                 } catch (error) {
-                    setRaw(`ERROR: ${error.message}`);
-                    addLog("error", "AI profile save failed", { error: error.message });
+                                        addLog("error", "AI profile save failed", { error: error.message });
                 } finally {
                     setLoading(false);
                 }
@@ -2055,13 +2116,11 @@
                         body: JSON.stringify({ message: aiMessage, apply_to_profile: true })
                     });
                     setAiLayer(current => ({ ...current, ...response }));
-                    setRaw(pretty(response));
-                    setAiMessage("");
+                                        setAiMessage("");
                     addLog("ai", "AI layer chat updated behavior memory", response.raw_profile_patch);
                     await refreshAIProfile();
                 } catch (error) {
-                    setRaw(`ERROR: ${error.message}`);
-                    addLog("error", "AI layer chat failed", { error: error.message });
+                                        addLog("error", "AI layer chat failed", { error: error.message });
                 } finally {
                     setLoading(false);
                 }
@@ -2071,12 +2130,10 @@
                 setLoading(true);
                 try {
                     const response = await request("/ai/reset", { method: "POST" });
-                    setRaw(pretty(response));
-                    addLog("ai", "AI layer memory reset", response.profile);
+                                        addLog("ai", "AI layer memory reset", response.profile);
                     await refreshAIProfile();
                 } catch (error) {
-                    setRaw(`ERROR: ${error.message}`);
-                    addLog("error", "AI memory reset failed", { error: error.message });
+                                        addLog("error", "AI memory reset failed", { error: error.message });
                 } finally {
                     setLoading(false);
                 }
@@ -2087,8 +2144,7 @@
                 setLogs([]);
                 writeStorage(ORDER_KEY, []);
                 writeStorage(LOG_KEY, []);
-                setRaw("Local dashboard history cleared.");
-            }
+                            }
 
             const filteredOrders = useMemo(() => {
                 const now = Date.now();
@@ -2284,7 +2340,7 @@
                         </section>)}
 
                         {layoutConfig.panels.logs && (<section className={tab === "Logs" ? "" : "hidden"}>
-                            <Logs logs={logs} raw={raw} status={{ health, status }} />
+                            <Logs logs={logs} status={{ health, status }} />
                         </section>)}
 
                         <section className={tab === "Live Paper" ? "" : "hidden"}>
@@ -2350,7 +2406,7 @@
                                         <strong>{t.scout_name} Scout: A/B Test</strong>
                                         <span className={`pill ${t.status === 'running' ? 'warn' : 'ok'}`}>{t.status}</span>
                                     </div>
-                                    <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--ink)'}}>
+                                    <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--text)'}}>
                                         <div>
                                             <div style={{color: 'var(--muted)'}}>Variant A ({t.variant_a_version})</div>
                                             <div>{t.calls_a > 0 ? ((t.correct_a / t.calls_a)*100).toFixed(1) : 0}% Acc. ({t.calls_a} calls)</div>
@@ -3033,8 +3089,7 @@
                     }, 0);
                 } catch (e) {
                     setJsonError(e.message);
-                    setRaw(`JSON Error: ${e.message}`);
-                    addLog("error", "Invalid JSON payload", { error: e.message });
+                                        addLog("error", "Invalid JSON payload", { error: e.message });
                 }
             }
 
@@ -3177,7 +3232,7 @@
                 const chart = LightweightCharts.createChart(chartContainerRef.current, {
                     width: chartContainerRef.current.clientWidth,
                     height: 520,
-                    layout: { background: { color: "#ffffff" }, textColor: "#142118" },
+                    layout: { background: { color: "#ffffff" }, textColor: "var(--text)" },
                     grid: { vertLines: { color: "#f0f0f0" }, horzLines: { color: "#f0f0f0" } },
                     crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
                     rightPriceScale: { borderColor: "#dde8df" },
@@ -3298,8 +3353,7 @@
                 try {
                     const response = await request("/backtest/smoke", { method: "POST" });
                     setSmokeResult(response);
-                    setRaw(pretty(response));
-                    addLog("system", `Smoke test ${response.all_passed ? "PASSED" : "FAILED"}`, { broker_mode: response.broker_mode, live_capable: response.live_capable });
+                                        addLog("system", `Smoke test ${response.all_passed ? "PASSED" : "FAILED"}`, { broker_mode: response.broker_mode, live_capable: response.live_capable });
                 } catch (error) {
                     setSmokeResult({ error: error.message });
                     addLog("error", "Smoke test failed", { error: error.message });
@@ -3337,12 +3391,10 @@
                 try {
                     const response = await request("/ai/chat", { method: "POST", body: JSON.stringify(body) });
                     setAiLayer(current => ({ ...current, ...response }));
-                    setRaw(pretty(response));
-                    if (previewOnly) setShowPrompt(true);
+                                        if (previewOnly) setShowPrompt(true);
                     addLog("ai", previewOnly ? "AI prompt previewed" : "AI analyzed chart context", { symbol: chartState.symbol, timeframe: chartState.timeframe, bars: analyzeBars, strategy: analyzeStrategy });
                 } catch (error) {
-                    setRaw(`ERROR: ${error.message}`);
-                    addLog("error", "AI chart analysis failed", { error: error.message });
+                                        addLog("error", "AI chart analysis failed", { error: error.message });
                 }
             }
 
@@ -3986,15 +4038,10 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
         function Logs({ logs, raw, status }) {
             return (
                 <div className="grid">
-                    <div className="panel span-6">
+                    <div className="panel span-12">
                         <div className="panel-title">Activity Logs</div>
                         <LogList logs={logs} />
-                    </div>
-                    <div className="panel span-6">
-                        <div className="panel-title">Raw Response</div>
-                        <pre>{raw}</pre>
-                    </div>
-                    <div className="panel span-12">
+                    </div>                    <div className="panel span-12">
                         <div className="panel-title">Runtime Status</div>
                         <pre>{pretty(status)}</pre>
                     </div>
@@ -4371,9 +4418,9 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                             <tbody>
                                 {watchlist.map(item => (
                                     <tr key={item.symbol || Math.random()}>
-                                        <td style={{ color: "#142118" }}><b>{item.symbol || "???"}</b></td>
-                                        <td style={{ color: "#142118" }}>{(item.timeframes || []).join(", ") || "—"}</td>
-                                        <td style={{ color: "#142118" }}>{item.active ? "✅" : "⏸️"}</td>
+                                        <td style={{ color: "var(--text)" }}><b>{item.symbol || "???"}</b></td>
+                                        <td style={{ color: "var(--text)" }}>{(item.timeframes || []).join(", ") || "—"}</td>
+                                        <td style={{ color: "var(--text)" }}>{item.active ? "✅" : "⏸️"}</td>
                                         <td><button className="danger" style={{ padding: "2px 8px", fontSize: 12 }} onClick={() => removeSymbol(item.symbol)} disabled={loading}>Remove</button></td>
                                     </tr>
                                 ))}
@@ -4391,13 +4438,13 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                             <tbody>
                                 {positions.map(p => (
                                     <tr key={p.trade_id}>
-                                        <td style={{ color: "#142118" }}><b>{p.symbol || "???"}</b></td>
-                                        <td style={{ color: "#142118" }}>{p.direction || "?"}</td>
-                                        <td style={{ color: "#142118" }}>{p.entry_price ?? "—"}</td>
-                                        <td style={{ color: "#142118" }}>{p.current_price ?? "—"}</td>
-                                        <td style={{ color: "#142118" }}>{p.size ?? "—"}</td>
+                                        <td style={{ color: "var(--text)" }}><b>{p.symbol || "???"}</b></td>
+                                        <td style={{ color: "var(--text)" }}>{p.direction || "?"}</td>
+                                        <td style={{ color: "var(--text)" }}>{p.entry_price ?? "—"}</td>
+                                        <td style={{ color: "var(--text)" }}>{p.current_price ?? "—"}</td>
+                                        <td style={{ color: "var(--text)" }}>{p.size ?? "—"}</td>
                                         <td style={{ color: p.unrealized_pnl >= 0 ? "var(--emerald)" : "var(--rose)" }}>{p.unrealized_pnl >= 0 ? "+" : ""}{p.unrealized_pnl?.toFixed?.(4) || p.unrealized_pnl}</td>
-                                        <td style={{ color: "#142118" }}>{p.time_in_trade_minutes?.toFixed?.(1) || "0"}m</td>
+                                        <td style={{ color: "var(--text)" }}>{p.time_in_trade_minutes?.toFixed?.(1) || "0"}m</td>
                                     </tr>
                                 ))}
                                 {positions.length === 0 && <tr><td colSpan={7} style={{ textAlign: "center", color: "var(--muted)" }}>No open positions</td></tr>}
