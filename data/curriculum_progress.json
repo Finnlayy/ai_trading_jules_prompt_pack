@@ -1,1 +1,50 @@
-[]
+[
+  {
+    "scout_name": "technical",
+    "curriculum_level": "Beginner",
+    "completed_drills": 27,
+    "required_drills": 10,
+    "passed_drills": 27,
+    "average_confidence": 0.7099687857754979
+  },
+  {
+    "scout_name": "sentiment",
+    "curriculum_level": "Beginner",
+    "completed_drills": 27,
+    "required_drills": 10,
+    "passed_drills": 27,
+    "average_confidence": 0.7636681963367309
+  },
+  {
+    "scout_name": "risk",
+    "curriculum_level": "Beginner",
+    "completed_drills": 27,
+    "required_drills": 10,
+    "passed_drills": 27,
+    "average_confidence": 0.7417394541945667
+  },
+  {
+    "scout_name": "macro",
+    "curriculum_level": "Beginner",
+    "completed_drills": 27,
+    "required_drills": 10,
+    "passed_drills": 27,
+    "average_confidence": 0.7143151296950121
+  },
+  {
+    "scout_name": "execution",
+    "curriculum_level": "Beginner",
+    "completed_drills": 27,
+    "required_drills": 10,
+    "passed_drills": 27,
+    "average_confidence": 0.7170546179524359
+  },
+  {
+    "scout_name": "correlation",
+    "curriculum_level": "Beginner",
+    "completed_drills": 27,
+    "required_drills": 10,
+    "passed_drills": 27,
+    "average_confidence": 0.7711507048322619
+  }
+]

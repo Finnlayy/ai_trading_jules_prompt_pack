@@ -4,6 +4,8 @@ import asyncio
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 
+from pathlib import Path
+DRILL_RESULTS_FILE = Path('data/drill_results.jsonl')
 from app.schemas.academy import SyntheticDrill, DrillResult, CareerEntry
 from app.services.agent_registry import agent_registry
 
