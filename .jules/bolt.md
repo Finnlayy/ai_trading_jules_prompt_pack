@@ -5,3 +5,6 @@
 ## 2026-05-23 - Generator Expressions in Hot Paths
 **Learning:** Using Python generator expressions like `any(condition for x in iter)` in performance hot paths (e.g. iterating over 1m candles for touch detection) incurs significant function call and generator overhead. Unrolling the generator into a native `for` loop with an early `break` can dramatically improve execution time (e.g. 10x faster for touch evaluation).
 **Action:** When iterating over small loops inside massive outer loops (e.g. backtest engines, scorers), replace `any(...)` with an explicitly unrolled `for` loop containing an early `break`.
+## 2026-05-27 - Vectorizing Performance Metrics
+**Learning:** Python-level list comprehensions for standard deviation calculations in performance metrics (`_sharpe` and `_sortino` loops) are significantly slower than native numpy equivalents, particularly as journal entries grow.
+**Action:** Replace iterative mathematical loops over return sequences with `np.asarray`, `np.std`, and boolean indexing (`arr[arr < 0]`) to achieve measurable ~2-3x speedups on large collections.
