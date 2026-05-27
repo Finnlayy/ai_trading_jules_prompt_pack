@@ -1,7 +1,7 @@
 import asyncio
 import os
 import random
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any, List
 
 from app.schemas.academy import DiversityMonitorStats
@@ -26,7 +26,7 @@ class TrainingLoopService:
     def _is_night_time(self) -> bool:
         if not TRAINING_LOOP_NIGHT_MODE:
             return True
-        hour = datetime.utcnow().hour
+        hour = datetime.now(timezone.utc).hour
         # Default 22:00 to 06:00
         return hour >= 22 or hour < 6
 
@@ -58,7 +58,7 @@ class TrainingLoopService:
             await asyncio.sleep(300)
 
     async def _run_cycle(self):
-        self.last_run_time = datetime.utcnow().isoformat()
+        self.last_run_time = datetime.now(timezone.utc).isoformat()
         scouts = ["technical", "sentiment", "risk", "macro", "execution", "correlation"]
 
         # Track agreements for diversity monitor

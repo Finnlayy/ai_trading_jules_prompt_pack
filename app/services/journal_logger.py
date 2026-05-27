@@ -53,7 +53,7 @@ class JournalLogger:
         if self._should_rotate():
             self._rotate()
 
-        with open(self.filepath, "a") as f:
+        with open(self.filepath, "a", encoding="utf-8") as f:
             f.write(entry.model_dump_json() + "\n")
 
         # Also persist to SQLite

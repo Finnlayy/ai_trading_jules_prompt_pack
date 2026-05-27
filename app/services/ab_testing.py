@@ -2,7 +2,7 @@ import json
 import asyncio
 from pathlib import Path
 from typing import List, Optional, Dict
-from datetime import datetime
+from datetime import datetime, timezone
 from app.schemas.academy import ABTest
 
 DATA_DIR = Path("data")
@@ -71,7 +71,7 @@ class ABTestingService:
 
         t.winner_version = t.variant_a_version if acc_a >= acc_b else t.variant_b_version
         t.status = "concluded"
-        t.concluded_at = datetime.utcnow().isoformat()
+        t.concluded_at = datetime.now(timezone.utc).isoformat()
 
         self.save_tests()
         return t

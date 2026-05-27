@@ -86,7 +86,8 @@ def test_direct_broker_dry_run_stays_non_live_even_with_allowed_symbol(tmp_path)
 
 
 def test_env_example_keeps_live_execution_disabled_by_default():
-    text = Path(".env.example").read_text(encoding="utf-8")
+    text = Path(__file__).resolve().parents[2] / ".env.example"
+    text = text.read_text(encoding="utf-8")
 
     assert "BROKER_MODE=simulation" in text
     assert "PIONEX_DIRECT_ENABLED=false" in text

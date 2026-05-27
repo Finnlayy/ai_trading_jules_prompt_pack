@@ -80,7 +80,7 @@ class TrainingDrillsService:
 
         # Log specific drill result
         def _write_drill():
-            with open(DRILL_RESULTS_FILE, "a") as f:
+            with open(DRILL_RESULTS_FILE, "a", encoding="utf-8") as f:
                 f.write(result.model_dump_json() + "\n")
 
         await asyncio.to_thread(_write_drill)

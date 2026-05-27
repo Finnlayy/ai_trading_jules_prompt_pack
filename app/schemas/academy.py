@@ -1,26 +1,26 @@
 from pydantic import BaseModel, Field
 from typing import List, Dict, Optional, Any
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 
 class Badge(BaseModel):
     name: str
     description: str
     icon: str
-    awarded_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    awarded_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class CareerEntry(BaseModel):
     entry_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     scout_name: str
     event_type: str  # "first_call", "first_win", "badge_earned", "prompt_evolution", "ab_test", "prediction_result"
-    timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     details: Dict[str, Any] = Field(default_factory=dict)
 
 class ScoutIdentity(BaseModel):
     scout_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
     archetype: str
-    created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     born_from: str = "v1_base"
     generation: int = 1
     specialization_symbols: List[str] = Field(default_factory=list)
@@ -56,14 +56,14 @@ class DrillResult(BaseModel):
     scout_decision: Any
     is_correct: bool
     confidence: float
-    timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     feedback_notes: str = ""
 
 class PromptVersion(BaseModel):
     version_id: str
     scout_name: str
     prompt_text: str
-    created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     parent_version: Optional[str] = None
     change_summary: str = "Initial version"
 
@@ -73,7 +73,7 @@ class ABTest(BaseModel):
     variant_a_version: str
     variant_b_version: str
     status: str = "running" # "running", "concluded"
-    started_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    started_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     concluded_at: Optional[str] = None
     calls_a: int = 0
     calls_b: int = 0

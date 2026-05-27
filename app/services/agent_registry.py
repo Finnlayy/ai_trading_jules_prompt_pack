@@ -118,7 +118,7 @@ class AgentRegistryService:
             self.save_registry()
 
         def _write_log():
-            with open(CAREER_LOG_FILE, "a") as f:
+            with open(CAREER_LOG_FILE, "a", encoding="utf-8") as f:
                 f.write(entry.model_dump_json() + "\n")
 
         # Offload file write to thread
