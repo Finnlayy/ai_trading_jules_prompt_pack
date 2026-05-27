@@ -33,7 +33,7 @@ class PromptEvolutionService:
 
         # Populate defaults if empty
         if not self._versions:
-            for scout in ["technical", "sentiment", "risk", "macro"]:
+            for scout in ["technical", "sentiment", "risk", "macro", "execution", "correlation"]:
                 self.create_version(scout, "v1_base", f"You are the {scout} scout...", change_summary="Base version")
 
     def save_registry(self):

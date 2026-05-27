@@ -62,19 +62,21 @@ async def test_kimi_swarm_success():
         assert "STRONG_CONFLUENCE" in review.reason_codes
         assert review.audit_trace["trace_type"] == "ai_reasoning_audit_not_hidden_chain_of_thought"
         # 4 scouts + 1 orchestrator
-        assert mock_method.call_count == 5
+        assert mock_method.call_count == 7
         # Verify all 4 scouts are present
         scouts = review.audit_trace["scouts"]
         assert "technical" in scouts
         assert "sentiment" in scouts
         assert "risk" in scouts
         assert "macro" in scouts
+        assert "execution" in scouts
+        assert "correlation" in scouts
         # Verify symbol context was injected
         assert "symbol_context" in review.audit_trace
         assert "BTCUSD" in review.audit_trace["symbol_context"]
         # Verify scout weights are tracked
         assert "scout_weights" in review.audit_trace
-        assert set(review.audit_trace["scout_weights"].keys()) == {"technical", "sentiment", "risk", "macro"}
+        assert set(review.audit_trace["scout_weights"].keys()) == {"technical", "sentiment", "risk", "macro", "execution", "correlation"}
 
 
 @pytest.mark.asyncio

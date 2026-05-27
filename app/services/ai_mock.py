@@ -10,16 +10,18 @@ class MockAIReviewLayer:
     In mock mode, scouts use deterministic heuristics instead of LLM calls.
     """
 
-    SCOUT_NAMES = ["technical", "sentiment", "risk", "macro"]
+    SCOUT_NAMES = ["technical", "sentiment", "risk", "macro", "execution", "correlation"]
 
     def review_signal(self, payload: M8Payload) -> SignalReview:
         # Simulate 4 scouts with deterministic heuristics
-        scout_reports = {
-            "technical": self._mock_technical(payload),
-            "sentiment": self._mock_sentiment(payload),
-            "risk": self._mock_risk(payload),
-            "macro": self._mock_macro(payload),
-        }
+        scout_reports = {}
+        for name in self.SCOUT_NAMES:
+            method_name = f"_mock_{name}"
+            if hasattr(self, method_name):
+                scout_reports[name] = getattr(self, method_name)(payload)
+            else:
+                scout_reports[name] = "Confidence: 0.75\nmocked report"
+
 
         # Mock orchestrator synthesis
         decision = DecisionEnum.PROCEED_TO_SIMULATION

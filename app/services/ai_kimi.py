@@ -84,7 +84,7 @@ class KimiSwarmService:
     The Orchestrator synthesizes weighted by per-scout accuracy for the symbol.
     """
 
-    SCOUT_NAMES = ["technical", "sentiment", "risk", "macro"]
+    SCOUT_NAMES = ["technical", "sentiment", "risk", "macro", "execution", "correlation"]
 
     def __init__(self, provider: str | None = None) -> None:
         self.provider = provider
@@ -97,6 +97,16 @@ class KimiSwarmService:
 
     def _behavior_guidance(self) -> str:
         return ai_layer_memory_instance.behavior_prompt()
+
+
+    def get_prompt_for_scout(self, scout_name: str) -> str:
+        import os
+        from pathlib import Path
+        prompt_path = Path(f"app/ai_prompts/{scout_name}/v_active.md")
+        if prompt_path.exists():
+            with open(prompt_path, "r") as f:
+                return f.read()
+        return f"You are the {scout_name.capitalize()} Scout. Analyze the signal from a {scout_name} perspective."
 
     def _trace_base(self) -> dict[str, Any]:
         return {
@@ -116,13 +126,14 @@ class KimiSwarmService:
                 payload.symbol, payload.direction
             )
 
-            # 2. Gather 4 scout reviews concurrently
-            tasks = {
-                "technical": self._run_technical_scout(payload, symbol_context),
-                "sentiment": self._run_sentiment_scout(payload, symbol_context),
-                "risk": self._run_risk_scout(payload, symbol_context),
-                "macro": self._run_macro_scout(payload, symbol_context),
-            }
+            # 2. Gather scout reviews concurrently
+            tasks = {}
+            for name in self.SCOUT_NAMES:
+                method_name = f"_run_{name}_scout"
+                if hasattr(self, method_name):
+                    tasks[name] = getattr(self, method_name)(payload, symbol_context)
+                else:
+                    tasks[name] = self._run_generic_scout(name, payload, symbol_context)
             scout_results = await asyncio.gather(*tasks.values())
             scout_reports = dict(zip(tasks.keys(), scout_results))
             advisor_reports = await self._run_external_advisors(payload, symbol_context)
@@ -196,6 +207,27 @@ class KimiSwarmService:
     # ------------------------------------------------------------------
     # Scouts
     # ------------------------------------------------------------------
+
+    async def _run_generic_scout(self, scout_name: str, payload: M8Payload, symbol_context: str) -> str:
+        base_prompt = self.get_prompt_for_scout(scout_name)
+        system = (
+            f"You are the {scout_name.capitalize()} Scout.\n"
+            f"{base_prompt}\n"
+            "Return a concise paragraph (2-4 sentences) with:\n"
+            f"  - Assessment from {scout_name} perspective\n"
+            "  - Confidence level (0.0-1.0) on the first line like 'Confidence: 0.75'\n"
+            f"\n{symbol_context}\n"
+            f"\n{self._behavior_guidance()}"
+        )
+        prompt = (
+            f"Symbol: {payload.symbol}\n"
+            f"Direction: {payload.direction}\n"
+            f"Confluence score: {payload.confluence_score}\n"
+            f"Crisis score: {payload.crisis_score}\n"
+            f"Evaluate the following signal:\n{payload.model_dump_json()}"
+        )
+        return await self._call_llm(prompt, system=system)
+
     async def _run_sentiment_scout(self, payload: M8Payload, symbol_context: str) -> str:
         # Fetch and score relevant news
         from app.services.news_aggregator import news_aggregator_instance

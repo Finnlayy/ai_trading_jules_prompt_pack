@@ -137,7 +137,7 @@ class ConfidenceRegistry:
     File: logs/confidence_registry.json
     """
 
-    SCOUT_NAMES = ["technical", "sentiment", "risk", "macro"]
+    SCOUT_NAMES = ["technical", "sentiment", "risk", "macro", "execution", "correlation"]
 
     def __init__(self, filepath: str = "logs/confidence_registry.json") -> None:
         self.filepath = Path(filepath)
