@@ -1,4 +1,5 @@
 import json
+import asyncio
 from typing import Dict, Any, List
 from app.schemas.journal import TradeJournalEntry
 
@@ -10,8 +11,11 @@ class JournalLogger:
     def __init__(self, filepath: str = "trade_journal.jsonl"):
         self.filepath = filepath
 
-    def log(self, entry: TradeJournalEntry):
-        with open(self.filepath, "a") as f:
+    def _write_entry(self, entry: TradeJournalEntry):
+        with open(self.filepath, "a", encoding="utf-8") as f:
             f.write(entry.model_dump_json() + "\n")
+
+    async def log(self, entry: TradeJournalEntry):
+        await asyncio.to_thread(self._write_entry, entry)
 
 journal_logger_instance = JournalLogger()

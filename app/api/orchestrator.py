@@ -83,7 +83,7 @@ async def process_signal(payload: M8Payload):
     )
     
     # 4. Journaling
-    journal_logger_instance.log(journal_entry)
+    await journal_logger_instance.log(journal_entry)
     
     # Update Risk Engine state if trade executed
     if decision_result["decision"] == DecisionEnum.PROCEED_TO_SIMULATION:
