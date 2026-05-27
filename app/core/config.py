@@ -88,6 +88,17 @@ PIONEX_DIRECT_FUTURES_ENABLED = _as_bool(os.getenv("PIONEX_DIRECT_FUTURES_ENABLE
 PIONEX_DIRECT_FUTURES_MODE = os.getenv("PIONEX_DIRECT_FUTURES_MODE", "mode1").strip().lower()  # mode1|mode3
 PIONEX_DIRECT_ALLOW_PAYLOAD_LEVERAGE = _as_bool(os.getenv("PIONEX_DIRECT_ALLOW_PAYLOAD_LEVERAGE"), False)
 
+# cTrader Open API broker
+CTRADER_ENABLED = _as_bool(os.getenv("CTRADER_ENABLED"), False)
+CTRADER_LIVE_TRADING_ENABLED = _as_bool(os.getenv("CTRADER_LIVE_TRADING_ENABLED"), False)
+CTRADER_CLIENT_ID = os.getenv("CTRADER_CLIENT_ID", "")
+CTRADER_CLIENT_SECRET = os.getenv("CTRADER_CLIENT_SECRET", "")
+CTRADER_ACCESS_TOKEN = os.getenv("CTRADER_ACCESS_TOKEN", "")
+CTRADER_ACCOUNT_ID = _as_int(os.getenv("CTRADER_ACCOUNT_ID"), 0)
+CTRADER_HOST = os.getenv("CTRADER_HOST", "demo.ctraderapi.com").strip()
+CTRADER_PORT = _as_int(os.getenv("CTRADER_PORT"), 5035)
+CTRADER_SYMBOL_MAP_PATH = os.getenv("CTRADER_SYMBOL_MAP_PATH", "ctrader_symbols.json")
+
 # Kelly sizing controls
 KELLY_DEPLOY_MODE = os.getenv("KELLY_DEPLOY_MODE", "half").strip().lower()  # half|full|fixed
 KELLY_LOOKBACK_TRADES = _as_int(os.getenv("KELLY_LOOKBACK_TRADES"), 50)

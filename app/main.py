@@ -23,6 +23,7 @@ from app.api.autonomous_loop import router as autonomous_loop_router
 from app.api.live_trading import router as live_trading_router
 from app.api.db_insight import router as db_insight_router
 from app.api.academy import router as academy_router
+from app.api.ctrader import router as ctrader_router
 
 app = FastAPI(
     title="Agent-Reflex Hybrid Trader API",
@@ -46,6 +47,7 @@ app.include_router(news_impact_router, prefix="/news", tags=["news-impact"])
 app.include_router(autonomous_loop_router, prefix="/loop", tags=["autonomous_loop"])
 app.include_router(live_trading_router, prefix="/live", tags=["live_trading"])
 app.include_router(db_insight_router, prefix="/db", tags=["db-insight"])
+app.include_router(ctrader_router, prefix="/ctrader", tags=["ctrader"])
 
 @app.get("/", include_in_schema=False)
 def frontend():

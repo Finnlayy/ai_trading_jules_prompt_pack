@@ -36,6 +36,8 @@ class BrokerFactory:
         "direct",
         "pionex_api",
         "glint",
+        "ctrader",
+        "ctrader_direct",
     }
 
     @classmethod
@@ -63,6 +65,10 @@ class BrokerFactory:
         if mode == "glint":
             return GlintBroker(journal_path=journal_path)
 
+        if mode in {"ctrader", "ctrader_direct"}:
+            from app.services.ctrader_broker import CTraderBroker
+            return CTraderBroker(journal_path=journal_path)
+
         # Fallback
         return SimulationBroker()
 
@@ -86,5 +92,7 @@ class BrokerFactory:
             "direct": "Pionex Direct",
             "pionex_api": "Pionex Direct",
             "glint": "GLINT (Hyperliquid)",
+            "ctrader": "cTrader Direct",
+            "ctrader_direct": "cTrader Direct",
         }
         return mapping.get(mode.strip().lower(), mode)
