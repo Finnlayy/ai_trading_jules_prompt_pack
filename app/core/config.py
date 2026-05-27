@@ -88,6 +88,17 @@ PIONEX_DIRECT_FUTURES_ENABLED = _as_bool(os.getenv("PIONEX_DIRECT_FUTURES_ENABLE
 PIONEX_DIRECT_FUTURES_MODE = os.getenv("PIONEX_DIRECT_FUTURES_MODE", "mode1").strip().lower()  # mode1|mode3
 PIONEX_DIRECT_ALLOW_PAYLOAD_LEVERAGE = _as_bool(os.getenv("PIONEX_DIRECT_ALLOW_PAYLOAD_LEVERAGE"), False)
 
+# cTrader Open API broker
+CTRADER_ENABLED = _as_bool(os.getenv("CTRADER_ENABLED"), False)
+CTRADER_LIVE_TRADING_ENABLED = _as_bool(os.getenv("CTRADER_LIVE_TRADING_ENABLED"), False)
+CTRADER_CLIENT_ID = os.getenv("CTRADER_CLIENT_ID", "")
+CTRADER_CLIENT_SECRET = os.getenv("CTRADER_CLIENT_SECRET", "")
+CTRADER_ACCESS_TOKEN = os.getenv("CTRADER_ACCESS_TOKEN", "")
+CTRADER_ACCOUNT_ID = _as_int(os.getenv("CTRADER_ACCOUNT_ID"), 0)
+CTRADER_HOST = os.getenv("CTRADER_HOST", "demo.ctraderapi.com").strip()
+CTRADER_PORT = _as_int(os.getenv("CTRADER_PORT"), 5035)
+CTRADER_SYMBOL_MAP_PATH = os.getenv("CTRADER_SYMBOL_MAP_PATH", "ctrader_symbols.json")
+
 # Kelly sizing controls
 KELLY_DEPLOY_MODE = os.getenv("KELLY_DEPLOY_MODE", "half").strip().lower()  # half|full|fixed
 KELLY_LOOKBACK_TRADES = _as_int(os.getenv("KELLY_LOOKBACK_TRADES"), 50)
@@ -105,6 +116,8 @@ PIONEX_DIRECT_MIN_BASE_SIZE = _as_float(os.getenv("PIONEX_DIRECT_MIN_BASE_SIZE")
 
 # AI availability policy for live-capable modes
 AI_FAILURE_POLICY = os.getenv("AI_FAILURE_POLICY", "reject_live").strip().lower()  # reject_live|allow_live
+AI_TELEGRAM_ADVISORS_ENABLED = _as_bool(os.getenv("AI_TELEGRAM_ADVISORS_ENABLED"), False)
+AI_TELEGRAM_ADVISOR_TIMEOUT_SECONDS = _as_float(os.getenv("AI_TELEGRAM_ADVISOR_TIMEOUT_SECONDS"), 20.0)
 
 # Deterministic War Room order-management controls
 WAR_ROOM_ENABLED = _as_bool(os.getenv("WAR_ROOM_ENABLED"), True)
@@ -119,6 +132,9 @@ WAR_ROOM_VIP_RELATIVE_VOLUME = _as_float(os.getenv("WAR_ROOM_VIP_RELATIVE_VOLUME
 WAR_ROOM_VIP_MAX_CRISIS_SCORE = _as_float(os.getenv("WAR_ROOM_VIP_MAX_CRISIS_SCORE"), 15.0)
 WAR_ROOM_VIP_MAX_MC_DISPERSION = _as_float(os.getenv("WAR_ROOM_VIP_MAX_MC_DISPERSION"), 2.5)
 
+# Webhook authentication
+WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "")
+
 # Offline/backtest signal generator controls
 SIGNAL_MIN_CONFLUENCE_OVERRIDE = _as_optional_float(os.getenv("SIGNAL_MIN_CONFLUENCE_OVERRIDE"))
 
@@ -127,12 +143,47 @@ TELEGRAM_NOTIFICATIONS_ENABLED = _as_bool(os.getenv("TELEGRAM_NOTIFICATIONS_ENAB
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 
+# GLINT broker configuration
+GLINT_ENABLED = _as_bool(os.getenv("GLINT_ENABLED"), False)
+GLINT_LIVE_TRADING_ENABLED = _as_bool(os.getenv("GLINT_LIVE_TRADING_ENABLED"), False)
+GLINT_TELEGRAM_CHAT_ID = os.getenv("GLINT_TELEGRAM_CHAT_ID", TELEGRAM_CHAT_ID)
+GLINT_BOT_USERNAME = os.getenv("GLINT_BOT_USERNAME", "")
+
+# Manus advisor configuration (separate Telegram chat)
+MANUS_ENABLED = _as_bool(os.getenv("MANUS_ENABLED"), False)
+MANUS_TELEGRAM_CHAT_ID = os.getenv("MANUS_TELEGRAM_CHAT_ID", TELEGRAM_CHAT_ID)
+MANUS_BOT_USERNAME = os.getenv("MANUS_BOT_USERNAME", "")
+
+# Autonomous Loop configuration
+AUTONOMOUS_LOOP_ENABLED = _as_bool(os.getenv("AUTONOMOUS_LOOP_ENABLED"), False)
+AUTONOMOUS_LOOP_AUTO_START = _as_bool(os.getenv("AUTONOMOUS_LOOP_AUTO_START"), False)
+AUTONOMOUS_LOOP_POLL_INTERVAL_SECONDS = _as_float(os.getenv("AUTONOMOUS_LOOP_POLL_INTERVAL_SECONDS"), 60.0)
+AUTONOMOUS_LOOP_MAX_ERRORS_5MIN = _as_int(os.getenv("AUTONOMOUS_LOOP_MAX_ERRORS_5MIN"), 20)
+AUTONOMOUS_LOOP_PAUSE_ON_ERROR_COUNT = _as_int(os.getenv("AUTONOMOUS_LOOP_PAUSE_ON_ERROR_COUNT"), 5)
+AUTONOMOUS_LOOP_ERROR_PAUSE_SECONDS = _as_float(os.getenv("AUTONOMOUS_LOOP_ERROR_PAUSE_SECONDS"), 60.0)
+AUTONOMOUS_LOOP_STRATEGY_ROTATION_ENABLED = _as_bool(os.getenv("AUTONOMOUS_LOOP_STRATEGY_ROTATION_ENABLED"), True)
+
+# Price Poller / Position Monitor configuration
+PRICE_POLLER_INTERVAL_SECONDS = _as_float(os.getenv("PRICE_POLLER_INTERVAL_SECONDS"), 10.0)
+POSITION_MAX_HOLD_MINUTES = _as_float(os.getenv("POSITION_MAX_HOLD_MINUTES"), 240.0)
+
+# Database configuration
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///app/data/trading.db")
+
+# News Impact configuration
+NEWS_IMPACT_ENABLED = _as_bool(os.getenv("NEWS_IMPACT_ENABLED"), True)
+NEWS_IMPACT_MAX_AGE_HOURS = _as_float(os.getenv("NEWS_IMPACT_MAX_AGE_HOURS"), 24.0)
+NEWS_IMPACT_MIN_RELEVANCE = _as_float(os.getenv("NEWS_IMPACT_MIN_RELEVANCE"), 0.3)
+NEWS_IMPACT_SENTIMENT_THRESHOLD = _as_float(os.getenv("NEWS_IMPACT_SENTIMENT_THRESHOLD"), 0.5)
+NEWS_IMPACT_URGENCY_THRESHOLD = _as_float(os.getenv("NEWS_IMPACT_URGENCY_THRESHOLD"), 0.7)
+NEWS_POLL_INTERVAL_MINUTES = _as_float(os.getenv("NEWS_POLL_INTERVAL_MINUTES"), 15.0)
+
 # Deterministic risk-gate defaults
 MIN_RR_RATIO = 2.0
 MAX_SPREAD = 15.0
-MIN_CONFLUENCE_SCORE = 70.0
+MIN_CONFLUENCE_SCORE = _as_float(os.getenv("MIN_CONFLUENCE_SCORE"), 70.0)
 MAX_CRISIS_SCORE = 30.0
 MAX_MC_DISPERSION = 5.0
-MAX_DAILY_DRAWDOWN = 1000.0
+MAX_DAILY_DRAWDOWN = _as_float(os.getenv("MAX_DAILY_DRAWDOWN"), 5.0)
 MAX_TRADES_PER_DAY = 5
 COOLDOWN_BARS = 3

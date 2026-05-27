@@ -64,6 +64,24 @@ class PaperBroker:
     def is_ready(self) -> bool:
         return self._connected
 
+    def is_live_capable(self) -> bool:
+        return self._connected
+
+    def get_broker_name(self) -> str:
+        return "PaperBroker"
+
+    def get_broker_type(self) -> str:
+        return "paper"
+
+    def get_broker_mode(self) -> str:
+        return "paper" if self._connected else "simulation"
+
+    def get_positions(self) -> Dict[str, Any]:
+        return {"positions": [], "broker": "paper"}
+
+    def get_wallet_balances(self, account_mode: str = "SPOT") -> Dict[str, Any]:
+        return {"balances": [], "broker": "paper"}
+
     def execute_trade(
         self,
         payload: M8Payload,

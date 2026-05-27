@@ -48,6 +48,24 @@ class PionexRelayBroker:
             and self.config.signal_bot_uuid
         )
 
+    def is_live_capable(self) -> bool:
+        return self.is_ready()
+
+    def get_broker_name(self) -> str:
+        return "PionexRelayBroker"
+
+    def get_broker_type(self) -> str:
+        return "pionex_relay"
+
+    def get_broker_mode(self) -> str:
+        return "live" if self.is_ready() else "dry-run"
+
+    def get_positions(self) -> Dict[str, Any]:
+        return {"positions": [], "broker": "pionex_relay"}
+
+    def get_wallet_balances(self, account_mode: str = "SPOT") -> Dict[str, Any]:
+        return {"balances": [], "broker": "pionex_relay"}
+
     def execute_trade(
         self,
         payload: M8Payload,

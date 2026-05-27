@@ -61,3 +61,108 @@ def test_server_error_is_retryable():
 
     assert exc.value.retryable is True
     assert exc.value.status_code == 502
+
+
+def test_get_futures_positions_uses_account_positions_endpoint():
+    client = PionexClient(PionexCredentials(api_key="k", api_secret="s"))
+    response = _mock_response(
+        200,
+        {
+            "result": True,
+            "data": {
+                "positions": [
+                    {"symbol": "ZEC_USDT_PERP", "initialMargin": "7.5"},
+                ]
+            },
+        },
+    )
+
+    with patch.object(client.session, "get", return_value=response) as get_mock:
+        positions = client.get_futures_positions(symbol="ZEC_USDT_PERP")
+
+    assert positions[0]["symbol"] == "ZEC_USDT_PERP"
+    assert get_mock.call_args.args[0].endswith("/uapi/v1/account/positions")
+    assert get_mock.call_args.kwargs["params"]["symbol"] == "ZEC_USDT_PERP"
+
+
+def test_get_bot_orders_uses_bot_orders_endpoint():
+    client = PionexClient(PionexCredentials(api_key="k", api_secret="s"))
+    response = _mock_response(
+        200,
+        {
+            "result": True,
+            "data": {
+                "results": [
+                    {"buOrderType": "futures_grid", "base": "ZEC", "quote": "USDT"},
+                ]
+            },
+        },
+    )
+
+    with patch.object(client.session, "get", return_value=response) as get_mock:
+        data = client.get_bot_orders(status="running", base="zec", quote="usdt")
+
+    assert data["results"][0]["base"] == "ZEC"
+    assert get_mock.call_args.args[0].endswith("/api/v1/bot/orders")
+    assert get_mock.call_args.kwargs["params"]["status"] == "running"
+    assert get_mock.call_args.kwargs["params"]["base"] == "ZEC"
+    assert get_mock.call_args.kwargs["params"]["quote"] == "USDT"
+
+
+def test_get_futures_grid_order_uses_bot_detail_endpoint():
+    client = PionexClient(PionexCredentials(api_key="k", api_secret="s"))
+    response = _mock_response(
+        200,
+        {
+            "result": True,
+            "data": {
+                "buOrderId": "bot-1",
+                "buOrderType": "futures_grid",
+                "buOrderData": {"marginBalance": "9.5"},
+            },
+        },
+    )
+
+    with patch.object(client.session, "get", return_value=response) as get_mock:
+        data = client.get_futures_grid_order("bot-1")
+
+    assert data["buOrderId"] == "bot-1"
+    assert get_mock.call_args.args[0].endswith("/api/v1/bot/orders/futuresGrid/order")
+    assert get_mock.call_args.kwargs["params"]["buOrderId"] == "bot-1"
+
+
+def test_place_spot_market_buy_includes_sl_tp():
+    client = PionexClient(PionexCredentials(api_key="k", api_secret="s"))
+    response = _mock_response(200, {"result": True, "data": {"orderId": "abc"}})
+
+    with patch.object(client.session, "post", return_value=response) as post_mock:
+        data = client.place_spot_market_buy(
+            symbol="BTC_USDT",
+            amount_usdt=25.0,
+            stop_loss=48000.0,
+            take_profit=54000.0,
+        )
+
+    assert data["orderId"] == "abc"
+    sent_body = post_mock.call_args.kwargs["data"]
+    assert '"stopLoss":"48000.0"' in sent_body
+    assert '"takeProfit":"54000.0"' in sent_body
+
+
+def test_place_futures_market_order_includes_sl_tp():
+    client = PionexClient(PionexCredentials(api_key="k", api_secret="s"))
+    response = _mock_response(200, {"result": True, "data": {"orderId": "fut-1"}})
+
+    with patch.object(client.session, "post", return_value=response) as post_mock:
+        data = client.place_futures_market_order(
+            symbol="BTC_USDT_PERP",
+            side="BUY",
+            size=0.01,
+            stop_loss=48000.0,
+            take_profit=54000.0,
+        )
+
+    assert data["orderId"] == "fut-1"
+    sent_body = post_mock.call_args.kwargs["data"]
+    assert '"stopLoss":"48000.0"' in sent_body
+    assert '"takeProfit":"54000.0"' in sent_body

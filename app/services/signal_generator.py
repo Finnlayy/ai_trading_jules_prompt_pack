@@ -17,6 +17,7 @@ from app.core.config import SIGNAL_MIN_CONFLUENCE_OVERRIDE
 from app.schemas.m8_payload import M8Payload
 from app.services.cisd_scorer import CISDScorer, Candle as CISDScorerCandle
 from app.services.asset_calibrator import get_calibration
+from app.services.strategy_engine import strategy_registry, PatternEnhancedStrategy
 
 
 @dataclass(frozen=True)
@@ -34,11 +35,34 @@ class BybitDataFeed:
 
     BASE = "https://api.bybit.com"
 
+    _TF_MAP = {
+        "1m": "1",
+        "5m": "5",
+        "15m": "15",
+        "30m": "30",
+        "1h": "60",
+        "4h": "240",
+        "1d": "D",
+    }
+
     @staticmethod
-    def fetch(symbol: str, bars: int = 1000) -> List[OHLCV]:
+    def _tf_to_ms(timeframe: str) -> int:
+        if timeframe.endswith("m"):
+            return int(timeframe[:-1]) * 60_000
+        if timeframe.endswith("h"):
+            return int(timeframe[:-1]) * 3_600_000
+        if timeframe == "4h":
+            return 14_400_000
+        if timeframe == "1d":
+            return 86_400_000
+        return 60_000
+
+    @classmethod
+    def fetch(cls, symbol: str, bars: int = 1000, timeframe: str = "1m") -> List[OHLCV]:
+        interval = cls._TF_MAP.get(timeframe, "1")
         all_bars: List[OHLCV] = []
         end_ms = int(time.time() * 1000)
-        tf_ms = 60_000
+        tf_ms = cls._tf_to_ms(timeframe)
 
         while len(all_bars) < bars:
             remaining = bars - len(all_bars)
@@ -48,7 +72,7 @@ class BybitDataFeed:
                 params={
                     "category": "linear",
                     "symbol": symbol,
-                    "interval": "1",
+                    "interval": interval,
                     "end": end_ms,
                     "limit": limit,
                 },
@@ -111,6 +135,14 @@ class SignalGenerator:
         )
         self.feed = BybitDataFeed()
         self.last_generation_summary: Dict = {}
+        self.last_raw_bars: List[OHLCV] = []
+        # Register a private strategy so explicit scorer overrides are respected
+        from app.services.strategy_engine import CISDStrategy, strategy_registry
+        self._strategy = CISDStrategy(strategy_id="generator_default", scorer=self.scorer)
+        strategy_registry.register(self._strategy)
+        # Only switch if current active is the generic default (not a user-selected one)
+        if strategy_registry.active_strategy_id in ("default", "generator_default"):
+            strategy_registry.set_active_strategy("generator_default")
 
     def _ohlcv_to_cisd_candles(self, bars: List[OHLCV]) -> List[CISDScorerCandle]:
         return [CISDScorerCandle(ts=b.ts, o=b.o, h=b.h, l=b.l, c=b.c, v=b.v) for b in bars]
@@ -139,7 +171,8 @@ class SignalGenerator:
         sl_atr_mul = cal_params.get("sl_atr_mul", 1.4)
         tp_atr_mul = cal_params.get("tp_atr_mul", 2.8)
 
-        raw_bars = self.feed.fetch(symbol, bars)
+        raw_bars = self.feed.fetch(symbol, bars, timeframe)
+        self.last_raw_bars = raw_bars
         if len(raw_bars) < 50:
             self.last_generation_summary = {
                 "symbol": symbol,
@@ -154,16 +187,40 @@ class SignalGenerator:
             }
             return []
 
+        # Load active strategy
+        strategy = strategy_registry.get_active_strategy()
+        strategy_scores = strategy.score_bars(raw_bars)
         cisd_candles = self._ohlcv_to_cisd_candles(raw_bars)
-        scores = self.scorer.score_series(cisd_candles)
-        max_score = max((float(score["confluence_score"]) for score in scores), default=0.0)
-        directional_scores = sum(1 for score in scores if score["direction_hint"] != "NEUTRAL")
+
+        # Pattern detection (if PatternEnhancedStrategy is active)
+        pattern_results = []
+        if isinstance(strategy, PatternEnhancedStrategy):
+            from app.services.pattern_recognition import scan_bars, aggregate_pattern_score
+            pattern_matches = scan_bars(raw_bars)
+            agg_score, dominant, avg_conf = aggregate_pattern_score(pattern_matches)
+            # Create a pattern result per bar for the dominant pattern
+            pattern_results = [
+                {
+                    "pattern_type": dominant,
+                    "pattern_score": agg_score,
+                    "pattern_confidence": avg_conf,
+                }
+                if dominant else {"pattern_type": None, "pattern_score": 0.0, "pattern_confidence": 0.0}
+                for _ in raw_bars
+            ]
+        else:
+            pattern_results = [
+                {"pattern_type": None, "pattern_score": 0.0, "pattern_confidence": 0.0}
+                for _ in raw_bars
+            ]
+        max_score = max((s.confluence_score for s in strategy_scores), default=0.0)
+        directional_scores = sum(1 for s in strategy_scores if s.direction != "NEUTRAL")
 
         payloads = []
-        for i, (bar, score) in enumerate(zip(raw_bars, scores)):
-            if score["confluence_score"] < min_conf:
+        for i, (bar, s_score, p_result) in enumerate(zip(raw_bars, strategy_scores, pattern_results)):
+            if s_score.confluence_score < min_conf:
                 continue
-            if score["direction_hint"] == "NEUTRAL":
+            if s_score.direction == "NEUTRAL":
                 continue
 
             # Compute ATR-based SL/TP for this bar
@@ -173,7 +230,7 @@ class SignalGenerator:
             atr_window = cisd_candles[i - 13 : i + 1]
             atr_val = self._simple_atr(atr_window)
 
-            direction = score["direction_hint"]
+            direction = s_score.direction
             entry = bar.c
             if direction == "LONG":
                 sl = entry - atr_val * sl_atr_mul
@@ -197,10 +254,13 @@ class SignalGenerator:
                 entry_price=round(entry, 4),
                 stop_price=round(sl, 4),
                 target_price=round(tp, 4),
-                confluence_score=round(score["confluence_score"], 2),
+                confluence_score=round(s_score.confluence_score, 2),
+                strategy_id=strategy.strategy_id,
+                pattern_detected=p_result["pattern_type"],
+                pattern_score=round(p_result["pattern_score"], 2),
                 relative_volume=round(bar.v / self._avg_volume(raw_bars[max(0, i - 20):i + 1]), 2) if i > 0 else 1.0,
                 crisis_score=round(crisis, 2),
-                mc_dispersion=round(score["alignment_count"] / 3.0 * 5.0, 2),  # proxy dispersion from alignment
+                mc_dispersion=round(s_score.metadata.get("alignment_count", 0) / 3.0 * 5.0, 2),  # proxy dispersion from alignment
                 spread=round(spread, 2),
             )
             payloads.append(payload)
@@ -211,9 +271,10 @@ class SignalGenerator:
             "bars_requested": bars,
             "bars_loaded": len(raw_bars),
             "min_confluence": min_conf,
-            "scores_count": len(scores),
-            "max_confluence_score": round(max_score, 2),
-            "directional_scores": directional_scores,
+            "scores_count": len(strategy_scores),
+            "max_confluence_score": round(max((s.confluence_score for s in strategy_scores), default=0.0), 2),
+            "directional_scores": sum(1 for s in strategy_scores if s.direction != "NEUTRAL"),
+            "active_strategy": strategy.strategy_id,
             "payloads_generated": len(payloads),
         }
         return payloads

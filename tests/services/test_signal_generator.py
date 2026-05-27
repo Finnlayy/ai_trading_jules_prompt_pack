@@ -2,7 +2,7 @@ from app.services.signal_generator import OHLCV, SignalGenerator
 
 
 class FakeFeed:
-    def fetch(self, _symbol: str, bars: int):
+    def fetch(self, _symbol: str, bars: int, timeframe: str = "1m"):
         return [
             OHLCV(
                 ts=1_700_000_000_000 + index * 60_000,

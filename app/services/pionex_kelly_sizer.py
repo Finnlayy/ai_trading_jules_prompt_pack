@@ -59,7 +59,7 @@ class KellySizer:
                 if entry.get("final_decision") != "EXECUTED_SIM":
                     continue
                 result = entry.get("result") or {}
-                if result.get("status") != "CLOSED":
+                if not result.get("status", "").startswith("CLOSED"):
                     continue
                 pnl = result.get("realized_pnl_quote")
                 risk_amount = result.get("risk_amount")

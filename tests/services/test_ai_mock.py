@@ -2,6 +2,8 @@ import pytest
 from app.services.ai_mock import MockAIReviewLayer
 from app.schemas.m8_payload import M8Payload
 from app.schemas.ai_review import DecisionEnum
+from app.services.confidence_registry import confidence_registry
+
 
 def create_valid_payload() -> M8Payload:
     return M8Payload(
@@ -16,8 +18,17 @@ def create_valid_payload() -> M8Payload:
         confluence_score=85.0,
         crisis_score=10.0,
         mc_dispersion=2.0,
-        spread=5.0
+        spread=5.0,
+        market_regime="GREEN",
     )
+
+
+@pytest.fixture(autouse=True)
+def reset_confidence_registry():
+    confidence_registry.reset_all()
+    yield
+    confidence_registry.reset_all()
+
 
 def test_ai_review_proceed():
     layer = MockAIReviewLayer()
@@ -27,6 +38,13 @@ def test_ai_review_proceed():
     assert review.decision == DecisionEnum.PROCEED_TO_SIMULATION
     assert "FAVORABLE_SETUP" in review.reason_codes
     assert review.requires_human_review is False
+    assert review.audit_trace["provider"] == "mock"
+    # 4-scout swarm
+    scouts = review.audit_trace["scouts"]
+    assert set(scouts.keys()) == {"technical", "sentiment", "risk", "macro", "execution", "correlation"}
+    assert "symbol_context" in review.audit_trace
+    assert "scout_weights" in review.audit_trace
+
 
 def test_ai_review_weak_confluence_warning():
     layer = MockAIReviewLayer()
@@ -38,6 +56,7 @@ def test_ai_review_weak_confluence_warning():
     assert "WEAK_CONFLUENCE_WARNING" in review.reason_codes
     assert review.confidence == 0.60
 
+
 def test_ai_review_reject_high_crisis():
     layer = MockAIReviewLayer()
     payload = create_valid_payload()
@@ -48,3 +67,16 @@ def test_ai_review_reject_high_crisis():
     assert "MACRO_RISK_HIGH" in review.reason_codes
     assert review.requires_human_review is True
     assert review.reject_reason == "High crisis environment detected"
+
+
+def test_ai_review_updates_confidence_registry():
+    layer = MockAIReviewLayer()
+    payload = create_valid_payload()
+    review = layer.review_signal(payload)
+
+    stats = confidence_registry.get_symbol_stats("BTCUSD")
+    assert stats.total_signals == 1
+    # All 4 scouts should have been recorded
+    for scout_name in layer.SCOUT_NAMES:
+        assert scout_name in stats.scout_stats
+        assert stats.scout_stats[scout_name].calls == 1

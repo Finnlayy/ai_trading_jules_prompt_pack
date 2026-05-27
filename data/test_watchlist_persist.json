@@ -1,0 +1,18 @@
+{
+  "items": [
+    {
+      "symbol": "XRPUSDT",
+      "timeframes": [
+        "1m",
+        "5m",
+        "15m"
+      ],
+      "active": true,
+      "strategy_id": null,
+      "min_confluence": null,
+      "max_position_size_usdt": null,
+      "added_at": "2026-05-27T16:00:20.019796+00:00"
+    }
+  ],
+  "updated_at": "2026-05-27T16:00:20.019842+00:00"
+}

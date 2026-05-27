@@ -103,3 +103,49 @@ class TelegramNotifier:
                 ]
             )
         )
+
+    def send_heartbeat(self, uptime_minutes: int, trades_today: int, circuit_status: dict) -> bool:
+        now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+        dd_pct = circuit_status.get("drawdown_pct", 0.0)
+        halted = "HALTED" if circuit_status.get("halted") else "OK"
+        return self.send(
+            "\n".join(
+                [
+                    "🤖 BOT HEARTBEAT",
+                    f"Uptime: {uptime_minutes} min",
+                    f"Trades today: {trades_today}",
+                    f"Circuit: {halted} (DD: {dd_pct}%)",
+                    now,
+                ]
+            )
+        )
+
+    def send_reconcile_alert(self, divergences: list[str]) -> bool:
+        now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+        return self.send(
+            "\n".join(
+                [
+                    "⚠️ LEDGER RECONCILIATION ALERT",
+                    "Divergences detected:",
+                    *divergences,
+                    now,
+                ]
+            )
+        )
+
+    def send_fill_alert(self, symbol: str, order_id: str, fill_price: float, expected_price: float) -> bool:
+        now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+        slippage = abs(fill_price - expected_price) / expected_price * 100 if expected_price else 0
+        return self.send(
+            "\n".join(
+                [
+                    "📋 ORDER FILL ALERT",
+                    f"Symbol: {symbol}",
+                    f"Order ID: {order_id}",
+                    f"Fill price: {fill_price:.4f}",
+                    f"Expected: {expected_price:.4f}",
+                    f"Slippage: {slippage:.3f}%",
+                    now,
+                ]
+            )
+        )
