@@ -95,9 +95,20 @@ def ljung_box(returns: Sequence[float], lags: int = 10) -> Dict[str, float]:
     if n < lags + 5:
         return {"q_stat": 0.0, "p_value": 1.0, "reject_h0": False}
 
+    # Pre-calculate mean and variance once to avoid O(N^2) behavior in lags
+    r_mean = np.mean(r)
+    r_centered = r - r_mean
+    c0 = np.sum(r_centered ** 2) / n
+    if c0 == 0:
+        return {"q_stat": 0.0, "p_value": 1.0, "reject_h0": False, "lags": lags, "critical_5pct": _chi2_critical(lags, 0.05)}
+
     q_stat = 0.0
     for k in range(1, lags + 1):
-        rho = _autocorr(r, k)
+        if k >= n:
+            break
+        # Vectorized covariance calculation for lag k
+        c_lag = np.sum(r_centered[:-k] * r_centered[k:]) / n
+        rho = c_lag / c0
         q_stat += (rho ** 2) / (n - k)
     q_stat *= n * (n + 2)
 
