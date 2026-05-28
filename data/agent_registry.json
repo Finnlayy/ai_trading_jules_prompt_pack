@@ -32,10 +32,10 @@
       "cautious": 0.4,
       "momentum_driven": 0.8
     },
-    "total_calls": 59,
-    "correct_calls": 59,
+    "total_calls": 85,
+    "correct_calls": 85,
     "accuracy": 1.0,
-    "current_streak": 59
+    "current_streak": 85
   },
   {
     "scout_id": "8589bbb2-ddcc-410e-8bb9-45717a852987",
@@ -70,10 +70,10 @@
       "cautious": 0.5,
       "momentum_driven": 0.9
     },
-    "total_calls": 59,
-    "correct_calls": 59,
+    "total_calls": 85,
+    "correct_calls": 85,
     "accuracy": 1.0,
-    "current_streak": 59
+    "current_streak": 85
   },
   {
     "scout_id": "0d4342f0-4031-4334-9b90-0013bf190452",
@@ -108,10 +108,10 @@
       "cautious": 0.95,
       "momentum_driven": 0.1
     },
-    "total_calls": 59,
-    "correct_calls": 59,
+    "total_calls": 85,
+    "correct_calls": 85,
     "accuracy": 1.0,
-    "current_streak": 59
+    "current_streak": 85
   },
   {
     "scout_id": "34059d23-47bf-4280-ba75-dea7348866eb",
@@ -146,10 +146,10 @@
       "cautious": 0.7,
       "momentum_driven": 0.5
     },
-    "total_calls": 59,
-    "correct_calls": 59,
+    "total_calls": 85,
+    "correct_calls": 85,
     "accuracy": 1.0,
-    "current_streak": 59
+    "current_streak": 85
   },
   {
     "scout_id": "cc5331fa-28cd-479e-acfc-da0c9c3cc521",
@@ -184,10 +184,10 @@
       "cautious": 0.8,
       "momentum_driven": 0.2
     },
-    "total_calls": 55,
-    "correct_calls": 55,
+    "total_calls": 81,
+    "correct_calls": 81,
     "accuracy": 1.0,
-    "current_streak": 55
+    "current_streak": 81
   },
   {
     "scout_id": "c5d87a22-e700-4f06-a2a8-5b3a4190327d",
@@ -222,9 +222,9 @@
       "cautious": 0.85,
       "momentum_driven": 0.1
     },
-    "total_calls": 55,
-    "correct_calls": 55,
+    "total_calls": 81,
+    "correct_calls": 81,
     "accuracy": 1.0,
-    "current_streak": 55
+    "current_streak": 81
   }
 ]
