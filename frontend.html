@@ -2001,6 +2001,7 @@
                     client_order_id: delta.client_order_id || fill.client_order_id || "",
                     final_decision: result.final_decision || "",
                     broker_status: broker.status || "",
+                    execution_mode: result.execution_mode || "",
                     ai_decision: result.ai_decision || "",
                     ai_trace: result.ai_trace || null,
                     reject_reason: result.reject_reason || broker.reject_reason || "",
@@ -2292,7 +2293,7 @@
                         </section>)}
 
                         {layoutConfig.panels.control && (<section className={tab === "Control" ? "" : "hidden"}>
-                            <Control signal={signal} setSignal={setSignal} submitSignal={submitSignal} loading={loading} addLog={addLog} setRaw={setRaw} request={request} />
+                            <Control signal={signal} setSignal={setSignal} submitSignal={submitSignal} loading={loading} addLog={addLog} setRaw={setRaw} request={request} broker={status} />
                         </section>)}
 
                         {layoutConfig.panels.aiLayer && (<section className={tab === "AI Layer" ? "" : "hidden"}>
@@ -3018,14 +3019,19 @@
             );
         }
 
-        function Control({ signal, setSignal, submitSignal, loading, addLog, setRaw, request }) {
+        function Control({ signal, setSignal, submitSignal, loading, addLog, setRaw, request, broker }) {
             const [editMode, setEditMode] = React.useState("form");
             const [rawJson, setRawJson] = React.useState("");
             const [jsonError, setJsonError] = React.useState("");
             const [recommendations, setRecommendations] = React.useState({});
             const [hints, setHints] = React.useState({});
+            const [liveConfirmed, setLiveConfirmed] = React.useState(false);
             const update = (key, value) => setSignal(current => ({ ...current, [key]: value }));
             const quick = (patch) => setSignal(current => ({ ...current, ...patch, signal_id: `manual-${Date.now()}`, timestamp: new Date().toISOString() }));
+
+            const isLive = broker && broker.live_capable;
+            const needsConfirmation = broker && broker.requires_ui_confirmation;
+            const canSubmit = !isLive || !needsConfirmation || liveConfirmed;
 
             React.useEffect(() => {
                 if (!signal.symbol || !signal.timeframe) return;
@@ -4106,6 +4112,7 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                                 <th>Side</th>
                                 <th>Intent</th>
                                 <th>Decision</th>
+                                {!compact && <th>Mode</th>}
                                 {!compact && <th>Client Order ID</th>}
                                 <th>Price</th>
                                 {!compact && <th>Size</th>}
@@ -4120,6 +4127,7 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                                     <td>{order.direction}</td>
                                     <td>{order.intent}</td>
                                     <td><span className={statusPill(order.final_decision)}>{order.final_decision || "UNKNOWN"}</span></td>
+                                    {!compact && <td><span className={`pill ${order.execution_mode === "live" ? "error" : "ok"}`}>{order.execution_mode || "simulation"}</span></td>}
                                     {!compact && <td className="mono">{order.client_order_id || "-"}</td>}
                                     <td>{order.entry_price}</td>
                                     {!compact && <td>{order.size_base || "-"}</td>}

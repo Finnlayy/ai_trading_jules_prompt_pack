@@ -148,27 +148,41 @@ async def process_signal(payload: M8Payload):
         ai_trace=ai_review.audit_trace,
     )
     
-    # 4. Journaling
-    await journal_logger_instance.log(journal_entry)
-    
-
     # 5. Journaling
     journal_logger_instance.log(journal_entry)
 
     # 6. Record fill if trade executed
+    # We only record an entry fill for ENTRY intents. (For CLOSE intents, this should be handled separately).
     if decision_result["decision"] == DecisionEnum.PROCEED_TO_SIMULATION and journal_entry.simulated_fill:
         fill = journal_entry.simulated_fill
-        live_fill_tracker.record_fill(
-            journal_entry.trade_id,
-            FillData(
-                entry_price=fill.get("fill_price", payload.entry_price),
-                fill_time=datetime.now(timezone.utc),
-                size=fill.get("size", 0.0),
-                side=payload.direction,
-                fees=fill.get("fees", 0.0),
-                slippage=fill.get("slippage", 0.0),
-            ),
-        )
+
+        # Determine actual size from various possible broker results.
+        # Pionex direct returns size_base in ledger_delta, simulated_fill has size.
+        size = 0.0
+        if "size_base" in fill:
+             size = fill.get("size_base", 0.0)
+        elif journal_entry.result and journal_entry.result.get("ledger_delta") and "size_base" in journal_entry.result.get("ledger_delta"):
+             size = journal_entry.result["ledger_delta"].get("size_base", 0.0)
+        elif journal_entry.result and "size_base" in journal_entry.result:
+             size = journal_entry.result.get("size_base", 0.0)
+        else:
+             size = fill.get("size", 0.0)
+
+        if payload.intent == "ENTRY":
+            live_fill_tracker.record_fill(
+                journal_entry.trade_id,
+                FillData(
+                    entry_price=fill.get("fill_price", payload.entry_price),
+                    fill_time=datetime.now(timezone.utc),
+                    size=size,
+                    side=payload.direction,
+                    fees=fill.get("fees", 0.0),
+                    slippage=fill.get("slippage", 0.0),
+                ),
+            )
+        else:
+             # It's a CLOSE intent. We could record an exit here. For now just updating tracker if needed.
+             pass
         dashboard_sse_manager.broadcast_trade_update({
             "trade_id": journal_entry.trade_id,
             "symbol": payload.symbol,
@@ -182,6 +196,12 @@ async def process_signal(payload: M8Payload):
         risk_engine_instance.last_trade_bar = risk_engine_instance.current_bar
         risk_engine_instance.trades_today += 1
 
+    execution_mode = "simulation"
+    if broker_instance.get_broker_type() == "pionex_direct":
+        execution_mode = "live" if getattr(broker_instance, "is_live_capable", lambda: False)() else "dry_run"
+    elif broker_instance.get_broker_type() == "pionex_relay":
+         execution_mode = "dry_run"
+
     return {
         "signal_id": payload.signal_id,
         "trade_id": journal_entry.trade_id,
@@ -192,4 +212,5 @@ async def process_signal(payload: M8Payload):
         "reject_reason": journal_entry.result.get("reject_reason") if journal_entry.result else None,
         "broker_result": journal_entry.result,
         "simulated_fill": journal_entry.simulated_fill,
+        "execution_mode": execution_mode,
     }
