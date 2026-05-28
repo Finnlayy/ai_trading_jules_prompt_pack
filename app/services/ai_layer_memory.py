@@ -10,6 +10,8 @@ from app.schemas.ai_layer import AIBehaviorProfile, AIChatMessage, utc_now
 class AILayerMemoryStore:
     def __init__(self, filepath: str = "logs/ai_layer_memory.json") -> None:
         self.filepath = Path(filepath)
+        # Cache the state in memory to prevent synchronous file I/O on every property access
+        self._cache = None
 
     def _default_state(self) -> dict[str, Any]:
         return {
@@ -18,19 +20,26 @@ class AILayerMemoryStore:
         }
 
     def _load_state(self) -> dict[str, Any]:
+        if self._cache is not None:
+            return self._cache
+
         if not self.filepath.exists():
-            return self._default_state()
+            self._cache = self._default_state()
+            return self._cache
 
         try:
             data = json.loads(self.filepath.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
-            return self._default_state()
+            self._cache = self._default_state()
+            return self._cache
 
         state = self._default_state()
         state.update(data if isinstance(data, dict) else {})
-        return state
+        self._cache = state
+        return self._cache
 
     def _save_state(self, state: dict[str, Any]) -> None:
+        self._cache = state
         self.filepath.parent.mkdir(parents=True, exist_ok=True)
         self.filepath.write_text(json.dumps(state, indent=2), encoding="utf-8")
 
