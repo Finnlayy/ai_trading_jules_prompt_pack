@@ -1,13 +1,9 @@
 {
-<<<<<<< Updated upstream
-  "active_strategy_id": "default",
-  "last_switch": null,
-=======
   "active_strategy_id": "generator_default",
-  "last_switch": "2026-05-28T10:31:20.932178+00:00",
->>>>>>> Stashed changes
+  "last_switch": "2026-05-28T15:31:25.036962+00:00",
   "available": [
     "default",
-    "pattern_enhanced"
+    "pattern_enhanced",
+    "generator_default"
   ]
 }

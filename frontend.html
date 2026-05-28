@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' http://127.0.0.1:* http://localhost:*;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' http://127.0.0.1:* http://localhost:*;">
     <title>MetricFlow Bot Command Center</title>
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://unpkg.com/lightweight-charts@4.2.1/dist/lightweight-charts.standalone.production.js"></script>
+    <script src="/static/vendor/react.production.min.js"></script>
+    <script src="/static/vendor/react-dom.production.min.js"></script>
+    <script src="/static/vendor/babel.min.js"></script>
+    <script src="/static/vendor/lightweight-charts.standalone.production.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
 
@@ -18,6 +18,7 @@
             --surface-soft: #fbfdfb;
             --line: #dde8df;
             --ink: #142118;
+            --text: var(--ink);
             --muted: #68786d;
 
             /* Core accent palette */
@@ -1737,6 +1738,7 @@
             const [backtest, setBacktest] = useState({ symbol: "HYPEUSDT", timeframe: "1m", bars: 500, max_signals: 10, min_confluence: "" });
             const [orders, setOrders] = useState(() => readStorage(ORDER_KEY, []));
             const [logs, setLogs] = useState(() => readStorage(LOG_KEY, []));
+            const [raw, setRaw] = useState(null);
                         const [loading, setLoading] = useState(false);
             const [filters, setFilters] = useState({ date: "all", segment: "all", symbol: "" });
 
@@ -2340,7 +2342,7 @@
                         </section>)}
 
                         {layoutConfig.panels.logs && (<section className={tab === "Logs" ? "" : "hidden"}>
-                            <Logs logs={logs} status={{ health, status }} />
+                            <Logs logs={logs} raw={raw} status={{ health, status }} />
                         </section>)}
 
                         <section className={tab === "Live Paper" ? "" : "hidden"}>
@@ -2498,6 +2500,18 @@
         }
 
         function AgentsPanel({ agents, leaderboard }) {
+            const getAvatar = (archetype) => {
+                const map = {
+                    "Analyst": "\u{1F9E0}",
+                    "Diplomat": "\u2696\uFE0F",
+                    "W\u00e4chter": "\u{1F6E1}\uFE0F",
+                    "Stratege": "\u265F\uFE0F",
+                    "Operateur": "\u2699\uFE0F",
+                    "Architekt": "\u{1F3D7}\uFE0F"
+                };
+                return map[archetype] || "\u{1F916}";
+            };
+
             return (
                 <div className="grid">
                     <div className="card span-12">
@@ -2511,18 +2525,6 @@
                                     width: '300px',
                                     background: 'var(--surface)'
                                 }}>
-
-            const getAvatar = (archetype) => {
-                const map = {
-                    "Analyst": "🧠",
-                    "Diplomat": "⚖️",
-                    "Wächter": "🛡️",
-                    "Stratege": "♟️",
-                    "Operateur": "⚙️",
-                    "Architekt": "🏗️"
-                };
-                return map[archetype] || "🤖";
-            };
                                     <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                                         <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
                                             <div style={{fontSize: '24px'}}>{getAvatar(agent.archetype)}</div>
@@ -3229,14 +3231,18 @@
                     chartRef.current.remove();
                     chartRef.current = null;
                 }
+                const theme = getComputedStyle(document.documentElement);
+                const chartTextColor = theme.getPropertyValue("--ink").trim() || "#142118";
+                const chartLineColor = theme.getPropertyValue("--line").trim() || "#dde8df";
+                const chartGridColor = theme.getPropertyValue("--surface-soft").trim() || "#fbfdfb";
                 const chart = LightweightCharts.createChart(chartContainerRef.current, {
                     width: chartContainerRef.current.clientWidth,
                     height: 520,
-                    layout: { background: { color: "#ffffff" }, textColor: "var(--text)" },
-                    grid: { vertLines: { color: "#f0f0f0" }, horzLines: { color: "#f0f0f0" } },
+                    layout: { background: { color: "#ffffff" }, textColor: chartTextColor },
+                    grid: { vertLines: { color: chartGridColor }, horzLines: { color: chartGridColor } },
                     crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
-                    rightPriceScale: { borderColor: "#dde8df" },
-                    timeScale: { borderColor: "#dde8df", timeVisible: true },
+                    rightPriceScale: { borderColor: chartLineColor },
+                    timeScale: { borderColor: chartLineColor, timeVisible: true },
                 });
                 chartRef.current = chart;
 

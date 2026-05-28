@@ -3,9 +3,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.responses import RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse, Response
+from fastapi.staticfiles import StaticFiles
 from app.api.ai_layer import router as ai_layer_router
-from fastapi.responses import FileResponse
 from app.api.backtest_runner import router as backtest_router
 from app.api.endpoints import router as m8_router
 from app.api.market_data import router as market_router
@@ -30,6 +30,9 @@ app = FastAPI(
     description="Simulation-first trading API. Open this UI to inspect health, backtest, and M8 webhook routes.",
 )
 
+ROOT_DIR = Path(__file__).resolve().parents[1]
+app.mount("/static", StaticFiles(directory=ROOT_DIR / "app" / "static"), name="static")
+
 app.include_router(m8_router, prefix="/webhook", tags=["webhook"])
 app.include_router(backtest_router, prefix="/backtest", tags=["backtest"])
 app.include_router(ai_layer_router, prefix="/ai", tags=["ai-layer"])
@@ -51,7 +54,11 @@ app.include_router(ctrader_router, prefix="/ctrader", tags=["ctrader"])
 
 @app.get("/", include_in_schema=False)
 def frontend():
-    return FileResponse(Path(__file__).resolve().parents[1] / "frontend.html")
+    return FileResponse(ROOT_DIR / "frontend.html")
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    return Response(status_code=204)
 
 @app.get("/health")
 def health_check():

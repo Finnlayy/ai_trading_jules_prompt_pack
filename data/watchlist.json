@@ -1,7 +1,7 @@
 {
   "items": [
     {
-      "symbol": "BTCUSDT",
+      "symbol": "HYPERUSDT",
       "timeframes": [
         "1h"
       ],
@@ -9,140 +9,8 @@
       "strategy_id": null,
       "min_confluence": null,
       "max_position_size_usdt": null,
-      "added_at": "2026-05-26T15:19:49.398394+00:00"
-    },
-    {
-      "symbol": "ETHUSDT",
-      "timeframes": [
-        "1h"
-      ],
-      "active": true,
-      "strategy_id": null,
-      "min_confluence": null,
-      "max_position_size_usdt": null,
-      "added_at": "2026-05-26T09:38:43.168581+00:00"
-    },
-    {
-      "symbol": "HYPEUSDT",
-      "timeframes": [
-        "1h"
-      ],
-      "active": true,
-      "strategy_id": null,
-      "min_confluence": null,
-      "max_position_size_usdt": null,
-      "added_at": "2026-05-26T09:38:43.453576+00:00"
-    },
-    {
-      "symbol": "BNBUSDT",
-      "timeframes": [
-        "1h"
-      ],
-      "active": true,
-      "strategy_id": null,
-      "min_confluence": null,
-      "max_position_size_usdt": null,
-      "added_at": "2026-05-26T09:39:14.548767+00:00"
-    },
-    {
-      "symbol": "WTIUSDT",
-      "timeframes": [
-        "1h"
-      ],
-      "active": true,
-      "strategy_id": null,
-      "min_confluence": null,
-      "max_position_size_usdt": null,
-      "added_at": "2026-05-26T09:39:14.865457+00:00"
-    },
-    {
-      "symbol": "XAGUSDT",
-      "timeframes": [
-        "1h"
-      ],
-      "active": true,
-      "strategy_id": null,
-      "min_confluence": null,
-      "max_position_size_usdt": null,
-      "added_at": "2026-05-26T09:39:15.142570+00:00"
-    },
-    {
-      "symbol": "XAUUSDT",
-      "timeframes": [
-        "1h"
-      ],
-      "active": true,
-      "strategy_id": null,
-      "min_confluence": null,
-      "max_position_size_usdt": null,
-      "added_at": "2026-05-26T09:39:15.443539+00:00"
-    },
-    {
-      "symbol": "BRENTOILUSDT",
-      "timeframes": [
-        "1h"
-      ],
-      "active": true,
-      "strategy_id": null,
-      "min_confluence": null,
-      "max_position_size_usdt": null,
-      "added_at": "2026-05-26T09:39:46.445454+00:00"
-    },
-    {
-      "symbol": "TAOUSDT",
-      "timeframes": [
-        "1h"
-      ],
-      "active": true,
-      "strategy_id": null,
-      "min_confluence": null,
-      "max_position_size_usdt": null,
-      "added_at": "2026-05-26T09:39:46.785179+00:00"
-    },
-    {
-      "symbol": "QQQXUSDT",
-      "timeframes": [
-        "1h"
-      ],
-      "active": true,
-      "strategy_id": null,
-      "min_confluence": null,
-      "max_position_size_usdt": null,
-      "added_at": "2026-05-26T09:39:47.075546+00:00"
-    },
-    {
-      "symbol": "USOXXUSDT",
-      "timeframes": [
-        "1h"
-      ],
-      "active": true,
-      "strategy_id": null,
-      "min_confluence": null,
-      "max_position_size_usdt": null,
-      "added_at": "2026-05-26T09:39:47.366256+00:00"
-    },
-    {
-      "symbol": "NVDAXUSDT",
-      "timeframes": [
-        "1h"
-      ],
-      "active": true,
-      "strategy_id": null,
-      "min_confluence": null,
-      "max_position_size_usdt": null,
-      "added_at": "2026-05-26T09:41:14.026617+00:00"
-    },
-    {
-      "symbol": "CRCLXUSDT",
-      "timeframes": [
-        "1h"
-      ],
-      "active": true,
-      "strategy_id": null,
-      "min_confluence": null,
-      "max_position_size_usdt": null,
-      "added_at": "2026-05-26T09:41:14.308799+00:00"
+      "added_at": "2026-05-28T15:34:16.737971+00:00"
     }
   ],
-  "updated_at": "2026-05-26T15:19:49.398843+00:00"
+  "updated_at": "2026-05-28T15:34:16.738212+00:00"
 }
