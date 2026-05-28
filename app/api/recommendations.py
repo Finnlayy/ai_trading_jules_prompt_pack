@@ -123,7 +123,7 @@ class RecommendResponse(BaseModel):
 
 @router.get("/recommend", response_model=RecommendResponse)
 async def get_recommendations(
-    symbol: str = Query(..., min_length=1),
+    symbol: str = Query(..., min_length=1, pattern=r"^[A-Za-z0-9_\-\.]+$"),
     timeframe: str = Query("1h"),
     strategy: str | None = Query(None),
 ):
