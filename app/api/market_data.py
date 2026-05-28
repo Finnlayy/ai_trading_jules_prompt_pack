@@ -71,7 +71,7 @@ def _to_ohlcv_bars(bars: List[OHLCV]) -> List[OHLCVBar]:
 
 @router.get("/ohlcv", response_model=OHLCVResponse)
 async def get_ohlcv(
-    symbol: str = Query(..., min_length=1, description="Trading pair, e.g. BTCUSDT"),
+    symbol: str = Query(..., min_length=1, pattern=r"^[A-Za-z0-9_\-\.]+$", description="Trading pair, e.g. BTCUSDT"),
     timeframe: str = Query("1h", description="Candle timeframe"),
     bars: int = Query(300, ge=10, le=1000, description="Number of candles to fetch"),
 ):
@@ -93,7 +93,7 @@ async def get_ohlcv(
 
 @router.get("/indicators", response_model=IndicatorsResponse)
 async def get_indicators(
-    symbol: str = Query(..., min_length=1, description="Trading pair, e.g. BTCUSDT"),
+    symbol: str = Query(..., min_length=1, pattern=r"^[A-Za-z0-9_\-\.]+$", description="Trading pair, e.g. BTCUSDT"),
     timeframe: str = Query("1h", description="Candle timeframe"),
     bars: int = Query(300, ge=50, le=1000, description="Number of candles to fetch"),
 ):

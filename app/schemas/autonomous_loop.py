@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 
 
 class WatchlistItemSchema(BaseModel):
-    symbol: str = Field(..., pattern=r"^[A-Z0-9]+$")
+    symbol: str = Field(..., pattern=r"^[A-Za-z0-9_\-\.]+$")
     timeframes: list[str] = Field(default=["1m", "5m", "15m"])
     active: bool = True
     strategy_id: str | None = None

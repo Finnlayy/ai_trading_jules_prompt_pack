@@ -20,7 +20,7 @@ router = APIRouter()
 
 @router.get("/trades")
 def get_trades(
-    symbol: str | None = Query(default=None),
+    symbol: str | None = Query(default=None, pattern=r"^[A-Za-z0-9_\-\.]+$"),
     strategy_id: str | None = Query(default=None),
     days: int = Query(default=30, ge=1, le=365),
     limit: int = Query(default=50, ge=1, le=1000),
@@ -56,7 +56,7 @@ def get_trades(
 
 @router.get("/performance/symbol")
 def get_symbol_performance(
-    symbol: str = Query(...),
+    symbol: str = Query(..., pattern=r"^[A-Za-z0-9_\-\.]+$"),
     days: int = Query(default=30, ge=1, le=365),
     db: Session = Depends(get_db),
 ):
@@ -96,7 +96,7 @@ def get_strategy_performance(
 
 @router.get("/winrate")
 def get_winrate(
-    symbol: str = Query(...),
+    symbol: str = Query(..., pattern=r"^[A-Za-z0-9_\-\.]+$"),
     timeframe: str = Query(default="1h"),
     days: int = Query(default=30, ge=1, le=365),
     db: Session = Depends(get_db),
@@ -108,7 +108,7 @@ def get_winrate(
 
 @router.get("/positions")
 def get_db_positions(
-    symbol: str | None = Query(default=None),
+    symbol: str | None = Query(default=None, pattern=r"^[A-Za-z0-9_\-\.]+$"),
     db: Session = Depends(get_db),
 ):
     """Query positions from the database."""
@@ -165,7 +165,7 @@ def get_rotations(
 
 @router.get("/news")
 def get_db_news(
-    symbol: str | None = Query(default=None),
+    symbol: str | None = Query(default=None, pattern=r"^[A-Za-z0-9_\-\.]+$"),
     limit: int = Query(default=50, ge=1, le=200),
     db: Session = Depends(get_db),
 ):
