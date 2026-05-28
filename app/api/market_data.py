@@ -4,6 +4,7 @@ Market Data API — serves OHLCV candles and computed indicators to the frontend
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import List
 
@@ -79,7 +80,7 @@ async def get_ohlcv(
         return OHLCVResponse(symbol=symbol, timeframe=timeframe, bars=[])
 
     try:
-        raw = BybitDataFeed.fetch(symbol, bars, timeframe)
+        raw = await asyncio.to_thread(BybitDataFeed.fetch, symbol, bars, timeframe)
     except Exception as exc:
         logger.warning("Bybit fetch failed for %s %s: %s", symbol, timeframe, exc)
         return OHLCVResponse(symbol=symbol, timeframe=timeframe, bars=[])
@@ -101,7 +102,7 @@ async def get_indicators(
         return IndicatorsResponse(symbol=symbol, timeframe=timeframe, indicators=[])
 
     try:
-        raw = BybitDataFeed.fetch(symbol, bars, timeframe)
+        raw = await asyncio.to_thread(BybitDataFeed.fetch, symbol, bars, timeframe)
     except Exception as exc:
         logger.warning("Bybit fetch failed for %s %s: %s", symbol, timeframe, exc)
         return IndicatorsResponse(symbol=symbol, timeframe=timeframe, indicators=[])
