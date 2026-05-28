@@ -54,8 +54,6 @@ class JournalLogger:
         with open(self.filepath, "a", encoding="utf-8") as f:
             f.write(entry.model_dump_json() + "\n")
 
-    async def log(self, entry: TradeJournalEntry):
-        await asyncio.to_thread(self._write_entry, entry)
     def log(self, entry: TradeJournalEntry):
         if self._should_rotate():
             self._rotate()
