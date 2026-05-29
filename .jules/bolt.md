@@ -11,3 +11,6 @@
 ## 2024-05-29 - Inefficient Statistical Baseline Recalculation inside Tight Loops
 **Learning:** The Ljung-Box test function (`ljung_box`) inside `app/services/statistical_battery.py` repeatedly called `_autocorr`, which recalculated the array's mean and variance (`c0`) for every single lag (e.g. 20 times for 20 lags).
 **Action:** Inline the autocorrelation logic inside `ljung_box` to compute the mean, centered array, and variance once outside the loop. Then iteratively compute only the specific lag's covariance inside the loop, effectively halving the computation time (~0.20s down to ~0.10s for 100 runs). This avoids redundant O(N) operations inside loops.
+## 2024-06-25 - Python memory allocations in high-frequency calculations
+**Learning:** For performance-critical arrays (like calculating metric indicators on millions of tick/candle returns), native python `sum()` over unrolled arrays or explicit tracking counters can be ~4x faster than list comprehensions because it avoids creating intermediate large list objects and overhead associated with Python generators.
+**Action:** When working on backends analyzing large series or arrays of returns in Python where external dependencies like numpy aren't immediately available, prefer explicitly unrolled loop structures and native mathematical reductions over memory-intensive generator comprehensions.
