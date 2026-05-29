@@ -2,49 +2,49 @@
   {
     "scout_name": "technical",
     "curriculum_level": "Beginner",
-    "completed_drills": 219,
+    "completed_drills": 232,
     "required_drills": 10,
-    "passed_drills": 219,
-    "average_confidence": 0.7494850828858606
+    "passed_drills": 231,
+    "average_confidence": 0.7458783770402151
   },
   {
     "scout_name": "sentiment",
     "curriculum_level": "Beginner",
-    "completed_drills": 219,
+    "completed_drills": 232,
     "required_drills": 10,
-    "passed_drills": 218,
-    "average_confidence": 0.7421962887605952
+    "passed_drills": 231,
+    "average_confidence": 0.7436031754540924
   },
   {
     "scout_name": "risk",
     "curriculum_level": "Beginner",
-    "completed_drills": 219,
+    "completed_drills": 232,
     "required_drills": 10,
-    "passed_drills": 219,
-    "average_confidence": 0.7563517919043832
+    "passed_drills": 229,
+    "average_confidence": 0.7606122575321178
   },
   {
     "scout_name": "macro",
     "curriculum_level": "Beginner",
-    "completed_drills": 219,
+    "completed_drills": 232,
     "required_drills": 10,
-    "passed_drills": 219,
-    "average_confidence": 0.7295086800530983
+    "passed_drills": 232,
+    "average_confidence": 0.7320033668221808
   },
   {
     "scout_name": "execution",
     "curriculum_level": "Beginner",
-    "completed_drills": 219,
+    "completed_drills": 232,
     "required_drills": 10,
-    "passed_drills": 212,
-    "average_confidence": 0.7420119683678603
+    "passed_drills": 222,
+    "average_confidence": 0.7408610532568317
   },
   {
     "scout_name": "correlation",
     "curriculum_level": "Beginner",
-    "completed_drills": 219,
+    "completed_drills": 232,
     "required_drills": 10,
-    "passed_drills": 219,
-    "average_confidence": 0.7362173864434755
+    "passed_drills": 231,
+    "average_confidence": 0.736312808084065
   }
 ]
