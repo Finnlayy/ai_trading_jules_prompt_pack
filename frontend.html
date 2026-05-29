@@ -1780,7 +1780,8 @@
             const [orders, setOrders] = useState(() => readStorage(ORDER_KEY, []));
             const [logs, setLogs] = useState(() => readStorage(LOG_KEY, []));
             const [raw, setRaw] = useState(null);
-                        const [loading, setLoading] = useState(false);
+                        const [loading, setLoading] = useState({});
+            const setLoadingKey = (key, value) => setLoading(prev => ({ ...prev, [key]: value }));
             const [filters, setFilters] = useState({ date: "all", segment: "all", symbol: "" });
 
             const [toasts, setToasts] = useState([]);
@@ -2090,7 +2091,7 @@
 
             async function submitSignal(event) {
                 event.preventDefault();
-                setLoading(true);
+                setLoadingKey("signal", true);
                 try {
                     const payload = cleanPayload(signal);
                     const response = await request("/webhook/m8", { method: "POST", body: JSON.stringify(payload) });
@@ -2101,7 +2102,7 @@
                 } catch (error) {
                                         addLog("error", "Manual signal failed", { error: error.message });
                 } finally {
-                    setLoading(false);
+                    setLoadingKey("signal", false);
                 }
             }
 
@@ -2128,7 +2129,7 @@
             }
 
             async function resetBot() {
-                setLoading(true);
+                setLoadingKey("global", true);
                 try {
                     const response = await request("/backtest/reset", { method: "POST" });
                                         addLog("system", "Bot state reset", response);
@@ -2136,13 +2137,13 @@
                 } catch (error) {
                                         addLog("error", "Reset failed", { error: error.message });
                 } finally {
-                    setLoading(false);
+                    setLoadingKey("global", false);
                 }
             }
 
             async function saveAIProfile() {
                 if (!aiLayer.profile) return;
-                setLoading(true);
+                setLoadingKey("ai", true);
                 try {
                     const response = await request("/ai/profile", {
                         method: "POST",
@@ -2154,14 +2155,14 @@
                 } catch (error) {
                                         addLog("error", "AI profile save failed", { error: error.message });
                 } finally {
-                    setLoading(false);
+                    setLoadingKey("ai", false);
                 }
             }
 
             async function sendAIMessage(event) {
                 event.preventDefault();
                 if (!aiMessage.trim()) return;
-                setLoading(true);
+                setLoadingKey("ai", true);
                 try {
                     const response = await request("/ai/chat", {
                         method: "POST",
@@ -2174,12 +2175,12 @@
                 } catch (error) {
                                         addLog("error", "AI layer chat failed", { error: error.message });
                 } finally {
-                    setLoading(false);
+                    setLoadingKey("ai", false);
                 }
             }
 
             async function resetAIMemory() {
-                setLoading(true);
+                setLoadingKey("ai", true);
                 try {
                     const response = await request("/ai/reset", { method: "POST" });
                                         addLog("ai", "AI layer memory reset", response.profile);
@@ -2187,7 +2188,7 @@
                 } catch (error) {
                                         addLog("error", "AI memory reset failed", { error: error.message });
                 } finally {
-                    setLoading(false);
+                    setLoadingKey("ai", false);
                 }
             }
 
@@ -2299,9 +2300,9 @@
                             <div className="subtitle" style={{margin:0, fontSize: "13px", marginTop: "4px"}}>Live operational view for AI review, deterministic risk gates, Pionex execution, backtests, orders, and local activity logs.</div>
                         </div>
                         <div className="header-actions" style={{display: "flex", gap: "8px", alignItems: "center"}}>
-                            <button onClick={() => { refreshStatus(); refreshAIProfile(); }} disabled={loading}>Refresh</button>
-                            <button className="warning" onClick={resetBot} disabled={loading}>Reset</button>
-                            <button className="danger" onClick={clearLocalHistory} disabled={loading}>Clear</button>
+                            <button onClick={() => { refreshStatus(); refreshAIProfile(); }} disabled={loading.global}>Refresh</button>
+                            <button className="warning" onClick={resetBot} disabled={loading.global}>Reset</button>
+                            <button className="danger" onClick={clearLocalHistory}>Clear</button>
                             <button
                                 className={layoutConfig.showSettings ? "primary" : ""}
                                 onClick={() => setLayoutConfig({...layoutConfig, showSettings: !layoutConfig.showSettings})}
@@ -2343,7 +2344,7 @@
                         </section>)}
 
                         {layoutConfig.panels.control && (<section className={tab === "Control" ? "" : "hidden"}>
-                            <Control signal={signal} setSignal={setSignal} submitSignal={submitSignal} loading={loading} addLog={addLog} setRaw={setRaw} request={request} broker={status} />
+                            <Control signal={signal} setSignal={setSignal} submitSignal={submitSignal} loading={loading.signal} addLog={addLog} setRaw={setRaw} request={request} broker={status} />
                         </section>)}
 
                         {layoutConfig.panels.aiLayer && (<section className={tab === "AI Layer" ? "" : "hidden"}>
@@ -2355,7 +2356,7 @@
                                 updateAIProfile={updateAIProfile}
                                 saveAIProfile={saveAIProfile}
                                 resetAIMemory={resetAIMemory}
-                                loading={loading}
+                                loading={loading.ai}
                                 orders={orders}
                                 chartState={chartState}
                                 request={request}
@@ -4710,7 +4711,7 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
             }
 
             async function controlLoop(action) {
-                setLoading(true);
+                setLoadingKey("loop", true);
                 try {
                     const data = await request("/loop/control", {
                         method: "POST",
@@ -4721,13 +4722,13 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                 } catch (e) {
                     addLog("error", `Loop ${action} failed`, { error: e.message });
                 } finally {
-                    setLoading(false);
+                    setLoadingKey("loop", false);
                 }
             }
 
             async function addSymbol() {
                 if (!newSymbol.trim()) return;
-                setLoading(true);
+                setLoadingKey("loop", true);
                 try {
                     console.log("[LivePaper] Adding symbol:", newSymbol.toUpperCase());
                     const result = await request("/loop/watchlist", {
@@ -4746,12 +4747,12 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                     console.error("[LivePaper] Add failed:", e);
                     addLog("error", `Add symbol failed: ${e.message} (status=${e.status || "?"}, path=${e.path || "?"})`, { error: e.message, status: e.status, path: e.path, response: e.response });
                 } finally {
-                    setLoading(false);
+                    setLoadingKey("loop", false);
                 }
             }
 
             async function removeSymbol(symbol) {
-                setLoading(true);
+                setLoadingKey("loop", true);
                 try {
                     await request(`/loop/watchlist/${symbol}`, { method: "DELETE" });
                     addLog("system", `Removed ${symbol} from watchlist`);
@@ -4759,13 +4760,13 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                 } catch (e) {
                     addLog("error", "Remove symbol failed", { error: e.message });
                 } finally {
-                    setLoading(false);
+                    setLoadingKey("loop", false);
                 }
             }
 
             async function emergencyStop() {
                 if (!confirm("EMERGENCY STOP: Pause loop and close all open positions?")) return;
-                setLoading(true);
+                setLoadingKey("loop", true);
                 try {
                     await request("/live/emergency-stop", {
                         method: "POST",
@@ -4776,7 +4777,7 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                 } catch (e) {
                     addLog("error", "Emergency stop failed", { error: e.message });
                 } finally {
-                    setLoading(false);
+                    setLoadingKey("loop", false);
                 }
             }
 
@@ -4827,11 +4828,11 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                     <div className="panel span-12">
                         <div className="panel-title">Live Paper Control <span className={`pill ${loopRunning ? (loopPaused ? "warn" : "ok") : "error"}`}>{loopRunning ? (loopPaused ? "Paused" : "Running") : "Stopped"}</span></div>
                         <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginTop: 8 }}>
-                            <button className="primary" onClick={() => controlLoop("start")} disabled={loading || loopRunning}>Start Loop</button>
-                            <button className="warning" onClick={() => controlLoop("pause")} disabled={loading || !loopRunning || loopPaused}>Pause</button>
-                            <button className="secondary" onClick={() => controlLoop("resume")} disabled={loading || !loopPaused}>Resume</button>
-                            <button className="danger" onClick={() => controlLoop("stop")} disabled={loading || !loopRunning}>Stop Loop</button>
-                            <button className="danger" onClick={emergencyStop} disabled={loading}>🚨 Emergency Stop</button>
+                            <button className="primary" onClick={() => controlLoop("start")} disabled={loading.loop || loopRunning}>Start Loop</button>
+                            <button className="warning" onClick={() => controlLoop("pause")} disabled={loading.loop || !loopRunning || loopPaused}>Pause</button>
+                            <button className="secondary" onClick={() => controlLoop("resume")} disabled={loading.loop || !loopPaused}>Resume</button>
+                            <button className="danger" onClick={() => controlLoop("stop")} disabled={loading.loop || !loopRunning}>Stop Loop</button>
+                            <button className="danger" onClick={emergencyStop} disabled={loading.loop}>🚨 Emergency Stop</button>
                             <span className="pill info">{sseConnected ? "SSE Connected" : "SSE Disconnected"}</span>
                         </div>
                         {loopStatus && (
@@ -4851,7 +4852,7 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                         <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
                             <input placeholder="Symbol (e.g. BTCUSDT)" value={newSymbol} onChange={e => setNewSymbol(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addSymbol(); } }} style={{ flex: 1 }} />
                             <input placeholder="Timeframes" value={newTimeframes} onChange={e => setNewTimeframes(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addSymbol(); } }} style={{ width: 120 }} />
-                            <button type="button" className="primary" onClick={addSymbol} disabled={loading || !newSymbol.trim()}>{loading ? "Adding…" : "Add"}</button>
+                            <button type="button" className="primary" onClick={addSymbol} disabled={loading.loop || !newSymbol.trim()}>{loading.loop ? "Adding…" : "Add"}</button>
                         </div>
                         <table className="ordertable">
                             <thead>
@@ -4863,7 +4864,7 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                                         <td style={{ color: "var(--text)" }}><b>{item.symbol || "???"}</b></td>
                                         <td style={{ color: "var(--text)" }}>{(item.timeframes || []).join(", ") || "—"}</td>
                                         <td style={{ color: "var(--text)" }}>{item.active ? "✅" : "⏸️"}</td>
-                                        <td><button className="danger" style={{ padding: "2px 8px", fontSize: 12 }} onClick={() => removeSymbol(item.symbol)} disabled={loading}>Remove</button></td>
+                                        <td><button className="danger" style={{ padding: "2px 8px", fontSize: 12 }} onClick={() => removeSymbol(item.symbol)} disabled={loading.loop}>Remove</button></td>
                                     </tr>
                                 ))}
                                 {watchlist.length === 0 && <tr><td colSpan={4} style={{ textAlign: "center", color: "var(--muted)" }}>No symbols in watchlist</td></tr>}
