@@ -97,6 +97,28 @@ def test_paper_order_form_wires_to_api_endpoint():
         f"/kraken/paper/order endpoint unreachable: {api_resp.status_code}"
 
 
+def test_paper_panel_shows_open_positions_table():
+    """GREEN: The Kraken Paper panel renders a table of open positions
+    fetched from GET /kraken/paper/positions."""
+    resp = requests.get(f"{BASE_URL}/", timeout=30)
+    html = resp.text
+
+    # Must contain a positions table or list
+    assert "position" in html.lower(), "Panel missing positions display"
+
+    # Must reference the positions endpoint
+    assert '"/kraken/paper/positions"' in html, \
+        "Panel does not fetch from /kraken/paper/positions"
+
+    # Verify endpoint returns position data
+    pos_resp = requests.get(f"{BASE_URL}/kraken/paper/positions", timeout=10)
+    assert pos_resp.status_code == 200
+    data = pos_resp.json()
+    assert data["status"] == "ok"
+    assert "positions" in data
+    assert "count" in data
+
+
 def test_balance_display_would_render_dollar_sign():
     """The panel renders balance as '$XX.XX' — verify the template string exists."""
     resp = requests.get(f"{BASE_URL}/", timeout=30)

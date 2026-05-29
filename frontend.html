@@ -2511,6 +2511,7 @@
             const [direction, setDirection] = useState("BUY");
             const [orderType, setOrderType] = useState("market");
             const [volume, setVolume] = useState("0.5");
+            const [positions, setPositions] = useState([]);
 
             async function refreshBalance() {
                 setLoading(true);
@@ -2521,6 +2522,15 @@
                     addLog("error", "Kraken paper balance failed", { error: e.message });
                 } finally {
                     setLoading(false);
+                }
+            }
+
+            async function refreshPositions() {
+                try {
+                    const data = await request("/kraken/paper/positions");
+                    setPositions(data.positions || []);
+                } catch (e) {
+                    addLog("error", "Kraken paper positions failed", { error: e.message });
                 }
             }
 
@@ -2537,7 +2547,7 @@
                         })
                     });
                     addLog("system", `Paper order: ${direction} ${volume} ${symbol} @ ${orderType}`, result);
-                    await refreshBalance();
+                    await Promise.all([refreshBalance(), refreshPositions()]);
                 } catch (e) {
                     addLog("error", "Paper order failed", { error: e.message });
                 } finally {
@@ -2547,7 +2557,11 @@
 
             useEffect(() => {
                 refreshBalance();
-                const timer = setInterval(refreshBalance, 5000);
+                refreshPositions();
+                const timer = setInterval(() => {
+                    refreshBalance();
+                    refreshPositions();
+                }, 5000);
                 return () => clearInterval(timer);
             }, []);
 
@@ -2611,6 +2625,30 @@
                                 {orderLoading ? "Submitting…" : "Submit Paper Order"}
                             </button>
                         </div>
+                    </div>
+
+                    <div className="panel span-12">
+                        <div className="panel-title">Open Positions <span className="pill">{positions.length} open</span></div>
+                        <table className="ordertable">
+                            <thead>
+                                <tr><th>Symbol</th><th>Direction</th><th>Volume</th><th>Entry Price</th><th>Unrealized P&L</th><th>Realized P&L</th></tr>
+                            </thead>
+                            <tbody>
+                                {positions.map((pos, idx) => (
+                                    <tr key={idx}>
+                                        <td><b>{pos.symbol}</b></td>
+                                        <td style={{ color: pos.direction === "LONG" ? "var(--ok)" : "var(--danger)" }}>{pos.direction}</td>
+                                        <td>{pos.volume?.toFixed(4)}</td>
+                                        <td>${pos.avg_entry_price?.toFixed(2)}</td>
+                                        <td style={{ color: (pos.unrealized_pnl || 0) >= 0 ? "var(--ok)" : "var(--danger)" }}>${pos.unrealized_pnl?.toFixed(4)}</td>
+                                        <td>${pos.realized_pnl?.toFixed(4)}</td>
+                                    </tr>
+                                ))}
+                                {positions.length === 0 && (
+                                    <tr><td colSpan={6} style={{ textAlign: "center", color: "var(--muted)" }}>No open positions</td></tr>
+                                )}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             );
