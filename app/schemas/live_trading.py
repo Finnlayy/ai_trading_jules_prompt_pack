@@ -83,6 +83,19 @@ class EmergencyStopResponse(BaseModel):
     halted_until: datetime
 
 
+class ManualOrderRequest(BaseModel):
+    symbol: str = Field(..., description="Trading pair, e.g. BTCUSDT")
+    direction: Literal["LONG", "SHORT"] = Field(..., description="Trade direction")
+    intent: Literal["ENTRY", "CLOSE"] = Field(default="ENTRY", description="ENTRY or CLOSE")
+    quantity: float = Field(..., gt=0.0, description="Order quantity / size")
+    entry_price: float | None = Field(default=None, description="Limit price or null for market")
+    stop_price: float | None = Field(default=None, description="Stop loss price")
+    target_price: float | None = Field(default=None, description="Take profit price")
+    account_mode: Literal["SPOT", "FUTURES"] = Field(default="SPOT")
+    leverage: float | None = Field(default=None, gt=0.0)
+    order_command: Literal["GO", "HOLD", "KILL"] = Field(default="GO")
+
+
 class SSEEventSchema(BaseModel):
     event_type: Literal["trade", "position", "metrics", "alert", "heartbeat"]
     payload: dict[str, Any]

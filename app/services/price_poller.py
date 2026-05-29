@@ -18,6 +18,40 @@ from app.services.position_monitor import position_monitor
 from app.services.dashboard_sse import dashboard_sse_manager
 
 
+# ------------------------------------------------------------------
+# Symbol normalization helpers
+# ------------------------------------------------------------------
+
+_SYMBOL_NORMALIZATION_MAP = {
+    "BTCUSD": "BTCUSDT",
+    "ETHUSD": "ETHUSDT",
+    "SOLUSD": "SOLUSDT",
+    "XRPUSD": "XRPUSDT",
+    "DOGEUSD": "DOGEUSDT",
+    "ADAUSD": "ADAUSDT",
+    "AVAXUSD": "AVAXUSDT",
+    "LINKUSD": "LINKUSDT",
+    "MATICUSD": "MATICUSDT",
+    "LTCUSD": "LTCUSDT",
+    "DOTUSD": "DOTUSDT",
+    "BCHUSD": "BCHUSDT",
+}
+
+
+def normalize_symbol(symbol: str) -> str:
+    """Canonicalize a symbol for Bybit linear tickers.
+    Maps BTCUSD → BTCUSDT, ETHUSD → ETHUSDT, etc.
+    Already-correct symbols pass through unchanged.
+    """
+    sym = symbol.upper().strip()
+    if sym in _SYMBOL_NORMALIZATION_MAP:
+        return _SYMBOL_NORMALIZATION_MAP[sym]
+    # Heuristic: if it ends with 'USD' but not 'USDT'/'USDC', append 'T'
+    if sym.endswith("USD") and not (sym.endswith("USDT") or sym.endswith("USDC")):
+        return sym + "T"
+    return sym
+
+
 class PricePoller:
     """
     Singleton asyncio background task for live position price monitoring.
@@ -69,18 +103,23 @@ class PricePoller:
             try:
                 positions = live_fill_tracker.get_open_positions()
                 if positions:
-                    symbols = list({p.symbol.upper() for p in positions})
-                    prices = await asyncio.to_thread(self._fetch_prices, symbols)
+                    # Normalize symbols for ticker lookup
+                    normalized_symbols = list({normalize_symbol(p.symbol) for p in positions})
+                    prices = await asyncio.to_thread(self._fetch_prices, normalized_symbols)
                     self._last_prices.update(prices)
 
-                    # Update unrealized PnL for all positions
+                    # Update unrealized PnL for all positions (lookup by normalized symbol)
                     for pos in positions:
-                        price = prices.get(pos.symbol.upper())
+                        price = prices.get(normalize_symbol(pos.symbol))
                         if price:
                             live_fill_tracker.update_price(pos.trade_id, price)
 
-                    # Check exits
-                    exits = position_monitor.check_price_based_exits(prices)
+                    # Check exits (build prices dict keyed by original position symbol)
+                    position_prices = {
+                        pos.symbol: prices.get(normalize_symbol(pos.symbol), pos.current_price)
+                        for pos in positions
+                    }
+                    exits = position_monitor.check_price_based_exits(position_prices)
                     if exits:
                         position_monitor.execute_exits(exits)
 
@@ -133,7 +172,7 @@ class PricePoller:
         return prices
 
     def get_last_price(self, symbol: str) -> float | None:
-        return self._last_prices.get(symbol.upper())
+        return self._last_prices.get(normalize_symbol(symbol))
 
 
 # Global singleton

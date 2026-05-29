@@ -12,6 +12,30 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 
+def _normalize_symbol(symbol: str) -> str:
+    """Canonicalize symbol for Bybit linear tickers."""
+    sym = symbol.upper().strip()
+    mapping = {
+        "BTCUSD": "BTCUSDT",
+        "ETHUSD": "ETHUSDT",
+        "SOLUSD": "SOLUSDT",
+        "XRPUSD": "XRPUSDT",
+        "DOGEUSD": "DOGEUSDT",
+        "ADAUSD": "ADAUSDT",
+        "AVAXUSD": "AVAXUSDT",
+        "LINKUSD": "LINKUSDT",
+        "MATICUSD": "MATICUSDT",
+        "LTCUSD": "LTCUSDT",
+        "DOTUSD": "DOTUSDT",
+        "BCHUSD": "BCHUSDT",
+    }
+    if sym in mapping:
+        return mapping[sym]
+    if sym.endswith("USD") and not (sym.endswith("USDT") or sym.endswith("USDC")):
+        return sym + "T"
+    return sym
+
+
 @dataclass
 class FillData:
     entry_price: float
@@ -78,29 +102,77 @@ class LiveFillTracker:
         self._persist_path = Path("data/positions.json")
         self._load()
 
+    @staticmethod
+    def _ensure_aware(dt: datetime) -> datetime:
+        """Ensure a datetime is timezone-aware (UTC)."""
+        if dt.tzinfo is None:
+            return dt.replace(tzinfo=timezone.utc)
+        return dt
+
     def _load(self) -> None:
-        if not self._persist_path.exists():
-            return
-        try:
-            data = json.loads(self._persist_path.read_text(encoding="utf-8"))
-            for pos_data in data.get("positions", []):
-                pos = OpenPosition(
-                    trade_id=pos_data["trade_id"],
-                    symbol=pos_data["symbol"],
-                    direction=pos_data["direction"],
-                    entry_price=pos_data["entry_price"],
-                    current_price=pos_data.get("current_price", pos_data["entry_price"]),
-                    size=pos_data["size"],
-                    unrealized_pnl=pos_data.get("unrealized_pnl", 0.0),
-                    realized_pnl=pos_data.get("realized_pnl", 0.0),
-                    open_time=datetime.fromisoformat(pos_data["open_time"]),
-                    strategy_id=pos_data.get("strategy_id"),
-                    stop_price=pos_data.get("stop_price", 0.0),
-                    target_price=pos_data.get("target_price", 0.0),
-                )
-                self._positions[pos.trade_id] = pos
-        except Exception:
-            pass
+        # Load from JSON file first
+        if self._persist_path.exists():
+            try:
+                data = json.loads(self._persist_path.read_text(encoding="utf-8"))
+                for pos_data in data.get("positions", []):
+                    pos = OpenPosition(
+                        trade_id=pos_data["trade_id"],
+                        symbol=_normalize_symbol(pos_data["symbol"]),
+                        direction=pos_data["direction"],
+                        entry_price=pos_data["entry_price"],
+                        current_price=pos_data.get("current_price", pos_data["entry_price"]),
+                        size=pos_data["size"],
+                        unrealized_pnl=pos_data.get("unrealized_pnl", 0.0),
+                        realized_pnl=pos_data.get("realized_pnl", 0.0),
+                        open_time=self._ensure_aware(datetime.fromisoformat(pos_data["open_time"])),
+                        strategy_id=pos_data.get("strategy_id"),
+                        stop_price=pos_data.get("stop_price", 0.0),
+                        target_price=pos_data.get("target_price", 0.0),
+                    )
+                    self._positions[pos.trade_id] = pos
+                for intent_data in data.get("intents", []):
+                    intent = PositionIntent(
+                        trade_id=intent_data["trade_id"],
+                        symbol=intent_data["symbol"],
+                        direction=intent_data["direction"],
+                        entry_price=intent_data["entry_price"],
+                        stop_price=intent_data["stop_price"],
+                        target_price=intent_data["target_price"],
+                        size=intent_data.get("size"),
+                        strategy_id=intent_data.get("strategy_id"),
+                        decision=intent_data["decision"],
+                        ai_trace=intent_data.get("ai_trace"),
+                        timestamp=self._ensure_aware(datetime.fromisoformat(intent_data["timestamp"])),
+                    )
+                    self._intents[intent.trade_id] = intent
+            except Exception:
+                pass
+        # Fallback: load open positions from SQLite (restores after server restart)
+        if not self._positions:
+            try:
+                from app.db import SessionLocal
+                from app.db.models import Position as DBPosition
+                db = SessionLocal()
+                db_positions = db.query(DBPosition).filter(DBPosition.is_open == True).all()
+                for dbp in db_positions:
+                    pos = OpenPosition(
+                        trade_id=dbp.trade_id,
+                        symbol=_normalize_symbol(dbp.symbol),
+                        direction=dbp.direction,
+                        entry_price=dbp.entry_price,
+                        current_price=dbp.current_price or dbp.entry_price,
+                        size=dbp.size,
+                        unrealized_pnl=dbp.unrealized_pnl or 0.0,
+                        realized_pnl=dbp.realized_pnl or 0.0,
+                        open_time=self._ensure_aware(dbp.opened_at),
+                        strategy_id=dbp.strategy_id,
+                        stop_price=dbp.stop_price or 0.0,
+                        target_price=dbp.target_price or 0.0,
+                    )
+                    self._positions[pos.trade_id] = pos
+                db.close()
+            except Exception:
+                pass
 
     def _persist(self) -> None:
         try:
@@ -123,6 +195,22 @@ class LiveFillTracker:
                     }
                     for p in self._positions.values()
                 ],
+                "intents": [
+                    {
+                        "trade_id": i.trade_id,
+                        "symbol": i.symbol,
+                        "direction": i.direction,
+                        "entry_price": i.entry_price,
+                        "stop_price": i.stop_price,
+                        "target_price": i.target_price,
+                        "size": i.size,
+                        "strategy_id": i.strategy_id,
+                        "decision": i.decision,
+                        "ai_trace": i.ai_trace,
+                        "timestamp": i.timestamp.isoformat(),
+                    }
+                    for i in self._intents.values()
+                ],
                 "updated_at": datetime.now(timezone.utc).isoformat(),
             }
             self._persist_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
@@ -138,7 +226,7 @@ class LiveFillTracker:
         """Record a trade intent before execution."""
         self._intents[trade_id] = PositionIntent(
             trade_id=trade_id,
-            symbol=symbol,
+            symbol=_normalize_symbol(symbol),
             direction=direction,
             entry_price=entry_price,
             stop_price=stop_price,
@@ -154,7 +242,7 @@ class LiveFillTracker:
         intent = self._intents.get(trade_id)
         self._positions[trade_id] = OpenPosition(
             trade_id=trade_id,
-            symbol=intent.symbol if intent else "UNKNOWN",
+            symbol=_normalize_symbol(intent.symbol) if intent else "UNKNOWN",
             direction=intent.direction if intent else "LONG",
             entry_price=fill_data.entry_price,
             current_price=fill_data.entry_price,

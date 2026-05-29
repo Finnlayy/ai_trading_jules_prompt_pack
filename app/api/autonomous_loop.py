@@ -26,6 +26,7 @@ async def get_loop_status():
     health = status.get("health", {})
     return LoopStatusResponse(
         is_running=status["is_running"],
+        is_paused=status.get("is_paused", False),
         active_symbols=status["active_symbols"],
         poll_interval_seconds=status["poll_interval_seconds"],
         loop_stats=status["loop_stats"],

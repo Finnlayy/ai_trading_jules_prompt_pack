@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -86,6 +86,7 @@
             --ink: #f0f0f0;
             --muted: #9ca3af;
             --hover-overlay: rgba(255, 255, 255, 0.04);
+            color-scheme: dark;
         }
 
         @media (prefers-color-scheme: dark) {
@@ -97,6 +98,7 @@
                 --ink: #f0f0f0;
                 --muted: #9ca3af;
                 --hover-overlay: rgba(255, 255, 255, 0.04);
+                color-scheme: dark;
             }
         }
 
@@ -105,12 +107,16 @@
         body {
             margin: 0;
             min-height: 100vh;
-            color: #142118;
+            color: var(--ink);
             font-family: "IBM Plex Sans", sans-serif;
             background:
                 linear-gradient(135deg, rgba(201, 243, 221, 0.72), transparent 30%),
                 linear-gradient(225deg, rgba(220, 238, 255, 0.70), transparent 33%),
                 var(--bg);
+        }
+
+        .dark body {
+            background: var(--bg);
         }
 
         button, input, select, textarea {
@@ -126,7 +132,7 @@
             padding: 8px 18px;
             border: 1.5px solid var(--line);
             border-radius: var(--radius-sm);
-            color: #142118;
+            color: var(--ink);
             background: var(--surface);
             cursor: pointer;
             font-weight: 600;
@@ -168,7 +174,7 @@
         button.secondary {
             background: var(--surface-soft);
             border-color: var(--line);
-            color: #142118;
+            color: var(--ink);
         }
         button.secondary:hover:not(:disabled) {
             background: var(--hover-overlay);
@@ -201,7 +207,7 @@
         }
         button.ghost:hover:not(:disabled) {
             background: var(--hover-overlay);
-            color: #142118;
+            color: var(--ink);
         }
 
         /* Loading spinner on buttons */
@@ -215,7 +221,7 @@
             width: 16px;
             height: 16px;
             border: 2px solid var(--line);
-            border-top-color: #142118;
+            border-top-color: var(--ink);
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
         }
@@ -227,7 +233,7 @@
             border: 1.5px solid var(--line);
             border-radius: var(--radius-sm);
             background: var(--surface);
-            color: #142118;
+            color: var(--ink);
             padding: 9px 12px;
             outline: none;
             font-size: 14px;
@@ -323,7 +329,7 @@
 
         .panel-sidebar {
             grid-area: sidebar;
-            background: rgba(255, 255, 255, 0.76);
+            background: var(--surface);
             border-right: 1px solid var(--line);
             padding: 22px;
             display: flex;
@@ -471,7 +477,7 @@
             height: 100vh;
             padding: 22px;
             border-right: 1px solid var(--line);
-            background: rgba(255, 255, 255, 0.76);
+            background: var(--surface);
             backdrop-filter: blur(18px);
         }
 
@@ -518,8 +524,8 @@
         }
 
         nav button.active {
-            background: #ffffff;
-            border-color: #bfe5cd;
+            background: var(--surface);
+            border-color: var(--line);
             box-shadow: 0 10px 30px rgba(30, 54, 38, 0.08);
         }
 
@@ -586,7 +592,7 @@
             padding: 12px;
             border: 1px solid var(--line);
             border-radius: var(--radius);
-            background: rgba(255, 255, 255, 0.82);
+            background: var(--surface-soft);
             box-shadow: var(--shadow);
             margin-bottom: 14px;
         }
@@ -600,7 +606,7 @@
         .panel {
             border: 1px solid var(--line);
             border-radius: var(--radius);
-            background: rgba(255, 255, 255, 0.92);
+            background: var(--surface);
             box-shadow: var(--shadow);
             padding: 16px;
             min-width: 0;
@@ -781,7 +787,7 @@
             color: var(--muted);
         }
         .signal-card .signal-metric strong {
-            color: #142118;
+            color: var(--ink);
             font-weight: 600;
         }
 
@@ -815,6 +821,9 @@
         .ordertable tbody tr.status-executed { background: var(--emerald-bg); }
         .ordertable tbody tr.status-rejected { background: var(--rose-bg); }
         .ordertable tbody tr.status-sim { background: var(--indigo-bg); }
+        .dark .ordertable tbody tr.status-executed { background: rgba(16, 185, 129, 0.12); }
+        .dark .ordertable tbody tr.status-rejected { background: rgba(244, 63, 94, 0.12); }
+        .dark .ordertable tbody tr.status-sim { background: rgba(99, 102, 241, 0.12); }
         .ordertable tbody tr.status-executed:hover,
         .ordertable tbody tr.status-rejected:hover,
         .ordertable tbody tr.status-sim:hover {
@@ -942,7 +951,7 @@
             min-height: 24px;
             padding: 4px 9px;
             border-radius: 999px;
-            color: #142118;
+            color: #0f172a;
             background: var(--sky);
             font-size: 11px;
             font-weight: 700;
@@ -987,9 +996,9 @@
             border: 1px solid var(--line);
             border-radius: 16px;
             background:
-                linear-gradient(#eef5ef 1px, transparent 1px),
-                linear-gradient(90deg, #eef5ef 1px, transparent 1px),
-                #ffffff;
+                linear-gradient(var(--line) 1px, transparent 1px),
+                linear-gradient(90deg, var(--line) 1px, transparent 1px),
+                var(--surface);
             background-size: 42px 42px;
             overflow: hidden;
         }
@@ -1071,7 +1080,7 @@
         .pnl-track {
             height: 18px;
             border-radius: 999px;
-            background: #edf3ed;
+            background: var(--surface-soft);
             overflow: hidden;
         }
 
@@ -1112,7 +1121,7 @@
         .position-alert.zcash {
             border-left-color: var(--mint-strong);
             background:
-                linear-gradient(90deg, rgba(201, 243, 221, 0.68), transparent 38%),
+                linear-gradient(90deg, rgba(16, 185, 129, 0.18), transparent 38%),
                 var(--surface);
         }
 
@@ -1153,6 +1162,7 @@
             display: grid;
             align-content: space-between;
             background: var(--butter);
+            color: #0f172a;
         }
 
         .month-day.profit {
@@ -1172,7 +1182,7 @@
         }
 
         .month-day.future {
-            background: #f3f6f3;
+            background: var(--surface-soft);
             color: var(--muted);
             opacity: 0.72;
         }
@@ -1192,7 +1202,7 @@
             display: flex;
             justify-content: space-between;
             gap: 8px;
-            color: var(--muted);
+            color: #374151;
             font-size: 12px;
             font-weight: 800;
         }
@@ -1227,7 +1237,7 @@
         .bar-track {
             height: 12px;
             border-radius: 999px;
-            background: #edf3ed;
+            background: var(--surface-soft);
             overflow: hidden;
         }
 
@@ -1312,11 +1322,13 @@
         .chat-message.user {
             justify-self: end;
             background: var(--sky);
+            color: #1e40af;
         }
 
         .chat-message.assistant {
             justify-self: start;
             background: var(--mint);
+            color: #065f46;
         }
 
         pre {
@@ -1331,7 +1343,7 @@
             padding: 12px;
             border: 1px solid var(--line);
             border-radius: 16px;
-            background: #fbfdfb;
+            background: var(--surface-soft);
         }
 
         .hidden { display: none; }
@@ -1775,12 +1787,21 @@
 
             const switchStrategy = async (stratId) => {
                 if(confirm(`Are you sure you want to switch to strategy: ${stratId}?`)) {
-                    await fetch("/strategies/switch", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ strategy_id: stratId })
-                    });
-                    setActiveStrategy(stratId);
+                    try {
+                        const response = await fetch("/strategies/switch", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ strategy_id: stratId })
+                        });
+                        if (!response.ok) {
+                            const data = await response.json().catch(() => ({}));
+                            throw new Error(data.detail || `HTTP ${response.status}`);
+                        }
+                        setActiveStrategy(stratId);
+                        addLog("system", `Switched to strategy ${stratId}`);
+                    } catch (error) {
+                        addLog("error", `Strategy switch failed`, { error: error.message });
+                    }
                 }
             };
 
@@ -2003,6 +2024,7 @@
                     client_order_id: delta.client_order_id || fill.client_order_id || "",
                     final_decision: result.final_decision || "",
                     broker_status: broker.status || "",
+                    execution_mode: result.execution_mode || "",
                     ai_decision: result.ai_decision || "",
                     ai_trace: result.ai_trace || null,
                     reject_reason: result.reject_reason || broker.reject_reason || "",
@@ -2199,9 +2221,9 @@
 
                         <nav>
                             <div className="nav-category">Trading</div>
-                            {["Overview", "Control", "Orders", "Live Paper"].map(item => (
+                            {["Overview", "Control", "Orders", "Live Paper", "Manual"].map(item => (
                                 <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)}>
-                                    <span className="nav-icon">{item === "Overview" ? "◈" : item === "Control" ? "⚡" : item === "Orders" ? "◎" : "◉"}</span>
+                                    <span className="nav-icon">{item === "Overview" ? "◈" : item === "Control" ? "⚡" : item === "Orders" ? "◎" : item === "Live Paper" ? "◉" : "➤"}</span>
                                     <span>{item}</span>
                                     <span>{tab === item ? "●" : ""}</span>
                                 </button>
@@ -2240,6 +2262,9 @@
                             <div>AI {ai.provider || "loading"}</div>
                             <div>Primary {walletAmount(primaryWallet)} USDT</div>
                             <div>Futures {walletAmount(futuresWallet)} USDT</div>
+                        </div>
+                        <div style={{marginTop: 12, display: "flex", flexDirection: "column", gap: 8, padding: "0 16px 16px"}}>
+                            <QuickTradingButtons request={request} addLog={addLog} />
                         </div>
                     </aside>
                     )}
@@ -2290,11 +2315,11 @@
                         </section>)}
 
                         {layoutConfig.panels.chart && (<section className={tab === "Charts" ? "" : "hidden"}>
-                            <ChartPanel chartState={chartState} setChartState={setChartState} chartRef={chartRef} chartContainerRef={chartContainerRef} orders={filteredOrders} />
+                            <ChartPanel chartState={chartState} setChartState={setChartState} chartRef={chartRef} chartContainerRef={chartContainerRef} orders={filteredOrders} addLog={addLog} request={request} />
                         </section>)}
 
                         {layoutConfig.panels.control && (<section className={tab === "Control" ? "" : "hidden"}>
-                            <Control signal={signal} setSignal={setSignal} submitSignal={submitSignal} loading={loading} addLog={addLog} setRaw={setRaw} request={request} />
+                            <Control signal={signal} setSignal={setSignal} submitSignal={submitSignal} loading={loading} addLog={addLog} setRaw={setRaw} request={request} broker={status} />
                         </section>)}
 
                         {layoutConfig.panels.aiLayer && (<section className={tab === "AI Layer" ? "" : "hidden"}>
@@ -2344,6 +2369,10 @@
                         {layoutConfig.panels.logs && (<section className={tab === "Logs" ? "" : "hidden"}>
                             <Logs logs={logs} raw={raw} status={{ health, status }} />
                         </section>)}
+
+                        <section className={tab === "Manual" ? "" : "hidden"}>
+                            <ManualPanel request={request} addLog={addLog} addOrders={addOrders} />
+                        </section>
 
                         <section className={tab === "Live Paper" ? "" : "hidden"}>
                             <LivePaperPanel request={request} addLog={addLog} />
@@ -2915,7 +2944,7 @@
         }
 
         function SignedMoney({ value }) {
-            const tone = value > 0 ? "var(--mint-strong)" : value < 0 ? "var(--peach-strong)" : "#142118";
+            const tone = value > 0 ? "var(--mint-strong)" : value < 0 ? "var(--peach-strong)" : "var(--ink)";
             const prefix = value > 0 ? "+" : value < 0 ? "-" : "";
             return <span style={{ color: tone }}>{prefix}${money(Math.abs(value))}</span>;
         }
@@ -2939,7 +2968,7 @@
             return (
                 <div className="pie-shell">
                     <svg className="pie" viewBox="0 0 42 42" aria-label="Asset value distribution">
-                        <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#edf3ed" strokeWidth="8"></circle>
+                        <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="var(--surface-soft)" strokeWidth="8"></circle>
                         {slices.map((slice, index) => {
                             const percent = (slice.value / total) * 100;
                             const dash = `${percent} ${100 - percent}`;
@@ -3020,14 +3049,19 @@
             );
         }
 
-        function Control({ signal, setSignal, submitSignal, loading, addLog, setRaw, request }) {
+        function Control({ signal, setSignal, submitSignal, loading, addLog, setRaw, request, broker }) {
             const [editMode, setEditMode] = React.useState("form");
             const [rawJson, setRawJson] = React.useState("");
             const [jsonError, setJsonError] = React.useState("");
             const [recommendations, setRecommendations] = React.useState({});
             const [hints, setHints] = React.useState({});
+            const [liveConfirmed, setLiveConfirmed] = React.useState(false);
             const update = (key, value) => setSignal(current => ({ ...current, [key]: value }));
             const quick = (patch) => setSignal(current => ({ ...current, ...patch, signal_id: `manual-${Date.now()}`, timestamp: new Date().toISOString() }));
+
+            const isLive = broker && broker.live_capable;
+            const needsConfirmation = broker && broker.requires_ui_confirmation;
+            const canSubmit = !isLive || !needsConfirmation || liveConfirmed;
 
             React.useEffect(() => {
                 if (!signal.symbol || !signal.timeframe) return;
@@ -3132,12 +3166,18 @@
                                 <label><span style={{ display: "flex", alignItems: "center" }}>Bar Confirmed{(hints.bar_confirmed || recommendations.bar_confirmed !== undefined) && <Tooltip hint={hints.bar_confirmed} recommended={String(recommendations.bar_confirmed)} />}</span><select value={String(signal.bar_confirmed)} onChange={e => update("bar_confirmed", e.target.value === "true")}><option value="true">true</option><option value="false">false</option></select></label>
                                 <label><span style={{ display: "flex", alignItems: "center" }}>Macro Event Risk{(hints.macro_event_risk || recommendations.macro_event_risk !== undefined) && <Tooltip hint={hints.macro_event_risk} recommended={String(recommendations.macro_event_risk)} />}</span><select value={String(signal.macro_event_risk)} onChange={e => update("macro_event_risk", e.target.value === "true")}><option value="false">false</option><option value="true">true</option></select></label>
                             </div>
+                            {isLive && needsConfirmation && (
+                                <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, padding: "8px 12px", background: "var(--rose-bg)", borderRadius: 6, border: "1px solid var(--danger)", color: "var(--danger)", fontWeight: 600 }}>
+                                    <input type="checkbox" checked={liveConfirmed} onChange={e => setLiveConfirmed(e.target.checked)} />
+                                    <span>I confirm this is a LIVE order — check before submitting</span>
+                                </label>
+                            )}
                             <div className="row-actions">
                                 <button type="button" onClick={() => quick(freshSignal())}>Sample Entry</button>
                                 <button type="button" className="warning" onClick={() => quick({ order_command: "HOLD" })}>Hold</button>
                                 <button type="button" className="danger" onClick={() => quick({ order_command: "KILL" })}>Kill</button>
                                 <button type="button" onClick={() => quick({ intent: "CLOSE", execution_quantity: "" })}>Close</button>
-                                <button type="submit" className="primary" disabled={loading}>Submit</button>
+                                <button type="submit" className="primary" disabled={loading || !canSubmit}>Submit</button>
                             </div>
                         </form>
                     ) : (
@@ -3155,12 +3195,18 @@
                                 />
                             </label>
                             {jsonError && <div style={{ color: "#d86545", fontSize: 13, marginBottom: 10 }}>⚠ {jsonError}</div>}
+                            {isLive && needsConfirmation && (
+                                <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, padding: "8px 12px", background: "var(--rose-bg)", borderRadius: 6, border: "1px solid var(--danger)", color: "var(--danger)", fontWeight: 600 }}>
+                                    <input type="checkbox" checked={liveConfirmed} onChange={e => setLiveConfirmed(e.target.checked)} />
+                                    <span>I confirm this is a LIVE order — check before submitting</span>
+                                </label>
+                            )}
                             <div className="row-actions">
                                 <button type="button" onClick={() => setRawJson(pretty(signal))}>Reset to Current</button>
                                 <button type="button" onClick={() => quick(freshSignal())}>Sample Entry</button>
                                 <button type="button" className="warning" onClick={() => { const patched = { ...signal, order_command: "HOLD" }; setSignal(patched); setRawJson(pretty(patched)); }}>Hold</button>
                                 <button type="button" className="danger" onClick={() => { const patched = { ...signal, order_command: "KILL" }; setSignal(patched); setRawJson(pretty(patched)); }}>Kill</button>
-                                <button type="submit" className="primary" disabled={loading}>Submit JSON</button>
+                                <button type="submit" className="primary" disabled={loading || !canSubmit}>Submit JSON</button>
                             </div>
                         </form>
                     )}
@@ -3198,15 +3244,15 @@
             );
         }
 
-        function ChartPanel({ chartState, setChartState, chartRef, chartContainerRef, orders }) {
+        function ChartPanel({ chartState, setChartState, chartRef, chartContainerRef, orders, addLog, request }) {
             const timeframes = ["1m", "5m", "15m", "30m", "1h", "4h", "1d"];
 
             async function loadChart() {
                 setChartState(s => ({ ...s, loading: true }));
                 try {
                     const [ohlcv, indicators] = await Promise.all([
-                        fetch(`/market/ohlcv?symbol=${chartState.symbol}&timeframe=${chartState.timeframe}&bars=300`).then(r => r.json()),
-                        fetch(`/market/indicators?symbol=${chartState.symbol}&timeframe=${chartState.timeframe}&bars=300`).then(r => r.json()),
+                        request(`/market/ohlcv?symbol=${chartState.symbol}&timeframe=${chartState.timeframe}&bars=300`),
+                        request(`/market/indicators?symbol=${chartState.symbol}&timeframe=${chartState.timeframe}&bars=300`),
                     ]);
                     setChartState(s => ({
                         ...s,
@@ -3216,6 +3262,7 @@
                     }));
                 } catch (err) {
                     setChartState(s => ({ ...s, loading: false }));
+                    addLog("error", "Chart data load failed", { error: err.message, symbol: chartState.symbol, timeframe: chartState.timeframe });
                 }
             }
 
@@ -3232,13 +3279,13 @@
                     chartRef.current = null;
                 }
                 const theme = getComputedStyle(document.documentElement);
-                const chartTextColor = theme.getPropertyValue("--ink").trim() || "#142118";
+                const chartTextColor = theme.getPropertyValue("--ink").trim() || "#f0f0f0";
                 const chartLineColor = theme.getPropertyValue("--line").trim() || "#dde8df";
-                const chartGridColor = theme.getPropertyValue("--surface-soft").trim() || "#fbfdfb";
+                const chartGridColor = theme.getPropertyValue("--surface-soft").trim() || "#1c1d20";
                 const chart = LightweightCharts.createChart(chartContainerRef.current, {
                     width: chartContainerRef.current.clientWidth,
                     height: 520,
-                    layout: { background: { color: "#ffffff" }, textColor: chartTextColor },
+                    layout: { background: { color: "#151618" }, textColor: chartTextColor },
                     grid: { vertLines: { color: chartGridColor }, horzLines: { color: chartGridColor } },
                     crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
                     rightPriceScale: { borderColor: chartLineColor },
@@ -4065,7 +4112,7 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                         onMouseLeave={() => setShow(false)}
                     >?</span>
                     {show && (
-                        <div style={{ position: "absolute", bottom: "calc(100% + 6px)", left: "50%", transform: "translateX(-50%)", width: 190, padding: 10, borderRadius: 12, background: "#ffffff", border: "1px solid var(--mint-strong)", boxShadow: "0 8px 24px rgba(30,54,38,0.12)", zIndex: 100, fontSize: 12, lineHeight: 1.4 }}>
+                        <div style={{ position: "absolute", bottom: "calc(100% + 6px)", left: "50%", transform: "translateX(-50%)", width: 190, padding: 10, borderRadius: 12, background: "var(--surface)", border: "1px solid var(--line)", boxShadow: "0 8px 24px rgba(0,0,0,0.35)", zIndex: 100, fontSize: 12, lineHeight: 1.4, color: "var(--ink)" }}>
                             {recommended !== undefined && recommended !== "" && <div><strong>Recommended:</strong> {String(recommended)}</div>}
                             {hint && <div style={{ marginTop: 4, color: "var(--muted)" }}><strong>Hint:</strong> {hint}</div>}
                         </div>
@@ -4112,6 +4159,7 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                                 <th>Side</th>
                                 <th>Intent</th>
                                 <th>Decision</th>
+                                {!compact && <th>Mode</th>}
                                 {!compact && <th>Client Order ID</th>}
                                 <th>Price</th>
                                 {!compact && <th>Size</th>}
@@ -4126,6 +4174,7 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                                     <td>{order.direction}</td>
                                     <td>{order.intent}</td>
                                     <td><span className={statusPill(order.final_decision)}>{order.final_decision || "UNKNOWN"}</span></td>
+                                    {!compact && <td><span className={`pill ${order.execution_mode === "live" ? "error" : "ok"}`}>{order.execution_mode || "simulation"}</span></td>}
                                     {!compact && <td className="mono">{order.client_order_id || "-"}</td>}
                                     <td>{order.entry_price}</td>
                                     {!compact && <td>{order.size_base || "-"}</td>}
@@ -4222,8 +4271,220 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                 <svg className="chart" viewBox="0 0 600 230" preserveAspectRatio="none">
                     <polyline points={coords} fill="none" stroke="#33a56b" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
                     <circle cx="20" cy="200" r="4" fill="#33a56b" />
-                    <text x="20" y="32" fill="#68786d" fontSize="14">Order execution trend</text>
+                    <text x="20" y="32" fill="var(--muted)" fontSize="14">Order execution trend</text>
                 </svg>
+            );
+        }
+
+        function QuickTradingButtons({ request, addLog }) {
+            const [loopStatus, setLoopStatus] = useState(null);
+            const [loading, setLoading] = useState(false);
+
+            async function refreshLoop() {
+                try {
+                    const data = await request("/loop/status");
+                    setLoopStatus(data);
+                } catch (e) {}
+            }
+
+            useEffect(() => {
+                refreshLoop();
+                const timer = setInterval(refreshLoop, 5000);
+                return () => clearInterval(timer);
+            }, []);
+
+            async function controlLoop(action) {
+                setLoading(true);
+                try {
+                    const data = await request("/loop/control", {
+                        method: "POST",
+                        body: JSON.stringify({ action })
+                    });
+                    addLog("system", `Trading ${action}`, data.status);
+                    await refreshLoop();
+                } catch (e) {
+                    addLog("error", `Trading ${action} failed`, { error: e.message });
+                } finally {
+                    setLoading(false);
+                }
+            }
+
+            const loopRunning = loopStatus?.is_running || false;
+            const loopPaused = loopStatus?.is_paused || false;
+
+            return (
+                <>
+                    <button
+                        className="primary"
+                        onClick={() => controlLoop("start")}
+                        disabled={loading || loopRunning}
+                        style={{ width: "100%" }}
+                    >
+                        ▶ Start Trading
+                    </button>
+                    <button
+                        className="danger"
+                        onClick={() => controlLoop("stop")}
+                        disabled={loading || !loopRunning}
+                        style={{ width: "100%" }}
+                    >
+                        ⏹ Stop Trading
+                    </button>
+                </>
+            );
+        }
+
+        function ManualPanel({ request, addLog, addOrders }) {
+            const [form, setForm] = useState({
+                symbol: "BTCUSDT",
+                direction: "LONG",
+                intent: "ENTRY",
+                quantity: "",
+                entry_price: "",
+                stop_price: "",
+                target_price: "",
+                account_mode: "FUTURES",
+                leverage: "",
+                order_command: "GO"
+            });
+            const [loading, setLoading] = useState(false);
+            const [result, setResult] = useState(null);
+
+            const update = (key, value) => setForm(current => ({ ...current, [key]: value }));
+
+            async function submitManualOrder(e) {
+                e.preventDefault();
+                setLoading(true);
+                setResult(null);
+                try {
+                    const payload = {
+                        symbol: form.symbol.toUpperCase(),
+                        direction: form.direction,
+                        intent: form.intent,
+                        quantity: parseFloat(form.quantity) || 0,
+                        entry_price: form.entry_price ? parseFloat(form.entry_price) : null,
+                        stop_price: form.stop_price ? parseFloat(form.stop_price) : null,
+                        target_price: form.target_price ? parseFloat(form.target_price) : null,
+                        account_mode: form.account_mode,
+                        leverage: form.leverage ? parseFloat(form.leverage) : null,
+                        order_command: form.order_command
+                    };
+                    const response = await request("/live/manual/order", {
+                        method: "POST",
+                        body: JSON.stringify(payload)
+                    });
+                    setResult(response);
+                    const order = {
+                        id: response.trade_id || response.signal_id,
+                        at: new Date().toISOString(),
+                        source: "manual_bypass",
+                        signal_id: response.signal_id,
+                        trade_id: response.trade_id || "",
+                        symbol: payload.symbol,
+                        direction: payload.direction,
+                        intent: payload.intent,
+                        account_mode: payload.account_mode,
+                        entry_price: payload.entry_price,
+                        size_base: "",
+                        value_usdt: "",
+                        risk_pct: "",
+                        client_order_id: "",
+                        final_decision: response.final_decision || "",
+                        broker_status: response.broker_result?.status || "",
+                        execution_mode: response.execution_mode || "",
+                        ai_decision: response.ai_decision || "",
+                        ai_trace: response.ai_trace || null,
+                        reject_reason: response.reject_reason || "",
+                        realized_pnl_quote: 0,
+                        raw: response
+                    };
+                    addOrders([order]);
+                    addLog("order", `Manual bypass ${payload.symbol} ${payload.direction} → ${response.final_decision}`, response);
+                } catch (error) {
+                    addLog("error", "Manual order failed", { error: error.message });
+                    setResult({ error: error.message, detail: error.response });
+                } finally {
+                    setLoading(false);
+                }
+            }
+
+            return (
+                <div className="grid">
+                    <div className="panel span-12">
+                        <div className="panel-title">Manual Bypass Order <span className="pill warn">Skip AI Review</span></div>
+                        <p style={{ color: "var(--muted)", fontSize: 13, marginTop: 4 }}>
+                            Direct-to-broker execution. Risk engine still active. AI review bypassed.
+                        </p>
+                    </div>
+
+                    <form className="panel span-6" onSubmit={submitManualOrder}>
+                        <div className="panel-title">Order Parameters</div>
+                        <div className="form-grid">
+                            <Field label="Symbol" value={form.symbol} onChange={v => update("symbol", v)} />
+                            <Select label="Direction" value={form.direction} options={["LONG", "SHORT"]} onChange={v => update("direction", v)} />
+                            <Select label="Intent" value={form.intent} options={["ENTRY", "CLOSE"]} onChange={v => update("intent", v)} />
+                            <Field label="Quantity" type="number" value={form.quantity} onChange={v => update("quantity", v)} />
+                            <Field label="Entry Price" type="number" value={form.entry_price} onChange={v => update("entry_price", v)} />
+                            <Field label="Stop Price" type="number" value={form.stop_price} onChange={v => update("stop_price", v)} />
+                            <Field label="Target Price" type="number" value={form.target_price} onChange={v => update("target_price", v)} />
+                            <Select label="Account" value={form.account_mode} options={["SPOT", "FUTURES"]} onChange={v => update("account_mode", v)} />
+                            <Field label="Leverage" type="number" value={form.leverage} onChange={v => update("leverage", v)} />
+                            <Select label="Command" value={form.order_command} options={["GO", "HOLD", "KILL"]} onChange={v => update("order_command", v)} />
+                        </div>
+                        <div className="row-actions">
+                            <button type="submit" className="primary" disabled={loading || !form.symbol || !form.quantity}>
+                                {loading ? "Sending…" : "Send Manual Order"}
+                            </button>
+                        </div>
+                    </form>
+
+                    <div className="panel span-6">
+                        <div className="panel-title">Result</div>
+                        {result ? (
+                            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                    <span style={{ color: "var(--muted)" }}>Decision</span>
+                                    <span className={`pill ${result.final_decision?.includes("PROCEED") ? "ok" : result.final_decision?.includes("REJECT") ? "bad" : "warn"}`}>
+                                        {result.final_decision || "—"}
+                                    </span>
+                                </div>
+                                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                    <span style={{ color: "var(--muted)" }}>Execution Mode</span>
+                                    <span className="pill info">{result.execution_mode || "—"}</span>
+                                </div>
+                                {result.reject_reason && (
+                                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                        <span style={{ color: "var(--muted)" }}>Reject Reason</span>
+                                        <span style={{ color: "var(--danger)", fontWeight: 600 }}>{result.reject_reason}</span>
+                                    </div>
+                                )}
+                                {result.trade_id && (
+                                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                        <span style={{ color: "var(--muted)" }}>Trade ID</span>
+                                        <span style={{ fontFamily: "monospace", fontSize: 12 }}>{result.trade_id}</span>
+                                    </div>
+                                )}
+                                {result.regime && (
+                                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                        <span style={{ color: "var(--muted)" }}>Regime</span>
+                                        <span className="pill">{result.regime.regime || "UNKNOWN"}</span>
+                                    </div>
+                                )}
+                                {result.error && (
+                                    <div style={{ color: "var(--danger)", padding: 12, background: "var(--rose-bg)", borderRadius: 6 }}>
+                                        {result.error}
+                                    </div>
+                                )}
+                                <details style={{ marginTop: 8 }}>
+                                    <summary style={{ color: "var(--muted)", fontSize: 12, cursor: "pointer" }}>Raw Response</summary>
+                                    <pre style={{ fontSize: 11, maxHeight: 300, overflow: "auto" }}>{JSON.stringify(result, null, 2)}</pre>
+                                </details>
+                            </div>
+                        ) : (
+                            <p className="text-muted">Submit an order to see the broker response.</p>
+                        )}
+                    </div>
+                </div>
             );
         }
 

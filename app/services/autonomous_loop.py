@@ -23,7 +23,7 @@ from app.core.config import (
 from app.schemas.m8_payload import M8Payload
 from app.services.signal_generator import BybitDataFeed, SignalGenerator
 from app.services.strategy_engine import strategy_registry
-from app.services.watchlist_manager import WatchlistManager, WatchlistItem
+from app.services.watchlist_manager import WatchlistManager, WatchlistItem, watchlist_manager
 from app.services.loop_health_monitor import LoopHealthMonitor
 from app.services.regime_engine import regime_engine_instance
 
@@ -50,7 +50,7 @@ class AutonomousTradingLoop:
         self.is_paused = False
         self.poll_interval = AUTONOMOUS_LOOP_POLL_INTERVAL_SECONDS
         self._task: asyncio.Task | None = None
-        self._watchlist = WatchlistManager()
+        self._watchlist = watchlist_manager
         self._health = LoopHealthMonitor()
         self._generator = SignalGenerator()
         self._last_poll_times: dict[str, datetime] = {}

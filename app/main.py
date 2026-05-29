@@ -50,6 +50,7 @@ app.include_router(news_impact_router, prefix="/news", tags=["news-impact"])
 app.include_router(autonomous_loop_router, prefix="/loop", tags=["autonomous_loop"])
 app.include_router(live_trading_router, prefix="/live", tags=["live_trading"])
 app.include_router(db_insight_router, prefix="/db", tags=["db-insight"])
+app.include_router(academy_router, tags=["academy"])
 app.include_router(ctrader_router, prefix="/ctrader", tags=["ctrader"])
 
 @app.get("/", include_in_schema=False)
@@ -129,11 +130,26 @@ async def _autonomous_loop_auto_start():
 _news_poll_task = None
 _autostart_task = None
 _price_poller_task = None
+_shadow_queue_task = None
+
+
+async def _shadow_queue_loop():
+    """Periodically process pending shadow-queue entries for rejected-trade learning."""
+    from app.services.shadow_queue import shadow_queue
+    while True:
+        try:
+            await asyncio.sleep(300)  # every 5 minutes
+            await shadow_queue.process_pending()
+            shadow_queue.purge_old(max_age_days=7)
+        except asyncio.CancelledError:
+            break
+        except Exception:
+            pass
 
 
 @app.on_event("startup")
 def startup_event():
-    global _heartbeat_task, _news_poll_task, _autostart_task, _price_poller_task
+    global _heartbeat_task, _news_poll_task, _autostart_task, _price_poller_task, _shadow_queue_task
     # Create DB tables
     from app.db import Base, engine
     Base.metadata.create_all(bind=engine)
@@ -143,11 +159,13 @@ def startup_event():
     # Start price poller for live position monitoring
     from app.services.price_poller import price_poller
     price_poller.start()
+    # Start shadow queue processor for rejected-trade feedback
+    _shadow_queue_task = asyncio.create_task(_shadow_queue_loop())
 
 
 @app.on_event("shutdown")
 def shutdown_event():
-    global _heartbeat_task, _news_poll_task, _autostart_task, _price_poller_task
+    global _heartbeat_task, _news_poll_task, _autostart_task, _price_poller_task, _shadow_queue_task
     from app.services.autonomous_loop import autonomous_loop_instance
     from app.services.price_poller import price_poller
     autonomous_loop_instance.stop()
@@ -158,3 +176,5 @@ def shutdown_event():
         _news_poll_task.cancel()
     if _autostart_task:
         _autostart_task.cancel()
+    if _shadow_queue_task:
+        _shadow_queue_task.cancel()

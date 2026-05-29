@@ -1,16 +1,4 @@
 {
-  "items": [
-    {
-      "symbol": "HYPERUSDT",
-      "timeframes": [
-        "1h"
-      ],
-      "active": true,
-      "strategy_id": null,
-      "min_confluence": null,
-      "max_position_size_usdt": null,
-      "added_at": "2026-05-28T15:34:16.737971+00:00"
-    }
-  ],
-  "updated_at": "2026-05-28T15:34:16.738212+00:00"
+  "items": [],
+  "updated_at": "2026-05-29T10:51:17.427443+00:00"
 }

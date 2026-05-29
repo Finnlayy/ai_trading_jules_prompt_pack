@@ -20,6 +20,7 @@ from app.core.config import (
 from app.services.ai_layer_memory import ai_layer_memory_instance
 from app.services.confidence_registry import confidence_registry
 from app.services.telegram_advisors import telegram_advisor_hub
+from app.services.ai_mock import MockAIReviewLayer
 
 
 @dataclass(frozen=True)
@@ -182,27 +183,21 @@ class KimiSwarmService:
 
         except Exception as e:
             print(f"AI provider error ({self.provider or AI_PROVIDER}): {e}")
-            return SignalReview(
-                schema_version="1.0",
-                signal_id=payload.signal_id,
-                decision=DecisionEnum.PROCEED_TO_SIMULATION,
-                confidence=0.5,
-                reason_codes=["API_FALLBACK"],
-                risk_flags=[self._provider_unavailable_flag()],
-                reject_reason=None,
-                requires_human_review=False,
-                audit_trace={
-                    **self._trace_base(),
-                    "fallback": True,
-                    "error_type": type(e).__name__,
-                    "final_summary": {
-                        "decision": DecisionEnum.PROCEED_TO_SIMULATION.value,
-                        "confidence": 0.5,
-                        "reason_codes": ["API_FALLBACK"],
-                        "risk_flags": [self._provider_unavailable_flag()],
-                    },
-                },
-            )
+            # Fallback to mock layer so scouts still run and feedback loops stay alive
+            mock = MockAIReviewLayer()
+            mock_review = mock.review_signal(payload)
+            # Inject API_FALLBACK flag for auditability
+            if "API_FALLBACK" not in mock_review.reason_codes:
+                mock_review.reason_codes.append("API_FALLBACK")
+            if self._provider_unavailable_flag() not in mock_review.risk_flags:
+                mock_review.risk_flags.append(self._provider_unavailable_flag())
+            mock_review.audit_trace = {
+                **(mock_review.audit_trace or {}),
+                "fallback": True,
+                "error_type": type(e).__name__,
+                "original_provider": self.provider or AI_PROVIDER,
+            }
+            return mock_review
 
     # ------------------------------------------------------------------
     # Scouts

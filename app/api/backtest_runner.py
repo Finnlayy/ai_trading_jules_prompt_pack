@@ -97,7 +97,9 @@ async def run_backtest(
             engine = ShadowPaperEngine()
 
         for payload, result in executed_payloads:
-            entry_idx = bar_index.get(getattr(payload, 'timestamp', 0))
+            signal_dt = datetime.fromisoformat(payload.timestamp.replace('Z', '+00:00'))
+            signal_ts = int(signal_dt.timestamp() * 1000)
+            entry_idx = min(range(len(raw_bars)), key=lambda i: abs(raw_bars[i].ts - signal_ts)) if raw_bars else None
             if entry_idx is not None and entry_idx < len(raw_bars) - 1:
                 try:
                     outcome = engine.simulate_trade(payload, raw_bars, entry_idx, max_holding_bars=50)

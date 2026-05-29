@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, AsyncGenerator, Dict, Set
@@ -38,6 +39,7 @@ class DashboardSSEManager:
         self._initialized = True
         self._queues: Dict[str, asyncio.Queue[SSEEvent]] = {}
         self._client_ids: Set[str] = set()
+        self._event_log: deque[SSEEvent] = deque(maxlen=1000)
 
     async def connect(self, client_id: str) -> AsyncGenerator[str, None]:
         """Yield SSE-formatted strings for a client."""
@@ -56,7 +58,8 @@ class DashboardSSEManager:
         self._client_ids.discard(client_id)
 
     def broadcast(self, event: SSEEvent) -> None:
-        """Send an event to all connected clients."""
+        """Send an event to all connected clients and persist to ring buffer."""
+        self._event_log.append(event)
         for client_id in list(self._client_ids):
             queue = self._queues.get(client_id)
             if queue is None:

@@ -149,6 +149,12 @@ class PositionRepository:
             pos.realized_pnl = realized_pnl
             pos.closed_at = datetime.now(timezone.utc)
             self.db.commit()
+            # Structural binding: sync in-memory cache so the tracker does not hold stale state
+            try:
+                from app.services.live_fill_tracker import live_fill_tracker
+                live_fill_tracker.record_exit(trade_id, exit_price)
+            except Exception:
+                pass
 
 
 # ---------------------------------------------------------------------------

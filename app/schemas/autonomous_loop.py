@@ -34,6 +34,7 @@ class HealthSnapshotSchema(BaseModel):
 
 class LoopStatusResponse(BaseModel):
     is_running: bool
+    is_paused: bool
     active_symbols: list[str]
     poll_interval_seconds: float
     loop_stats: dict[str, Any]

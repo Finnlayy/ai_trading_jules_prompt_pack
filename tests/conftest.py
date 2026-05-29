@@ -8,3 +8,14 @@ os.environ["PIONEX_RELAY_ENABLED"] = "false"
 os.environ["PIONEX_DIRECT_ENABLED"] = "false"
 os.environ["PIONEX_DIRECT_LIVE_TRADING_ENABLED"] = "false"
 os.environ["AI_FAILURE_POLICY"] = "reject_live"
+
+
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def mock_regime_check(monkeypatch):
+    """Patch regime check to always allow trades in tests."""
+    async def _mock_check_regime(payload):
+        return {"trade_allowed": True, "regime": "TEST", "reason": "Mocked for tests"}
+    monkeypatch.setattr("app.api.orchestrator._check_regime", _mock_check_regime)

@@ -32,7 +32,7 @@ async def test_journal_logger_async_write(tmp_journal):
         result={"test": "data"}
     )
 
-    await logger.log(entry)
+    logger.log(entry)
 
     assert os.path.exists(filepath)
     with open(filepath, "r") as f:

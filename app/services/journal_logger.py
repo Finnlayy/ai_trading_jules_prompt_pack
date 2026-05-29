@@ -54,8 +54,6 @@ class JournalLogger:
         with open(self.filepath, "a", encoding="utf-8") as f:
             f.write(entry.model_dump_json() + "\n")
 
-    async def log(self, entry: TradeJournalEntry):
-        await asyncio.to_thread(self._write_entry, entry)
     def log(self, entry: TradeJournalEntry):
         if self._should_rotate():
             self._rotate()
@@ -68,23 +66,26 @@ class JournalLogger:
             from app.db import SessionLocal
             from app.db.models import Trade
             db = SessionLocal()
+            # result is an optional dict; simulated_fill may hold size/fees
+            result = entry.result or {}
+            sim_fill = entry.simulated_fill or {}
+            size = result.get("size") or sim_fill.get("size") or sim_fill.get("size_base")
+            fees = result.get("fees") or sim_fill.get("fees") or 0.0
             db.add(Trade(
                 trade_id=entry.trade_id,
-                signal_id=entry.payload.get("signal_id") if hasattr(entry, "payload") else None,
                 symbol=entry.symbol,
                 direction=entry.direction,
-                strategy_id=entry.payload.get("strategy_id") if hasattr(entry, "payload") else None,
-                timeframe=entry.payload.get("timeframe") if hasattr(entry, "payload") else None,
+                timeframe=entry.timeframe,
                 entry_price=entry.entry_price,
-                stop_price=entry.payload.get("stop_price") if hasattr(entry, "payload") else None,
-                target_price=entry.payload.get("target_price") if hasattr(entry, "payload") else None,
-                size=entry.result.get("size") if hasattr(entry, "result") else None,
-                confluence_score=entry.payload.get("confluence_score") if hasattr(entry, "payload") else None,
-                crisis_score=entry.payload.get("crisis_score") if hasattr(entry, "payload") else None,
+                stop_price=entry.stop_price,
+                target_price=entry.target_price,
+                size=size,
+                confluence_score=entry.m8_score,
                 final_decision=entry.final_decision,
-                reject_reason=entry.result.get("reject_reason") if hasattr(entry, "result") else None,
-                pnl=entry.result.get("pnl") if hasattr(entry, "result") else None,
-                fees=entry.result.get("fees") if hasattr(entry, "result") else 0.0,
+                reject_reason=result.get("reject_reason"),
+                pnl=result.get("pnl"),
+                fees=fees,
+                ai_decision=entry.ai_decision,
             ))
             db.commit()
             db.close()

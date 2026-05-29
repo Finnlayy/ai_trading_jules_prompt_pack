@@ -13,25 +13,40 @@ class MockAIReviewLayer:
     SCOUT_NAMES = ["technical", "sentiment", "risk", "macro", "execution", "correlation"]
 
     def review_signal(self, payload: M8Payload) -> SignalReview:
-        # Simulate 4 scouts with deterministic heuristics
+        # Simulate scouts with deterministic heuristics
         scout_reports = {}
         for name in self.SCOUT_NAMES:
             method_name = f"_mock_{name}"
             if hasattr(self, method_name):
-                scout_reports[name] = getattr(self, method_name)(payload)
+                report = getattr(self, method_name)(payload)
             else:
-                scout_reports[name] = "Confidence: 0.75\nmocked report"
+                report = "Confidence: 0.75\nmocked report"
+            individual_decision = self._derive_scout_decision(name, payload)
+            scout_reports[name] = {
+                "report": report,
+                "decision": individual_decision,
+            }
 
+        # Orchestrator synthesizes majority vote
+        approvals = sum(1 for s in scout_reports.values() if s["decision"] == DecisionEnum.PROCEED_TO_SIMULATION.value)
+        rejections = len(scout_reports) - approvals
 
-        # Mock orchestrator synthesis
-        decision = DecisionEnum.PROCEED_TO_SIMULATION
-        confidence = 0.85
-        reason_codes = ["FAVORABLE_SETUP"]
-        risk_flags = []
-        requires_human_review = False
-        reject_reason = None
+        if rejections > approvals:
+            decision = DecisionEnum.REJECT
+            confidence = 0.85
+            reason_codes = ["SCOUT_MAJORITY_REJECT"]
+            risk_flags = []
+            requires_human_review = True
+            reject_reason = f"{rejections}/{len(scout_reports)} scouts rejected"
+        else:
+            decision = DecisionEnum.PROCEED_TO_SIMULATION
+            confidence = 0.85
+            reason_codes = ["FAVORABLE_SETUP"]
+            risk_flags = []
+            requires_human_review = False
+            reject_reason = None
 
-        # Crisis override
+        # Crisis override (orchestrator veto)
         if payload.crisis_score > 20.0:
             decision = DecisionEnum.REJECT
             confidence = 0.95
@@ -48,13 +63,13 @@ class MockAIReviewLayer:
             reason_codes.append("WEAK_CONFLUENCE_WARNING")
 
         # Record in confidence registry (outcome = None for now)
-        for scout_name, report in scout_reports.items():
-            conf = self._extract_confidence(report)
+        for scout_name, data in scout_reports.items():
+            conf = self._extract_confidence(data["report"])
             confidence_registry.record_scout_review(
                 symbol=payload.symbol,
                 scout_name=scout_name,
                 direction=payload.direction,
-                decision=decision.value,
+                decision=data["decision"],
                 confidence=conf,
                 was_correct=None,
             )
@@ -98,6 +113,22 @@ class MockAIReviewLayer:
                 },
             },
         )
+
+    def _derive_scout_decision(self, scout_name: str, payload: M8Payload) -> str:
+        """Derive individual scout decision from payload heuristics."""
+        if scout_name == "technical":
+            return DecisionEnum.PROCEED_TO_SIMULATION.value if payload.confluence_score >= 70 else DecisionEnum.REJECT.value
+        if scout_name == "sentiment":
+            return DecisionEnum.PROCEED_TO_SIMULATION.value if not payload.macro_event_risk else DecisionEnum.REJECT.value
+        if scout_name == "risk":
+            return DecisionEnum.PROCEED_TO_SIMULATION.value if payload.crisis_score <= 20 else DecisionEnum.REJECT.value
+        if scout_name == "macro":
+            return DecisionEnum.PROCEED_TO_SIMULATION.value if payload.market_regime in {"GREEN", "YELLOW"} else DecisionEnum.REJECT.value
+        if scout_name == "execution":
+            return DecisionEnum.PROCEED_TO_SIMULATION.value if payload.spread < 50 else DecisionEnum.REJECT.value
+        if scout_name == "correlation":
+            return DecisionEnum.PROCEED_TO_SIMULATION.value
+        return DecisionEnum.PROCEED_TO_SIMULATION.value
 
     def _mock_technical(self, payload: M8Payload) -> str:
         conf = min(1.0, payload.confluence_score / 100 + 0.1)

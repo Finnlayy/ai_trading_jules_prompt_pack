@@ -63,10 +63,13 @@ class SimulationBroker:
             # Simulated fee
             fee = entry_price_with_slippage * (self.fee_bps / 10000.0)
             
+            size = 10.0 / payload.entry_price if payload.entry_price > 0 else 0.01
             simulated_fill = {
                 "fill_price": entry_price_with_slippage,
                 "fee": fee,
-                "slippage": abs(entry_price_with_slippage - payload.entry_price)
+                "slippage": abs(entry_price_with_slippage - payload.entry_price),
+                "size": size,
+                "size_base": size,
             }
             
             # For MVP, mock result as open (unrealized). Real backtest would scan future bars.

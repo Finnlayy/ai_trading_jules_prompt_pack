@@ -13,10 +13,13 @@ from app.schemas.live_trading import (
     EmergencyStopRequest,
     EmergencyStopResponse,
     LiveTradingStatus,
+    ManualOrderRequest,
     PerformanceMetricsSchema,
     PerformanceResponse,
     PositionResponse,
 )
+from app.schemas.m8_payload import M8Payload
+from app.api.orchestrator import process_manual_signal
 from app.core.config import BROKER_MODE
 from app.services.live_fill_tracker import live_fill_tracker
 from app.services.performance_calculator import performance_calculator
@@ -229,6 +232,32 @@ async def live_stream(request: Request):
             dashboard_sse_manager.disconnect(client_id)
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+@router.post("/manual/order")
+async def manual_order(req: ManualOrderRequest):
+    """Direct manual order — bypasses AI review, keeps risk gates."""
+    payload = M8Payload(
+        signal_id=f"manual-{uuid.uuid4().hex[:12]}",
+        symbol=req.symbol.upper(),
+        timeframe="1h",
+        direction=req.direction,
+        intent=req.intent,
+        account_mode=req.account_mode,
+        timestamp=datetime.now(timezone.utc).isoformat(),
+        entry_price=req.entry_price or 0.0,
+        stop_price=req.stop_price or 0.0,
+        target_price=req.target_price or 0.0,
+        confluence_score=50.0,
+        crisis_score=10.0,
+        mc_dispersion=1.0,
+        spread=1.0,
+        leverage=req.leverage,
+        execution_quantity=req.quantity,
+        order_command=req.order_command,
+    )
+    result = await process_manual_signal(payload)
+    return result
 
 
 @router.post("/emergency-stop", response_model=EmergencyStopResponse)
