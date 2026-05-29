@@ -3367,6 +3367,9 @@
 
         function ChartPanel({ chartState, setChartState, chartRef, chartContainerRef, orders, addLog, request }) {
             const timeframes = ["1m", "5m", "15m", "30m", "1h", "4h", "1d"];
+            const candleSeriesRef = React.useRef(null);
+            const volumeSeriesRef = React.useRef(null);
+            const lineSeriesRefs = React.useRef([]);
 
             async function loadChart() {
                 setChartState(s => ({ ...s, loading: true }));
@@ -3393,11 +3396,14 @@
                 return () => clearInterval(timer);
             }, [chartState.symbol, chartState.timeframe]);
 
+            // Create chart instance only when symbol or timeframe changes
             React.useEffect(() => {
-                if (!chartContainerRef.current || !chartState.bars.length) return;
+                if (!chartContainerRef.current) return;
                 if (chartRef.current) {
                     chartRef.current.remove();
                     chartRef.current = null;
+                    candleSeriesRef.current = null;
+                    volumeSeriesRef.current = null;
                 }
                 const theme = getComputedStyle(document.documentElement);
                 const chartTextColor = theme.getPropertyValue("--ink").trim() || "#f0f0f0";
@@ -3414,51 +3420,14 @@
                 });
                 chartRef.current = chart;
 
-                const candleSeries = chart.addCandlestickSeries({
+                candleSeriesRef.current = chart.addCandlestickSeries({
                     upColor: "#33a56b", downColor: "#d86545", borderUpColor: "#33a56b", borderDownColor: "#d86545",
                     wickUpColor: "#33a56b", wickDownColor: "#d86545",
                 });
-                candleSeries.setData(chartState.bars);
 
-                const volumeSeries = chart.addHistogramSeries({
+                volumeSeriesRef.current = chart.addHistogramSeries({
                     color: "#33a56b", priceFormat: { type: "volume" }, priceScaleId: "", scaleMargins: { top: 0.8, bottom: 0 },
                 });
-                volumeSeries.setData(chartState.bars.map(b => ({
-                    time: b.time,
-                    value: b.volume,
-                    color: b.close >= b.open ? "rgba(51,165,107,0.35)" : "rgba(216,101,69,0.35)",
-                })));
-
-                // Overlay signal markers from indicators
-                const markers = [];
-                (chartState.indicators || []).forEach(ind => {
-                    if (ind.direction_hint === "LONG" && ind.confluence_score >= 11) {
-                        markers.push({ time: ind.time, position: "belowBar", color: "#33a56b", shape: "arrowUp", text: `C${Math.round(ind.confluence_score)}` });
-                    } else if (ind.direction_hint === "SHORT" && ind.confluence_score >= 11) {
-                        markers.push({ time: ind.time, position: "aboveBar", color: "#d86545", shape: "arrowDown", text: `C${Math.round(ind.confluence_score)}` });
-                    }
-                });
-                candleSeries.setMarkers(markers);
-
-                // Overlay executed orders as horizontal lines
-                const symbolOrders = orders.filter(o => o.symbol === chartState.symbol && o.entry_price);
-                symbolOrders.forEach(order => {
-                    const color = order.direction === "LONG" ? "#33a56b" : "#d86545";
-                    if (order.entry_price) {
-                        const line = chart.addLineSeries({ color, lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dotted, lastValueVisible: false, title: `${order.direction} Entry` });
-                        line.setData(chartState.bars.map(b => ({ time: b.time, value: order.entry_price })));
-                    }
-                    if (order.stop_price) {
-                        const line = chart.addLineSeries({ color: "#a87812", lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, lastValueVisible: false, title: "SL" });
-                        line.setData(chartState.bars.map(b => ({ time: b.time, value: order.stop_price })));
-                    }
-                    if (order.target_price) {
-                        const line = chart.addLineSeries({ color: "#367bb8", lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, lastValueVisible: false, title: "TP" });
-                        line.setData(chartState.bars.map(b => ({ time: b.time, value: order.target_price })));
-                    }
-                });
-
-                chart.timeScale().fitContent();
 
                 const handleResize = () => {
                     if (chartContainerRef.current && chartRef.current) {
@@ -3469,8 +3438,66 @@
                 return () => {
                     window.removeEventListener("resize", handleResize);
                     if (chartRef.current) { chartRef.current.remove(); chartRef.current = null; }
+                    candleSeriesRef.current = null;
+                    volumeSeriesRef.current = null;
                 };
-            }, [chartState.bars, chartState.indicators, orders, chartState.symbol]);
+            }, [chartState.symbol, chartState.timeframe]);
+
+            // Update data without full rebuild
+            React.useEffect(() => {
+                if (!chartRef.current || !chartState.bars.length) return;
+
+                if (candleSeriesRef.current) {
+                    candleSeriesRef.current.setData(chartState.bars);
+                }
+                if (volumeSeriesRef.current) {
+                    volumeSeriesRef.current.setData(chartState.bars.map(b => ({
+                        time: b.time,
+                        value: b.volume,
+                        color: b.close >= b.open ? "rgba(51,165,107,0.35)" : "rgba(216,101,69,0.35)",
+                    })));
+                }
+
+                // Overlay signal markers from indicators
+                const markers = [];
+                (chartState.indicators || []).forEach(ind => {
+                    if (ind.direction_hint === "LONG" && ind.confluence_score >= 11) {
+                        markers.push({ time: ind.time, position: "belowBar", color: "#33a56b", shape: "arrowUp", text: `C${Math.round(ind.confluence_score)}` });
+                    } else if (ind.direction_hint === "SHORT" && ind.confluence_score >= 11) {
+                        markers.push({ time: ind.time, position: "aboveBar", color: "#d86545", shape: "arrowDown", text: `C${Math.round(ind.confluence_score)}` });
+                    }
+                });
+                if (candleSeriesRef.current) {
+                    candleSeriesRef.current.setMarkers(markers);
+                }
+
+                // Remove old overlay lines and add new ones
+                lineSeriesRefs.current.forEach(line => {
+                    if (chartRef.current) chartRef.current.removeSeries(line);
+                });
+                lineSeriesRefs.current = [];
+                const symbolOrders = orders.filter(o => o.symbol === chartState.symbol && o.entry_price);
+                symbolOrders.forEach(order => {
+                    const color = order.direction === "LONG" ? "#33a56b" : "#d86545";
+                    if (order.entry_price && candleSeriesRef.current) {
+                        const line = chartRef.current.addLineSeries({ color, lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dotted, lastValueVisible: false, title: `${order.direction} Entry` });
+                        line.setData(chartState.bars.map(b => ({ time: b.time, value: order.entry_price })));
+                        lineSeriesRefs.current.push(line);
+                    }
+                    if (order.stop_price && candleSeriesRef.current) {
+                        const line = chartRef.current.addLineSeries({ color: "#a87812", lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, lastValueVisible: false, title: "SL" });
+                        line.setData(chartState.bars.map(b => ({ time: b.time, value: order.stop_price })));
+                        lineSeriesRefs.current.push(line);
+                    }
+                    if (order.target_price && candleSeriesRef.current) {
+                        const line = chartRef.current.addLineSeries({ color: "#367bb8", lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, lastValueVisible: false, title: "TP" });
+                        line.setData(chartState.bars.map(b => ({ time: b.time, value: order.target_price })));
+                        lineSeriesRefs.current.push(line);
+                    }
+                });
+
+                chartRef.current.timeScale().fitContent();
+            }, [chartState.bars, chartState.indicators, orders]);
 
             return (
                 <div className="grid">
