@@ -49,6 +49,25 @@ def test_kraken_paper_balance_endpoint_returns_numeric_usd():
     assert isinstance(data["equity"], (int, float))
 
 
+def test_paper_order_form_has_client_side_validation():
+    """GREEN: The order form prevents invalid inputs via HTML attributes
+    and button disabled states."""
+    resp = requests.get(f"{BASE_URL}/", timeout=30)
+    html = resp.text
+
+    # Volume input must have min="0" to prevent negative values
+    assert 'min="0"' in html or 'min={0}' in html or "min={\"0\"}" in html, \
+        "Volume input missing min=0 for negative-value prevention"
+
+    # Volume input should be type="number" with step
+    assert 'type="number"' in html, \
+        "Volume input is not a number field"
+
+    # The submit button must be disabled when volume <= 0 or symbol empty
+    assert "parseFloat(volume) <= 0" in html or "!symbol.trim()" in html, \
+        "Submit button missing disabled guard for invalid inputs"
+
+
 def test_balance_display_would_render_dollar_sign():
     """The panel renders balance as '$XX.XX' — verify the template string exists."""
     resp = requests.get(f"{BASE_URL}/", timeout=30)
