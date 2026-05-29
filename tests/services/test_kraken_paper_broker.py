@@ -29,6 +29,29 @@ def test_paper_order_simulates_slippage():
     assert 10 < result["fill_price"] < 500, f"Unrealistic fill price: {result['fill_price']}"
 
 
+def test_reconciliation_corrects_balance_drift():
+    """A reconciliation run must detect and correct balance drift."""
+    broker = KrakenPaperBroker(config=KrakenPaperConfig())
+    broker.reset_paper_account(new_balance=100.0)
+
+    # Place an order
+    broker.place_paper_order("SOLUSD", "BUY", 0.5, "market")
+
+    # Simulate external drift by manually adjusting balance
+    from app.db import SessionLocal
+    from app.db.models import PaperBalance
+    with SessionLocal() as db:
+        bal = db.query(PaperBalance).filter(PaperBalance.currency == "USD").first()
+        bal.balance += 999  # artificial drift
+        db.commit()
+
+    # Reconcile should detect and fix the drift
+    result = broker.reconcile_ledger()
+    assert result["checked"] is True
+    assert result.get("drift_detected") is True
+    assert result.get("corrected") is True
+
+
 def test_paper_order_simulates_latency():
     """Execution must take measurable time (live ticker fetch + DB write)."""
     broker = KrakenPaperBroker(config=KrakenPaperConfig())

@@ -119,6 +119,45 @@ class KrakenPaperBroker(BaseBroker):
     def get_broker_mode(self) -> str:
         return "paper"
 
+    def reconcile_ledger(self) -> dict[str, Any]:
+        """Reconcile paper balance against trade history to detect drift."""
+        with self._db() as db:
+            bal = self._get_balance(db)
+            trades = db.query(PaperTrade).all()
+
+            # Compute expected balance from initial balance and trade history
+            expected = self.config.initial_balance_usd
+            for t in trades:
+                if t.status == "open" and t.direction == "LONG":
+                    expected -= (t.entry_price * t.volume + t.fee)
+                elif t.status == "closed":
+                    if t.direction == "LONG":
+                        expected -= t.fee
+                        if t.pnl:
+                            expected += t.pnl
+                    elif t.direction == "SHORT":
+                        expected -= t.fee
+                        if t.pnl:
+                            expected += t.pnl
+
+            drift = round(bal.balance - expected, 8)
+            drift_detected = abs(drift) > 0.0001
+
+            if drift_detected:
+                bal.balance = round(expected, 8)
+                bal.equity = round(expected, 8)
+                db.commit()
+
+            return {
+                "checked": True,
+                "drift_detected": drift_detected,
+                "drift_amount": drift,
+                "corrected": drift_detected,
+                "expected_balance": round(expected, 8),
+                "actual_balance": round(bal.balance, 8),
+                "trade_count": len(trades),
+            }
+
     def health(self) -> dict[str, Any]:
         h = super().health()
         h["initial_balance"] = self.config.initial_balance_usd
