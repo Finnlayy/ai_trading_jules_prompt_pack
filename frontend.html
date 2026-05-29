@@ -2107,7 +2107,6 @@
 
             async function runBacktest(event) {
                 event.preventDefault();
-                setLoading(true);
                 try {
                     const body = {
                         symbol: backtest.symbol,
@@ -2125,8 +2124,6 @@
                 } catch (error) {
                     addLog("error", "Backtest failed", { error: error.message });
                     throw error;
-                } finally {
-                    setLoading(false);
                 }
             }
 
@@ -2377,7 +2374,7 @@
                         </section>
 
                         <section className={tab === "Backtest" ? "" : "hidden"}>
-                            <Backtest backtest={backtest} setBacktest={setBacktest} runBacktest={runBacktest} loading={loading} orders={filteredOrders} />
+                            <Backtest backtest={backtest} setBacktest={setBacktest} runBacktest={runBacktest} orders={filteredOrders} />
                         </section>
 
                         {layoutConfig.panels.news && (<section className={tab === "News" ? "" : "hidden"}>
@@ -3300,17 +3297,23 @@
             );
         }
 
-        function Backtest({ backtest, setBacktest, runBacktest, loading, orders }) {
+        function Backtest({ backtest, setBacktest, runBacktest, orders }) {
             const update = (key, value) => setBacktest(current => ({ ...current, [key]: value }));
             const [showModal, setShowModal] = React.useState(false);
             const [backtestResult, setBacktestResult] = React.useState(null);
+            const [running, setRunning] = React.useState(false);
 
             async function handleSubmit(e) {
                 e.preventDefault();
-                const result = await runBacktest(e);
-                if (result && result.status === "success") {
-                    setBacktestResult(result);
-                    setShowModal(true);
+                setRunning(true);
+                try {
+                    const result = await runBacktest(e);
+                    if (result && result.status === "success") {
+                        setBacktestResult(result);
+                        setShowModal(true);
+                    }
+                } finally {
+                    setRunning(false);
                 }
             }
 
@@ -3326,7 +3329,7 @@
                             <Field label="Min Confluence" type="number" value={backtest.min_confluence} onChange={v => update("min_confluence", v)} />
                         </div>
                         <div className="row-actions">
-                            <button type="submit" className="primary" disabled={loading}>Run Backtest</button>
+                            <button type="submit" className="primary" disabled={running}>Run Backtest</button>
                         </div>
                     </form>
                     <div className="panel span-8">
