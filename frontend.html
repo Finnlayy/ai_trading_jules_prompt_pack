@@ -1635,7 +1635,8 @@
                     news: "News Feed",
                     agents: "Agent Registry",
                     training: "Training Academy",
-                    strategies: "Strategy Health"
+                    strategies: "Strategy Health",
+                    ctrader: "cTrader Panel"
                 };
                 return map[key] || key;
             };
@@ -1656,7 +1657,8 @@
                             news: true,
                         agents: true,
                         training: true,
-                        strategies: true
+                        strategies: true,
+                        ctrader: true
                         }
                     });
                 }
@@ -1805,6 +1807,18 @@
             const [availableStrategies, setAvailableStrategies] = useState([]);
             const [activeStrategy, setActiveStrategy] = useState("unknown");
             const [strategyHealth, setStrategyHealth] = useState([]);
+            const [ctraderState, setCtraderState] = useState({
+                connected: false,
+                status: null,
+                balance: null,
+                symbols: {},
+                orderResult: null,
+                selectedSymbol: "EURUSD",
+                direction: "BUY",
+                lots: 0.01,
+                stopLoss: "",
+                takeProfit: ""
+            });
 
             useEffect(() => {
                 const fetchStrats = async () => {
@@ -1925,6 +1939,52 @@
                     addLog("error", "Failed to load strategy health", { error: e.message });
                 } finally {
                     setLoadingKey("strategies", false);
+                }
+            }
+
+            async function fetchCTraderStatus() {
+                try {
+                    const data = await request("/ctrader/status");
+                    setCtraderState(prev => ({ ...prev, status: data, connected: data.connection?.connected || false }));
+                } catch (e) {
+                    setCtraderState(prev => ({ ...prev, connected: false, status: null }));
+                }
+            }
+
+            async function fetchCTraderBalance() {
+                try {
+                    const data = await request("/ctrader/balance");
+                    setCtraderState(prev => ({ ...prev, balance: data }));
+                } catch (e) {}
+            }
+
+            async function fetchCTraderSymbols() {
+                try {
+                    const data = await request("/ctrader/symbols");
+                    setCtraderState(prev => ({ ...prev, symbols: data.symbols || {} }));
+                } catch (e) {}
+            }
+
+            async function placeCTraderOrder() {
+                setLoadingKey("ctrader", true);
+                try {
+                    const data = await request("/ctrader/order", {
+                        method: "POST",
+                        body: JSON.stringify({
+                            symbol: ctraderState.selectedSymbol,
+                            direction: ctraderState.direction,
+                            volume_lots: parseFloat(ctraderState.lots) || 0.01,
+                            stop_loss: ctraderState.stopLoss ? parseFloat(ctraderState.stopLoss) : null,
+                            take_profit: ctraderState.takeProfit ? parseFloat(ctraderState.takeProfit) : null,
+                        })
+                    });
+                    setCtraderState(prev => ({ ...prev, orderResult: data }));
+                    addLog("system", `cTrader order: ${data.status}`, { symbol: ctraderState.selectedSymbol, direction: ctraderState.direction, lots: ctraderState.lots });
+                } catch (e) {
+                    addLog("error", "cTrader order failed", { error: e.message, response: e.response });
+                    setCtraderState(prev => ({ ...prev, orderResult: { status: "ERROR", error: e.message } }));
+                } finally {
+                    setLoadingKey("ctrader", false);
                 }
             }
 
@@ -2273,9 +2333,9 @@
                                 </button>
                             ))}
                             <div className="nav-category">Analyse</div>
-                            {["Wallets", "Charts", "Backtest", "Confidence", "Strategies", "AI Layer"].map(item => (
+                            {["Wallets", "Charts", "Backtest", "Confidence", "Strategies", "cTrader", "AI Layer"].map(item => (
                                 <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)} data-label={item}>
-                                    <span className="nav-icon">{item === "Wallets" ? "👛" : item === "Charts" ? "📊" : item === "Backtest" ? "🧪" : item === "Confidence" ? "🎯" : item === "Strategies" ? "🎚️" : "🤖"}</span>
+                                    <span className="nav-icon">{item === "Wallets" ? "👛" : item === "Charts" ? "📊" : item === "Backtest" ? "🧪" : item === "Confidence" ? "🎯" : item === "Strategies" ? "🎚️" : item === "cTrader" ? "📉" : "🤖"}</span>
                                     <span>{tab === item ? "●" : ""}</span>
                                 </button>
                             ))}
@@ -2388,7 +2448,11 @@
 
                         {layoutConfig.panels.strategies && (<section className={tab === "Strategies" ? "" : "hidden"}>
                             <StrategyHealthPanel strategies={strategyHealth} loading={loading.strategies} onRefresh={fetchStrategyHealth} switchStrategy={switchStrategy} />
-                        </section>)
+                        </section>)}
+
+                        {layoutConfig.panels.ctrader && (<section className={tab === "cTrader" ? "" : "hidden"}>
+                            <CTraderPanel state={ctraderState} setState={setCtraderState} onPlaceOrder={placeCTraderOrder} loading={loading} />
+                        </section>)}
 
                         <section className={tab === "Orders" ? "" : "hidden"}>
                             <Orders orders={filteredOrders} />
@@ -3869,6 +3933,213 @@
             );
         }
 
+        function CTraderPanel({ state, setState, onPlaceOrder, loading }) {
+            const status = state.status || {};
+            const conn = status.connection || {};
+            const balance = state.balance || {};
+            const symbols = Object.keys(state.symbols || {});
+            const result = state.orderResult;
+
+            const isConnected = conn.connected || false;
+            const isReady = status.ready || false;
+            const isLive = status.live_capable || false;
+
+            return (
+                <div className="grid">
+                    <div className="panel span-12">
+                        <div className="panel-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span>cTrader <span className={`pill ${isConnected ? "ok" : "error"}`}>{isConnected ? "Connected" : "Disconnected"}</span></span>
+                            <div style={{ display: "flex", gap: 8 }}>
+                                <button onClick={() => { fetchCTraderStatus(); fetchCTraderBalance(); fetchCTraderSymbols(); }} disabled={loading.ctrader}>Refresh</button>
+                            </div>
+                        </div>
+                        <div className="kpi-caption">Direct cTrader Open API integration. Broker mode: <b>{status.mode || "unknown"}</b> · Live capable: <b>{isLive ? "Yes" : "No"}</b></div>
+                    </div>
+
+                    {/* Connection Status */}
+                    <div className="panel span-4">
+                        <div className="panel-title">Connection</div>
+                        <div style={{ display: "grid", gap: 8, fontSize: 13 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                <span style={{ color: "var(--muted)" }}>Socket</span>
+                                <span style={{ color: isConnected ? "var(--emerald)" : "var(--rose)", fontWeight: 600 }}>{isConnected ? "✓ Connected" : "✕ Disconnected"}</span>
+                            </div>
+                            <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                <span style={{ color: "var(--muted)" }}>App Auth</span>
+                                <span style={{ color: conn.app_authenticated ? "var(--emerald)" : "var(--rose)", fontWeight: 600 }}>{conn.app_authenticated ? "✓" : "✕"}</span>
+                            </div>
+                            <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                <span style={{ color: "var(--muted)" }}>Account Auth</span>
+                                <span style={{ color: conn.account_authenticated ? "var(--emerald)" : "var(--rose)", fontWeight: 600 }}>{conn.account_authenticated ? "✓" : "✕"}</span>
+                            </div>
+                            <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                <span style={{ color: "var(--muted)" }}>Host</span>
+                                <span>{conn.host || "—"}</span>
+                            </div>
+                            <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                <span style={{ color: "var(--muted)" }}>Port</span>
+                                <span>{conn.port || "—"}</span>
+                            </div>
+                            {conn.last_error && (
+                                <div style={{ color: "var(--rose)", fontSize: 12, marginTop: 4 }}>Last error: {conn.last_error}</div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Balance */}
+                    <div className="panel span-4">
+                        <div className="panel-title">Account</div>
+                        {balance.status === "ok" ? (
+                            <div style={{ display: "grid", gap: 8, fontSize: 13 }}>
+                                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                    <span style={{ color: "var(--muted)" }}>Balance</span>
+                                    <span style={{ fontWeight: 700 }}>{balance.balance?.toFixed?.(2) || balance.balance}</span>
+                                </div>
+                                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                    <span style={{ color: "var(--muted)" }}>Equity</span>
+                                    <span>{balance.equity?.toFixed?.(2) || balance.equity}</span>
+                                </div>
+                                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                    <span style={{ color: "var(--muted)" }}>Used Margin</span>
+                                    <span>{balance.used_margin?.toFixed?.(2) || balance.used_margin}</span>
+                                </div>
+                                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                    <span style={{ color: "var(--muted)" }}>Free Margin</span>
+                                    <span style={{ color: "var(--emerald)", fontWeight: 600 }}>{balance.free_margin?.toFixed?.(2) || balance.free_margin}</span>
+                                </div>
+                            </div>
+                        ) : (
+                            <div style={{ color: "var(--muted)", fontSize: 13 }}>{balance.error || "No balance data"}</div>
+                        )}
+                    </div>
+
+                    {/* Quick Stats */}
+                    <div className="panel span-4">
+                        <div className="panel-title">Symbols</div>
+                        <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 8 }}>{symbols.length} cached</div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 4, maxHeight: 120, overflowY: "auto" }}>
+                            {symbols.slice(0, 30).map(sym => (
+                                <span key={sym} className="pill" style={{ fontSize: 11 }}>{sym}</span>
+                            ))}
+                            {symbols.length === 0 && <span style={{ color: "var(--muted)" }}>No symbols cached</span>}
+                        </div>
+                    </div>
+
+                    {/* Order Form */}
+                    <div className="panel span-6">
+                        <div className="panel-title">Place Market Order</div>
+                        <div style={{ display: "grid", gap: 12 }}>
+                            <div>
+                                <label style={{ fontSize: 12, color: "var(--muted)", display: "block", marginBottom: 4 }}>Symbol</label>
+                                <select
+                                    value={state.selectedSymbol}
+                                    onChange={e => setState(prev => ({ ...prev, selectedSymbol: e.target.value }))}
+                                    disabled={loading.ctrader}
+                                >
+                                    {symbols.length > 0 ? symbols.map(sym => <option key={sym} value={sym}>{sym}</option>) : <option value="EURUSD">EURUSD</option>}
+                                </select>
+                            </div>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                                <div>
+                                    <label style={{ fontSize: 12, color: "var(--muted)", display: "block", marginBottom: 4 }}>Direction</label>
+                                    <div style={{ display: "flex", gap: 8 }}>
+                                        <button
+                                            type="button"
+                                            className={state.direction === "BUY" ? "primary" : "secondary"}
+                                            onClick={() => setState(prev => ({ ...prev, direction: "BUY" }))}
+                                            disabled={loading.ctrader}
+                                            style={{ flex: 1 }}
+                                        >Buy</button>
+                                        <button
+                                            type="button"
+                                            className={state.direction === "SELL" ? "danger" : "secondary"}
+                                            onClick={() => setState(prev => ({ ...prev, direction: "SELL" }))}
+                                            disabled={loading.ctrader}
+                                            style={{ flex: 1 }}
+                                        >Sell</button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: 12, color: "var(--muted)", display: "block", marginBottom: 4 }}>Lots</label>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        min="0.01"
+                                        max="100"
+                                        value={state.lots}
+                                        onChange={e => setState(prev => ({ ...prev, lots: e.target.value }))}
+                                        disabled={loading.ctrader}
+                                    />
+                                </div>
+                            </div>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                                <div>
+                                    <label style={{ fontSize: 12, color: "var(--muted)", display: "block", marginBottom: 4 }}>Stop Loss (optional)</label>
+                                    <input
+                                        type="number"
+                                        step="0.0001"
+                                        placeholder="Price level"
+                                        value={state.stopLoss}
+                                        onChange={e => setState(prev => ({ ...prev, stopLoss: e.target.value }))}
+                                        disabled={loading.ctrader}
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: 12, color: "var(--muted)", display: "block", marginBottom: 4 }}>Take Profit (optional)</label>
+                                    <input
+                                        type="number"
+                                        step="0.0001"
+                                        placeholder="Price level"
+                                        value={state.takeProfit}
+                                        onChange={e => setState(prev => ({ ...prev, takeProfit: e.target.value }))}
+                                        disabled={loading.ctrader}
+                                    />
+                                </div>
+                            </div>
+                            <button
+                                className="primary"
+                                onClick={onPlaceOrder}
+                                disabled={loading.ctrader || !isReady}
+                                style={{ marginTop: 4 }}
+                            >
+                                {loading.ctrader ? "Placing…" : isLive ? "🚀 Place Live Order" : "📋 Place Dry-Run Order"}
+                            </button>
+                            {!isReady && (
+                                <div style={{ fontSize: 12, color: "var(--rose)" }}>cTrader not ready. Check credentials and connection.</div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Order Result */}
+                    <div className="panel span-6">
+                        <div className="panel-title">Last Order Result</div>
+                        {result ? (
+                            <div style={{ fontSize: 13 }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                                    <span style={{ color: "var(--muted)" }}>Status</span>
+                                    <span className={`pill ${result.status === "SENT_TO_CTRADER" || result.status === "EXECUTED" ? "ok" : result.status === "DRY_RUN" ? "info" : "error"}`}>{result.status}</span>
+                                </div>
+                                {result.symbol && <div style={{ marginBottom: 4 }}><span style={{ color: "var(--muted)" }}>Symbol:</span> <b>{result.symbol}</b></div>}
+                                {result.direction && <div style={{ marginBottom: 4 }}><span style={{ color: "var(--muted)" }}>Direction:</span> <b>{result.direction}</b></div>}
+                                {result.volume_lots !== null && result.volume_lots !== undefined && <div style={{ marginBottom: 4 }}><span style={{ color: "var(--muted)" }}>Lots:</span> <b>{result.volume_lots}</b></div>}
+                                {result.order_id && <div style={{ marginBottom: 4 }}><span style={{ color: "var(--muted)" }}>Order ID:</span> <b>{result.order_id}</b></div>}
+                                {result.position_id && <div style={{ marginBottom: 4 }}><span style={{ color: "var(--muted)" }}>Position ID:</span> <b>{result.position_id}</b></div>}
+                                {result.margin_checked && (
+                                    <div style={{ marginBottom: 4 }}>
+                                        <span style={{ color: "var(--muted)" }}>Margin:</span>{" "}
+                                        <b>{result.free_margin_before?.toFixed?.(2) || result.free_margin_before}</b> free, ~<b>{result.estimated_margin_required?.toFixed?.(2) || result.estimated_margin_required}</b> required
+                                    </div>
+                                )}
+                                {result.error && <div style={{ color: "var(--rose)", marginTop: 8 }}>Error: {result.error}</div>}
+                            </div>
+                        ) : (
+                            <div style={{ color: "var(--muted)", fontSize: 13 }}>No orders placed yet.</div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
         function StrategyHealthPanel({ strategies, loading, onRefresh, switchStrategy }) {
             function formatAge(seconds) {
                 if (seconds === null || seconds === undefined) return "—";
@@ -4972,11 +5243,16 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                 refreshPositions();
                 refreshPerformance();
                 fetchStrategyHealth();
+                fetchCTraderStatus();
+                fetchCTraderBalance();
+                fetchCTraderSymbols();
                 const timer = setInterval(() => {
                     refreshLoop();
                     refreshPositions();
                     refreshPerformance();
                     fetchStrategyHealth();
+                    fetchCTraderStatus();
+                    fetchCTraderBalance();
                 }, 10000);
                 connectSSE();
                 return () => clearInterval(timer);

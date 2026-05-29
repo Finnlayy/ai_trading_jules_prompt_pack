@@ -66,3 +66,28 @@ class CTraderBalanceResponse(BaseModel):
 class CTraderActionResponse(BaseModel):
     status: str = "ok"
     health: CTraderStatusResponse
+
+
+class CTraderOrderRequest(BaseModel):
+    symbol: str = Field(..., min_length=1, max_length=20)
+    direction: str = Field(..., pattern=r"^(BUY|SELL|LONG|SHORT)$")
+    volume_lots: float = Field(..., gt=0, le=1000)
+    stop_loss: float | None = None
+    take_profit: float | None = None
+    label: str | None = Field(default=None, max_length=50)
+    comment: str | None = Field(default="MetricFlow cTrader", max_length=100)
+
+
+class CTraderOrderResponse(BaseModel):
+    status: str
+    order_id: str | None = None
+    position_id: str | None = None
+    execution_price: float | None = None
+    symbol: str | None = None
+    direction: str | None = None
+    volume_lots: float | None = None
+    fill_price: float | None = None
+    error: str | None = None
+    margin_checked: bool = False
+    free_margin_before: float | None = None
+    estimated_margin_required: float | None = None

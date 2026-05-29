@@ -10,6 +10,8 @@ from fastapi import APIRouter, HTTPException
 from app.schemas.ctrader import (
     CTraderActionResponse,
     CTraderBalanceResponse,
+    CTraderOrderRequest,
+    CTraderOrderResponse,
     CTraderPositionsResponse,
     CTraderStatusResponse,
     CTraderSymbolsResponse,
@@ -108,3 +110,20 @@ async def disconnect_ctrader():
     broker = _get_ctrader_broker()
     health = await asyncio.to_thread(broker.disconnect)
     return CTraderActionResponse(health=health)
+
+
+@router.post("/order", response_model=CTraderOrderResponse)
+async def place_ctrader_order(req: CTraderOrderRequest):
+    """Place a direct market order through cTrader Open API."""
+    broker = _get_ctrader_broker()
+    result = await asyncio.to_thread(
+        broker.place_direct_order,
+        symbol=req.symbol,
+        direction=req.direction,
+        volume_lots=req.volume_lots,
+        stop_loss=req.stop_loss,
+        take_profit=req.take_profit,
+        label=req.label,
+        comment=req.comment or "MetricFlow cTrader",
+    )
+    return CTraderOrderResponse(**result)

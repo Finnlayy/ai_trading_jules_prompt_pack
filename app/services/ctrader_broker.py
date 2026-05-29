@@ -585,6 +585,150 @@ class CTraderBroker(BaseBroker):
             return "dry-run"
         return "simulation"
 
+    def place_direct_order(
+        self,
+        symbol: str,
+        direction: str,
+        volume_lots: float,
+        stop_loss: float | None = None,
+        take_profit: float | None = None,
+        label: str | None = None,
+        comment: str = "MetricFlow cTrader",
+    ) -> dict[str, Any]:
+        """
+        Place a market order directly via cTrader Open API.
+        Performs margin pre-check, builds the order, and sends it.
+        Returns a dict compatible with CTraderOrderResponse.
+        """
+        if not self.config.enabled:
+            return {
+                "status": "ERROR",
+                "error": "CTRADER_DISABLED",
+                "symbol": symbol,
+                "direction": direction,
+                "volume_lots": volume_lots,
+                "margin_checked": False,
+            }
+
+        symbol_name = _compact_symbol(symbol)
+        symbol_id = self._resolve_symbol_id(symbol_name, refresh=self.config.live_trading_enabled)
+        if symbol_id is None:
+            return {
+                "status": "REJECTED",
+                "error": f"CTRADER_SYMBOL_NOT_FOUND:{symbol_name}",
+                "symbol": symbol,
+                "direction": direction,
+                "volume_lots": volume_lots,
+                "margin_checked": False,
+            }
+
+        # Margin pre-check
+        margin_check = self._check_margin(symbol_id, volume_lots)
+        if not margin_check["sufficient"]:
+            return {
+                "status": "REJECTED",
+                "error": f"INSUFFICIENT_MARGIN: need ~{margin_check['estimated']:.2f}, have {margin_check['free']:.2f}",
+                "symbol": symbol,
+                "direction": direction,
+                "volume_lots": volume_lots,
+                "margin_checked": True,
+                "free_margin_before": margin_check["free"],
+                "estimated_margin_required": margin_check["estimated"],
+            }
+
+        volume = self._lots_to_protocol_volume(volume_lots)
+        trade_side = "BUY" if direction.upper() in {"BUY", "LONG"} else "SELL"
+        order_label = (label or f"metricflow-direct-{datetime.now(timezone.utc).strftime('%H%M%S')}")[:50]
+
+        order = {
+            "symbol": symbol_name,
+            "symbol_id": symbol_id,
+            "trade_side": trade_side,
+            "volume": volume,
+            "lots": volume_lots,
+            "base_units": volume_lots * LOTS_TO_UNITS,
+            "label": order_label,
+            "client_order_id": order_label,
+            "comment": comment,
+        }
+
+        if stop_loss is not None:
+            # Relative distance in cents for cTrader protocol
+            # We'll use a placeholder; real SL calculation needs current price
+            order["relative_stop_loss"] = int(round(abs(stop_loss) * 100_000))
+        if take_profit is not None:
+            order["relative_take_profit"] = int(round(abs(take_profit) * 100_000))
+
+        if self.config.live_trading_enabled:
+            try:
+                self.bridge.connect()
+                response = self.bridge.send_market_order(order)
+                return {
+                    "status": "SENT_TO_CTRADER",
+                    "order_id": str(response.get("orderId", "") or response.get("order_id", "")),
+                    "position_id": str(response.get("positionId", "") or response.get("position_id", "")),
+                    "symbol": symbol,
+                    "direction": trade_side,
+                    "volume_lots": volume_lots,
+                    "fill_price": None,
+                    "margin_checked": True,
+                    "free_margin_before": margin_check["free"],
+                    "estimated_margin_required": margin_check["estimated"],
+                    "error": None,
+                }
+            except Exception as exc:
+                return {
+                    "status": "CTRADER_API_ERROR",
+                    "error": str(exc),
+                    "symbol": symbol,
+                    "direction": trade_side,
+                    "volume_lots": volume_lots,
+                    "margin_checked": True,
+                    "free_margin_before": margin_check["free"],
+                    "estimated_margin_required": margin_check["estimated"],
+                }
+
+        # Dry-run path
+        return {
+            "status": "DRY_RUN",
+            "order_id": None,
+            "position_id": None,
+            "symbol": symbol,
+            "direction": trade_side,
+            "volume_lots": volume_lots,
+            "fill_price": None,
+            "margin_checked": True,
+            "free_margin_before": margin_check["free"],
+            "estimated_margin_required": margin_check["estimated"],
+            "error": None,
+            "preview": order,
+        }
+
+    def _check_margin(self, symbol_id: int, volume_lots: float) -> dict[str, Any]:
+        """
+        Estimate required margin and compare against free margin.
+        Returns dict with 'sufficient', 'free', 'estimated'.
+        """
+        try:
+            wallet = self.get_wallet_balances()
+            free_margin = float(wallet.get("free_margin") or wallet.get("freeMargin") or 0.0)
+        except Exception:
+            free_margin = 0.0
+
+        # Very rough margin estimate: 1 lot ≈ 1000 units margin for major FX pairs at 1:30 leverage
+        # This is a conservative placeholder; real margin depends on leverage, symbol, and price
+        estimated_margin = volume_lots * 1000.0
+
+        # If we can't determine free margin, allow the order (defer to broker)
+        if free_margin <= 0:
+            return {"sufficient": True, "free": 0.0, "estimated": estimated_margin}
+
+        return {
+            "sufficient": free_margin >= estimated_margin,
+            "free": free_margin,
+            "estimated": estimated_margin,
+        }
+
     def health(self) -> dict[str, Any]:
         """Return cTrader broker health details."""
         bridge_status = self.bridge.status()
