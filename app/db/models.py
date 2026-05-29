@@ -39,6 +39,55 @@ class Trade(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
+class PaperTrade(Base):
+    """Paper trading journal — simulated trades against live Kraken prices."""
+    __tablename__ = "paper_trades"
+
+    id = Column(Integer, primary_key=True, index=True)
+    trade_id = Column(String, unique=True, index=True, nullable=False)
+    symbol = Column(String, index=True, nullable=False)
+    direction = Column(String, nullable=False)  # LONG / SHORT
+    order_type = Column(String, default="market")
+    volume = Column(Float, nullable=False)
+    entry_price = Column(Float, nullable=False)
+    exit_price = Column(Float, nullable=True)
+    fee = Column(Float, default=0.0)
+    pnl = Column(Float, nullable=True)
+    status = Column(String, default="open")  # open, closed, cancelled
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    closed_at = Column(DateTime(timezone=True), nullable=True)
+
+
+class PaperPosition(Base):
+    """Aggregated paper position per symbol."""
+    __tablename__ = "paper_positions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    symbol = Column(String, index=True, nullable=False)
+    direction = Column(String, nullable=False)  # LONG / SHORT
+    volume = Column(Float, nullable=False)
+    avg_entry_price = Column(Float, nullable=False)
+    unrealized_pnl = Column(Float, default=0.0)
+    realized_pnl = Column(Float, default=0.0)
+    fee_paid = Column(Float, default=0.0)
+    status = Column(String, default="open")  # open, closed
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    closed_at = Column(DateTime(timezone=True), nullable=True)
+
+
+class PaperBalance(Base):
+    """Virtual balance for paper trading."""
+    __tablename__ = "paper_balance"
+
+    id = Column(Integer, primary_key=True, index=True)
+    currency = Column(String, nullable=False, default="USD")
+    balance = Column(Float, nullable=False, default=0.0)
+    reserved = Column(Float, default=0.0)
+    equity = Column(Float, default=0.0)
+    total_pnl = Column(Float, default=0.0)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
 class Position(Base):
     """Open or closed position tracked in real-time."""
     __tablename__ = "positions"

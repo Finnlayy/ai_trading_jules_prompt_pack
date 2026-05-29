@@ -26,6 +26,7 @@ from app.api.academy import router as academy_router
 from app.api.ctrader import router as ctrader_router
 from app.api.ctrader_fix import router as ctrader_fix_router
 from app.api.kraken import router as kraken_router
+from app.api.kraken_paper import router as kraken_paper_router
 
 app = FastAPI(
     title="Agent-Reflex Hybrid Trader API",
@@ -56,6 +57,7 @@ app.include_router(academy_router, tags=["academy"])
 app.include_router(ctrader_router, prefix="/ctrader", tags=["ctrader"])
 app.include_router(ctrader_fix_router, prefix="/ctrader-fix", tags=["ctrader-fix"])
 app.include_router(kraken_router, tags=["kraken"])
+app.include_router(kraken_paper_router, tags=["kraken-paper"])
 
 @app.get("/", include_in_schema=False)
 def frontend():
