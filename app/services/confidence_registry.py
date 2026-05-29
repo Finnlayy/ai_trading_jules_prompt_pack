@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from datetime import datetime, timezone
 from dataclasses import dataclass, field, asdict
 from typing import Any
 from app.schemas.academy import CareerEntry
@@ -377,6 +378,77 @@ class ConfidenceRegistry:
 
     def dump(self) -> dict[str, Any]:
         return {sym: self._serialize_symbol(stats) for sym, stats in self._symbols.items()}
+
+    def get_aggregate_stats(self) -> dict[str, Any]:
+        """
+        Aggregate performance metrics across all tracked symbols.
+        Returns totals, weighted averages, and recency info.
+        """
+        import math
+
+        total_signals = 0
+        total_wins = 0
+        total_losses = 0
+        total_pnl_pct = 0.0
+        total_trades = 0
+        last_updated_ts: float | None = None
+
+        for stats in self._symbols.values():
+            total_signals += stats.total_signals
+            for d in (stats.long_stats, stats.short_stats):
+                total_wins += d.wins
+                total_losses += d.losses
+                total_pnl_pct += d.total_pnl_pct
+                total_trades += d.total
+            if stats.last_updated:
+                try:
+                    ts = datetime.fromisoformat(stats.last_updated).timestamp()
+                    if last_updated_ts is None or ts > last_updated_ts:
+                        last_updated_ts = ts
+                except (ValueError, TypeError):
+                    pass
+
+        win_rate = total_wins / total_trades if total_trades > 0 else 0.0
+        avg_pnl_pct = total_pnl_pct / total_trades if total_trades > 0 else 0.0
+
+        # Profit factor proxy using avg pnl per win/loss
+        gross_wins = max(avg_pnl_pct * total_wins, 0.01) if total_wins > 0 else 0.0
+        gross_losses = max(abs(avg_pnl_pct) * total_losses, 0.01) if total_losses > 0 else 0.0
+        profit_factor = gross_wins / gross_losses if gross_losses > 0 else 0.0
+
+        # Max drawdown proxy: worst total_pnl_pct among symbols
+        max_dd = 0.0
+        for stats in self._symbols.values():
+            for d in (stats.long_stats, stats.short_stats):
+                if d.total > 0 and d.total_pnl_pct < max_dd:
+                    max_dd = d.total_pnl_pct
+
+        now = datetime.now(timezone.utc).timestamp()
+        last_signal_age_seconds = now - last_updated_ts if last_updated_ts else None
+
+        # Composite health score (0-100)
+        # 40% win_rate, 20% profit_factor, 20% recency, 20% volume
+        score = 0.0
+        if total_trades > 0:
+            score += min(win_rate * 100, 40)  # win_rate * 100, capped at 40
+            score += min(profit_factor * 20, 20)  # pf * 20, capped at 20
+            if last_signal_age_seconds is not None:
+                recency_score = max(0, 20 - (last_signal_age_seconds / 3600))  # decays over 20h
+                score += recency_score
+            volume_score = min(total_trades / 10, 20)  # 20 trades = full score
+            score += volume_score
+        score = round(max(0.0, min(100.0, score)), 1)
+
+        return {
+            "total_signals": total_signals,
+            "total_trades": total_trades,
+            "win_rate": round(win_rate, 4),
+            "profit_factor": round(profit_factor, 2),
+            "avg_pnl_pct": round(avg_pnl_pct, 4),
+            "max_drawdown_pct": round(abs(max_dd), 4),
+            "last_signal_age_seconds": last_signal_age_seconds,
+            "health_score": score,
+        }
 
 
 # Singleton instance
