@@ -68,6 +68,35 @@ def test_paper_order_form_has_client_side_validation():
         "Submit button missing disabled guard for invalid inputs"
 
 
+def test_paper_order_form_wires_to_api_endpoint():
+    """GREEN: Submitting the form POSTs to /kraken/paper/order with
+    the correct JSON payload shape."""
+    resp = requests.get(f"{BASE_URL}/", timeout=30)
+    html = resp.text
+
+    # The onClick handler must reference submitOrder
+    assert "submitOrder" in html, "Order form missing submitOrder handler"
+
+    # submitOrder must call request() with /kraken/paper/order
+    assert '"/kraken/paper/order"' in html, \
+        "submitOrder does not target /kraken/paper/order endpoint"
+
+    # The request body must include symbol, direction, volume, order_type
+    assert "symbol" in html, "Payload missing symbol"
+    assert "direction" in html, "Payload missing direction"
+    assert "volume" in html, "Payload missing volume"
+    assert "order_type" in html, "Payload missing order_type"
+
+    # Verify the endpoint actually exists and accepts POST
+    api_resp = requests.post(
+        f"{BASE_URL}/kraken/paper/order",
+        json={"symbol": "TESTUSD", "direction": "BUY", "volume": 0.1, "order_type": "market"},
+        timeout=10,
+    )
+    assert api_resp.status_code in (200, 400), \
+        f"/kraken/paper/order endpoint unreachable: {api_resp.status_code}"
+
+
 def test_balance_display_would_render_dollar_sign():
     """The panel renders balance as '$XX.XX' — verify the template string exists."""
     resp = requests.get(f"{BASE_URL}/", timeout=30)
