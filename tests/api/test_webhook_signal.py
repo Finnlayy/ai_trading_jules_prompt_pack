@@ -70,6 +70,22 @@ def test_webhook_signal_missing_signature():
     assert response.status_code == 401
 
 
+def test_signal_sanity_check_rejects_negative_price():
+    """Negative prices must be rejected as invalid."""
+    payload = json.dumps({"symbol": "SOLUSD", "direction": "BUY", "price": -10})
+    headers = {"X-Signature": _sign(payload), "Content-Type": "application/json"}
+    response = client.post("/api/webhook/signal", data=payload, headers=headers)
+    assert response.status_code == 422
+
+
+def test_signal_sanity_check_rejects_insane_volume():
+    """Volume above 1000 is rejected as suspicious."""
+    payload = json.dumps({"symbol": "SOLUSD", "direction": "BUY", "volume": 9999})
+    headers = {"X-Signature": _sign(payload), "Content-Type": "application/json"}
+    response = client.post("/api/webhook/signal", data=payload, headers=headers)
+    assert response.status_code == 422
+
+
 def test_webhook_signal_invalid_schema():
     """POST with missing required fields returns 422."""
     payload = json.dumps({"symbol": "SOLUSD"})  # missing direction
