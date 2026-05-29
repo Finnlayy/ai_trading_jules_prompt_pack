@@ -6,6 +6,7 @@ before queuing signals for the autonomous loop or paper broker.
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import hmac
 import logging
@@ -19,6 +20,9 @@ from app.schemas.webhook_signal import WebhookSignalPayload, WebhookSignalRespon
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/webhook", tags=["webhook"])
+
+# In-memory queue for pending signals (async-safe)
+signal_queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
 
 
 def _verify_signature(body: bytes, signature: str | None, secret: str) -> bool:
@@ -62,10 +66,18 @@ async def receive_signal(
     signal_id = f"sig_{uuid.uuid4().hex[:12]}"
     logger.info("Received signal %s: %s %s", signal_id, payload.direction, payload.symbol)
 
-    # TODO (Epic 2.2+): Queue signal for autonomous loop or paper broker
+    # Queue signal for async execution loop
+    signal_queue.put_nowait({
+        "signal_id": signal_id,
+        "symbol": payload.symbol,
+        "direction": payload.direction,
+        "price": payload.price,
+        "volume": payload.volume,
+        "timestamp": payload.timestamp,
+    })
 
     return {
         "status": "ok",
         "signal_id": signal_id,
-        "message": f"Signal accepted: {payload.direction} {payload.symbol}",
+        "message": f"Signal queued: {payload.direction} {payload.symbol}",
     }

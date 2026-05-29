@@ -86,6 +86,25 @@ def test_signal_sanity_check_rejects_insane_volume():
     assert response.status_code == 422
 
 
+def test_signal_queued_for_async_execution():
+    """After accepting a signal, it must be queued for the async loop."""
+    payload = json.dumps({
+        "symbol": "SOLUSD",
+        "direction": "BUY",
+        "price": 81.50,
+        "volume": 0.5,
+    })
+    headers = {"X-Signature": _sign(payload), "Content-Type": "application/json"}
+    response = client.post("/api/webhook/signal", data=payload, headers=headers)
+    assert response.status_code == 200
+
+    data = response.json()
+    assert data["status"] == "ok"
+    # The signal must be findable in the pending queue
+    assert "queued" in data.get("message", "").lower(), \
+        "Signal was not queued for async execution"
+
+
 def test_webhook_signal_invalid_schema():
     """POST with missing required fields returns 422."""
     payload = json.dumps({"symbol": "SOLUSD"})  # missing direction
