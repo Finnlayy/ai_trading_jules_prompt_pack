@@ -2326,9 +2326,9 @@
 
                         <nav>
                             <div className="nav-category">Trading</div>
-                            {["Overview", "Control", "Orders", "Live Paper", "Manual"].map(item => (
+                            {["Overview", "Control", "Orders", "Live Paper", "Kraken Paper", "Manual"].map(item => (
                                 <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)} data-label={item}>
-                                    <span className="nav-icon">{item === "Overview" ? "🏠" : item === "Control" ? "🎮" : item === "Orders" ? "📋" : item === "Live Paper" ? "📈" : "✋"}</span>
+                                    <span className="nav-icon">{item === "Overview" ? "🏠" : item === "Control" ? "🎮" : item === "Orders" ? "📋" : item === "Live Paper" ? "📈" : item === "Kraken Paper" ? "🦑" : "✋"}</span>
                                     <span>{tab === item ? "●" : ""}</span>
                                 </button>
                             ))}
@@ -2486,6 +2486,10 @@
                         <section className={tab === "Live Paper" ? "" : "hidden"}>
                             <LivePaperPanel request={request} addLog={addLog} />
                         </section>
+
+                        <section className={tab === "Kraken Paper" ? "" : "hidden"}>
+                            <KrakenPaperPanel request={request} addLog={addLog} />
+                        </section>
                     </div>
 
                     {layoutConfig.showSettings && (
@@ -2498,6 +2502,49 @@
         }
 
 
+
+        function KrakenPaperPanel({ request, addLog }) {
+            const [balance, setBalance] = useState(null);
+            const [loading, setLoading] = useState(false);
+
+            async function refreshBalance() {
+                setLoading(true);
+                try {
+                    const data = await request("/kraken/paper/balance");
+                    setBalance(data);
+                } catch (e) {
+                    addLog("error", "Kraken paper balance failed", { error: e.message });
+                } finally {
+                    setLoading(false);
+                }
+            }
+
+            useEffect(() => {
+                refreshBalance();
+                const timer = setInterval(refreshBalance, 5000);
+                return () => clearInterval(timer);
+            }, []);
+
+            return (
+                <div className="grid" data-testid="kraken-paper-panel">
+                    <div className="panel span-6">
+                        <div className="panel-title">Paper Balance</div>
+                        <div style={{ padding: "20px", fontSize: 24 }} data-testid="paper-balance-usd">
+                            {balance ? `$${balance.balance?.toFixed(2) || "0.00"}` : (loading ? "Loading…" : "—")}
+                        </div>
+                        <div style={{ padding: "0 20px 20px", color: "var(--muted)", fontSize: 13 }}>
+                            {balance && (
+                                <div>
+                                    Equity: <b>${balance.equity?.toFixed(2)}</b> ·
+                                    P&L: <b style={{ color: (balance.total_pnl || 0) >= 0 ? "var(--ok)" : "var(--danger)" }}>${balance.total_pnl?.toFixed(4)}</b> ·
+                                    Positions: <b>{balance.open_positions}</b>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
 
         function TrainingPanel({ curriculum, abTests, academyStatus, onToggleLoop, onTriggerDrill }) {
             return (
