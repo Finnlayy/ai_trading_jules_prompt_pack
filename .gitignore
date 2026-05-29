@@ -11,3 +11,14 @@ logs/
 .env*
 !.env.example
 ctrader_symbols.json
+
+# Node / Playwright
+node_modules/
+package-lock.json
+package.json
+playwright.config.js
+
+# Runtime data
+app/data/trading.db
+data/*.json
+data/*.jsonl

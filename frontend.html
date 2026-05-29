@@ -687,6 +687,35 @@
             letter-spacing: 0.08em;
         }
 
+        /* Tooltip for icon-only nav buttons */
+        nav button[data-label] {
+            position: relative;
+            overflow: visible;
+        }
+        nav button[data-label]::after {
+            content: attr(data-label);
+            position: absolute;
+            left: calc(100% + 6px);
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--surface);
+            color: var(--text);
+            padding: 4px 10px;
+            border-radius: var(--radius);
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.18s ease, transform 0.18s ease;
+            border: 1px solid var(--line);
+            box-shadow: var(--shadow);
+            z-index: 100;
+        }
+        nav button[data-label]:hover::after {
+            opacity: 1;
+        }
+
         /* Panel enhancements */
         .panel {
             transition: box-shadow 0.2s ease, transform 0.15s ease;
@@ -2080,20 +2109,22 @@
                 event.preventDefault();
                 setLoading(true);
                 try {
-                    const params = new URLSearchParams({
+                    const body = {
                         symbol: backtest.symbol,
                         timeframe: backtest.timeframe,
-                        bars: String(backtest.bars),
-                        max_signals: String(backtest.max_signals)
-                    });
-                    if (backtest.min_confluence !== "") params.set("min_confluence", String(backtest.min_confluence));
-                    const response = await request(`/backtest/run?${params.toString()}`, { method: "POST" });
+                        bars: Number(backtest.bars) || 500,
+                        max_signals: Number(backtest.max_signals) || 50,
+                        min_confluence: backtest.min_confluence !== "" ? Number(backtest.min_confluence) : null,
+                    };
+                    const response = await request("/backtest/run", { method: "POST", body: JSON.stringify(body) });
                     const backtestOrders = ordersFromBacktest(response);
                     addOrders(backtestOrders);
-                                        addLog("backtest", `${response.signals_generated || 0} signals on ${response.symbol}`, response);
+                    addLog("backtest", `${response.signals_generated || 0} signals on ${response.symbol}`, response);
                     await refreshStatus();
+                    return response;
                 } catch (error) {
-                                        addLog("error", "Backtest failed", { error: error.message });
+                    addLog("error", "Backtest failed", { error: error.message });
+                    throw error;
                 } finally {
                     setLoading(false);
                 }
@@ -2222,33 +2253,29 @@
                         <nav>
                             <div className="nav-category">Trading</div>
                             {["Overview", "Control", "Orders", "Live Paper", "Manual"].map(item => (
-                                <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)}>
-                                    <span className="nav-icon">{item === "Overview" ? "◈" : item === "Control" ? "⚡" : item === "Orders" ? "◎" : item === "Live Paper" ? "◉" : "➤"}</span>
-                                    <span>{item}</span>
+                                <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)} data-label={item}>
+                                    <span className="nav-icon">{item === "Overview" ? "🏠" : item === "Control" ? "🎮" : item === "Orders" ? "📋" : item === "Live Paper" ? "📈" : "✋"}</span>
                                     <span>{tab === item ? "●" : ""}</span>
                                 </button>
                             ))}
                             <div className="nav-category">Analyse</div>
                             {["Wallets", "Charts", "Backtest", "Confidence", "AI Layer"].map(item => (
-                                <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)}>
-                                    <span className="nav-icon">{item === "Wallets" ? "◉" : item === "Charts" ? "◊" : item === "Backtest" ? "◐" : item === "Confidence" ? "◈" : "✦"}</span>
-                                    <span>{item}</span>
+                                <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)} data-label={item}>
+                                    <span className="nav-icon">{item === "Wallets" ? "👛" : item === "Charts" ? "📊" : item === "Backtest" ? "🧪" : item === "Confidence" ? "🎯" : "🤖"}</span>
                                     <span>{tab === item ? "●" : ""}</span>
                                 </button>
                             ))}
                             <div className="nav-category">System</div>
                             {["News", "Logs"].map(item => (
-                                <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)}>
-                                    <span className="nav-icon">{item === "News" ? "◉" : "◊"}</span>
-                                    <span>{item}</span>
+                                <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)} data-label={item}>
+                                    <span className="nav-icon">{item === "News" ? "📰" : "📜"}</span>
                                     <span>{tab === item ? "●" : ""}</span>
                                 </button>
                             ))}
                             <div className="nav-category">Academy</div>
                             {["Agents", "Training"].map(item => (
-                                <button type="button" key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)}>
-                                    <span className="nav-icon">{item === "Agents" ? "◉" : "◊"}</span>
-                                    <span>{item}</span>
+                                <button type="button" key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)} data-label={item}>
+                                    <span className="nav-icon">{item === "Agents" ? "👤" : "🎓"}</span>
                                     <span>{tab === item ? "●" : ""}</span>
                                 </button>
                             ))}
@@ -2541,13 +2568,54 @@
                 return map[archetype] || "\u{1F916}";
             };
 
+            const getStatus = (agent) => {
+                if (agent.current_streak > 2) return "In trade";
+                if (agent.total_calls > 0) return "In training";
+                return "Waiting for setup";
+            };
+
             return (
                 <div className="grid">
                     <div className="card span-12">
-                        <h2>Agent Registry & Leaderboard</h2>
-                        <div style={{display: 'flex', gap: '20px', flexWrap: 'wrap', marginTop: '16px'}}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <h2>Agent Registry & Leaderboard</h2>
+                            <button id="deploy-new-agent-btn" className="primary">Deploy New Agent</button>
+                        </div>
+                        <div className="agent-quick-list" style={{ display: "flex", gap: "12px", flexWrap: "wrap", marginTop: "16px", marginBottom: "16px", minHeight: "32px" }}>
+                            {agents.length === 0 && (
+                                <div className="pill ok" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                    <span>🤖</span>
+                                    <span>Default Agent</span>
+                                    <span style={{ fontSize: "11px", opacity: 0.8 }}>Waiting for setup</span>
+                                </div>
+                            )}
                             {agents.map(agent => (
-                                <div key={agent.name} style={{
+                                <div key={agent.name} className="pill ok" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                    <span>{getAvatar(agent.archetype)}</span>
+                                    <span>{agent.name}</span>
+                                    <span style={{ fontSize: "11px", opacity: 0.8 }}>{getStatus(agent)}</span>
+                                </div>
+                            ))}
+                        </div>
+                        <div style={{display: 'flex', gap: '20px', flexWrap: 'wrap', marginTop: '16px'}}>
+                            {agents.length === 0 && (
+                                <div className="agent-profile-card" style={{
+                                    border: '1px solid var(--line)',
+                                    padding: '16px',
+                                    borderRadius: '8px',
+                                    width: '300px',
+                                    background: 'var(--surface)'
+                                }}>
+                                    <h3 style={{margin:0}}>Default Agent</h3>
+                                    <p className="kpi-caption">No agents registered yet. Deploy your first agent to begin.</p>
+                                    <div style={{display: 'flex', justifyContent: 'space-between', marginTop: '12px'}}>
+                                        <div><div style={{fontSize: '11px', color: 'var(--muted)'}}>CONFIDENCE</div><div style={{fontSize: '16px', fontWeight: 'bold'}}>50%</div></div>
+                                        <div><div style={{fontSize: '11px', color: 'var(--muted)'}}>EXPERIENCE</div><div style={{fontSize: '16px', fontWeight: 'bold'}}>Novice</div></div>
+                                    </div>
+                                </div>
+                            )}
+                            {agents.map(agent => (
+                                <div key={agent.name} className="agent-profile-card" style={{
                                     border: '1px solid var(--line)',
                                     padding: '16px',
                                     borderRadius: '8px',
@@ -2581,6 +2649,19 @@
                                             <div style={{fontSize: '18px', fontWeight: 'bold', color: 'var(--emerald)'}}>
                                                 {agent.current_streak}
                                             </div>
+                                        </div>
+                                    </div>
+
+                                    <div style={{display: 'flex', justifyContent: 'space-between', marginTop: '12px'}}>
+                                        <div>
+                                            <div style={{fontSize: '11px', color: 'var(--muted)'}}>CONFIDENCE</div>
+                                            <div style={{fontSize: '16px', fontWeight: 'bold'}}>
+                                                {((agent.confidence_level || 0.5) * 100).toFixed(0)}%
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div style={{fontSize: '11px', color: 'var(--muted)'}}>EXPERIENCE</div>
+                                            <div style={{fontSize: '16px', fontWeight: 'bold'}}>{agent.experience_level || "Novice"}</div>
                                         </div>
                                     </div>
 
@@ -3221,12 +3302,24 @@
 
         function Backtest({ backtest, setBacktest, runBacktest, loading, orders }) {
             const update = (key, value) => setBacktest(current => ({ ...current, [key]: value }));
+            const [showModal, setShowModal] = React.useState(false);
+            const [backtestResult, setBacktestResult] = React.useState(null);
+
+            async function handleSubmit(e) {
+                e.preventDefault();
+                const result = await runBacktest(e);
+                if (result && result.status === "success") {
+                    setBacktestResult(result);
+                    setShowModal(true);
+                }
+            }
+
             return (
                 <div className="grid">
-                    <form className="panel span-4" onSubmit={runBacktest}>
+                    <form className="panel span-4" onSubmit={handleSubmit}>
                         <div className="panel-title">Backtest Parameters</div>
                         <div className="form-grid">
-                            <Field label="Symbol" value={backtest.symbol} onChange={v => update("symbol", v)} full />
+                            <Field label="Symbol" name="symbol" value={backtest.symbol} onChange={v => update("symbol", v)} full />
                             <Field label="Timeframe" value={backtest.timeframe} onChange={v => update("timeframe", v)} />
                             <Field label="Bars" type="number" value={backtest.bars} onChange={v => update("bars", v)} />
                             <Field label="Max Signals" type="number" value={backtest.max_signals} onChange={v => update("max_signals", v)} />
@@ -3240,6 +3333,30 @@
                         <div className="panel-title">Backtest Orders</div>
                         <OrderTable orders={orders.filter(o => o.source === "backtest").slice(0, 12)} compact />
                     </div>
+                    {showModal && backtestResult && (
+                        <div id="backtest-result-modal" style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.6)", zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <div style={{ background: "var(--surface)", borderRadius: "var(--radius)", padding: 24, width: "90vw", maxWidth: 900, maxHeight: "90vh", overflow: "auto", border: "1px solid var(--line)" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                                    <h3 style={{ margin: 0 }}>Backtest Results: {backtestResult.symbol}</h3>
+                                    <button onClick={() => setShowModal(false)}>Close</button>
+                                </div>
+                                <div className="backtest-chart-container" style={{ height: 320, border: "1px solid var(--line)", borderRadius: "var(--radius-sm)", marginBottom: 16, position: "relative" }}>
+                                    {backtestResult.results && backtestResult.results.map((r, i) => (
+                                        <div key={i} style={{ position: "absolute", left: `${(i / Math.max(backtestResult.results.length, 1)) * 90 + 5}%`, top: "10%" }}>
+                                            <div data-marker-type="entry" style={{ width: 8, height: 8, background: "#33a56b", borderRadius: "50%" }} />
+                                            <div data-marker-type="exit" style={{ width: 8, height: 8, background: "#d86545", borderRadius: "50%", marginTop: 4 }} />
+                                        </div>
+                                    ))}
+                                </div>
+                                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+                                    <div><div className="kpi-caption">Signals</div><div className="kpi-value">{backtestResult.signals_generated}</div></div>
+                                    <div><div className="kpi-caption">Executed</div><div className="kpi-value">{backtestResult.executed}</div></div>
+                                    <div><div className="kpi-caption">Rejected</div><div className="kpi-value">{backtestResult.rejected}</div></div>
+                                    <div><div className="kpi-caption">Longs/Shorts</div><div className="kpi-value">{backtestResult.longs}/{backtestResult.shorts}</div></div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
         }
@@ -3396,6 +3513,12 @@
             const [showPrompt, setShowPrompt] = React.useState(false);
             const [smokeResult, setSmokeResult] = React.useState(null);
             const [smokeLoading, setSmokeLoading] = React.useState(false);
+            const [selectedAgent, setSelectedAgent] = React.useState("");
+            const [agents, setAgents] = React.useState([]);
+
+            React.useEffect(() => {
+                request("/academy/agents/registry").then(data => setAgents(data.agents || [])).catch(() => setAgents([]));
+            }, []);
 
             React.useEffect(() => {
                 request("/ai/strategies").then(data => setStrategies(data.strategies || [])).catch(() => setStrategies([]));
@@ -3515,6 +3638,38 @@
                         ) : (
                             <div className="kpi-caption">Click "Run Smoke Test" to verify the Pionex Direct broker pipeline in dry-run mode. No live orders will be sent.</div>
                         )}
+                    </div>
+
+                    {/* Agent Selection */}
+                    <div className="panel span-12">
+                        <div className="panel-title">
+                            <span>Agent Review Trace</span>
+                            <select id="agent-select" value={selectedAgent} onChange={e => setSelectedAgent(e.target.value)} style={{ marginLeft: "auto", padding: "6px 12px", borderRadius: "var(--radius-xs)", border: "1px solid var(--line)", background: "var(--surface)" }}>
+                                <option value="">Select agent</option>
+                                {agents.map(a => (
+                                    <option key={a.name} value={a.name}>{a.name} ({a.archetype})</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div id="ai-review-detail" style={{ padding: "12px", border: "1px solid var(--line)", borderRadius: "var(--radius-sm)", marginTop: "12px", minHeight: 60 }}>
+                            {selectedAgent ? (
+                                <div>
+                                    <strong>{selectedAgent}</strong> review trace filter active.
+                                    {latestTrace && latestTrace.scouts && latestTrace.scouts[selectedAgent] && (
+                                        <div style={{ marginTop: 8 }}>
+                                            <span className={`pill ${latestTrace.scouts[selectedAgent].decision === "PROCEED_TO_SIMULATION" ? "ok" : "warn"}`}>
+                                                {latestTrace.scouts[selectedAgent].decision || "UNKNOWN"}
+                                            </span>
+                                            <div className="kpi-caption" style={{ marginTop: 4 }}>
+                                                Confidence: {((latestTrace.scouts[selectedAgent].confidence || 0) * 100).toFixed(0)}%
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="kpi-caption">Select an agent from the dropdown to filter review trace.</div>
+                            )}
+                        </div>
                     </div>
 
                     {/* Scout Review Detail Panel */}
@@ -4078,11 +4233,28 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
         }
 
         function Orders({ orders }) {
+            const [showSim, setShowSim] = React.useState(false);
+            const filtered = showSim ? orders.filter(o => (o.execution_mode || "simulation") !== "live") : orders;
+            const wins = filtered.filter(o => (o.pnl || 0) > 0).length;
+            const totalWithPnl = filtered.filter(o => o.pnl !== undefined && o.pnl !== null).length;
+            const winrate = totalWithPnl > 0 ? ((wins / totalWithPnl) * 100).toFixed(1) : "0.0";
+
             return (
                 <div className="grid">
                     <div className="panel span-12">
-                        <div className="panel-title">Personal Order Book <span className="pill">{orders.length} orders</span></div>
-                        <OrderTable orders={orders} />
+                        <div className="panel-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span>Personal Order Book <span className="pill">{filtered.length} orders</span></span>
+                            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                                <label className="live-sim-toggle" style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+                                    <input type="checkbox" checked={showSim} onChange={e => setShowSim(e.target.checked)} style={{ cursor: "pointer" }} />
+                                    <span>Sim only</span>
+                                </label>
+                                <div className="winrate-percentage" style={{ fontWeight: 700, color: "var(--emerald)" }}>
+                                    Winrate: {winrate}%
+                                </div>
+                            </div>
+                        </div>
+                        <OrderTable orders={filtered} />
                     </div>
                 </div>
             );
@@ -4121,14 +4293,14 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
             );
         }
 
-        function Field({ label, value, onChange, type = "text", full = false, hint, recommended }) {
+        function Field({ label, value, onChange, type = "text", full = false, hint, recommended, name }) {
             return (
                 <label className={full ? "full" : ""}>
                     <span style={{ display: "flex", alignItems: "center" }}>
                         {label}
                         {(hint || recommended !== undefined) && <Tooltip hint={hint} recommended={recommended} />}
                     </span>
-                    <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={recommended !== undefined && recommended !== "" ? String(recommended) : ""} />
+                    <input type={type} name={name} value={value} onChange={e => onChange(e.target.value)} placeholder={recommended !== undefined && recommended !== "" ? String(recommended) : ""} />
                 </label>
             );
         }
