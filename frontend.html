@@ -2506,6 +2506,11 @@
         function KrakenPaperPanel({ request, addLog }) {
             const [balance, setBalance] = useState(null);
             const [loading, setLoading] = useState(false);
+            const [orderLoading, setOrderLoading] = useState(false);
+            const [symbol, setSymbol] = useState("SOLUSD");
+            const [direction, setDirection] = useState("BUY");
+            const [orderType, setOrderType] = useState("market");
+            const [volume, setVolume] = useState("0.5");
 
             async function refreshBalance() {
                 setLoading(true);
@@ -2516,6 +2521,27 @@
                     addLog("error", "Kraken paper balance failed", { error: e.message });
                 } finally {
                     setLoading(false);
+                }
+            }
+
+            async function submitOrder() {
+                setOrderLoading(true);
+                try {
+                    const result = await request("/kraken/paper/order", {
+                        method: "POST",
+                        body: JSON.stringify({
+                            symbol: symbol.toUpperCase(),
+                            direction: direction,
+                            volume: parseFloat(volume),
+                            order_type: orderType,
+                        })
+                    });
+                    addLog("system", `Paper order: ${direction} ${volume} ${symbol} @ ${orderType}`, result);
+                    await refreshBalance();
+                } catch (e) {
+                    addLog("error", "Paper order failed", { error: e.message });
+                } finally {
+                    setOrderLoading(false);
                 }
             }
 
@@ -2540,6 +2566,50 @@
                                     Positions: <b>{balance.open_positions}</b>
                                 </div>
                             )}
+                        </div>
+                    </div>
+
+                    <div className="panel span-6">
+                        <div className="panel-title">Paper Order</div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: 20 }}>
+                            <div>
+                                <label style={{ fontSize: 12, color: "var(--muted)", display: "block", marginBottom: 4 }}>Asset / Symbol</label>
+                                <input
+                                    value={symbol}
+                                    onChange={e => setSymbol(e.target.value)}
+                                    placeholder="e.g. SOLUSD"
+                                    style={{ width: "100%" }}
+                                />
+                            </div>
+                            <div>
+                                <label style={{ fontSize: 12, color: "var(--muted)", display: "block", marginBottom: 4 }}>Direction</label>
+                                <select value={direction} onChange={e => setDirection(e.target.value)} style={{ width: "100%" }}>
+                                    <option value="BUY">BUY (Long)</option>
+                                    <option value="SELL">SELL (Short)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style={{ fontSize: 12, color: "var(--muted)", display: "block", marginBottom: 4 }}>Order Type</label>
+                                <select value={orderType} onChange={e => setOrderType(e.target.value)} style={{ width: "100%" }}>
+                                    <option value="market">Market</option>
+                                    <option value="limit">Limit</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style={{ fontSize: 12, color: "var(--muted)", display: "block", marginBottom: 4 }}>Volume / Size</label>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    value={volume}
+                                    onChange={e => setVolume(e.target.value)}
+                                    placeholder="0.5"
+                                    style={{ width: "100%" }}
+                                />
+                            </div>
+                            <button className="primary" onClick={submitOrder} disabled={orderLoading || !symbol.trim() || !volume || parseFloat(volume) <= 0}>
+                                {orderLoading ? "Submitting…" : "Submit Paper Order"}
+                            </button>
                         </div>
                     </div>
                 </div>
