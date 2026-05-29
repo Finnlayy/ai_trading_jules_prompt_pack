@@ -344,6 +344,41 @@ class KrakenBroker(BaseBroker):
         """Get available asset pairs."""
         return self._public("AssetPairs")
 
+    def get_ohlc(self, pair: str, interval: int = 60, since: int | None = None) -> list[list[float]]:
+        """Get OHLCV data for a given pair.
+
+        Args:
+            pair: Trading pair (e.g. SOLUSD)
+            interval: Candle interval in minutes (1, 5, 15, 30, 60, 240, 1440, 10080, 21600)
+            since: Return committed OHLC data since given ID
+
+        Returns:
+            List of [time, open, high, low, close, vwap, volume, count] bars.
+            For simplicity we return [time, open, high, low, close, volume].
+        """
+        normalized = self.normalize_pair(pair)
+        params: dict[str, Any] = {"pair": normalized, "interval": interval}
+        if since is not None:
+            params["since"] = since
+
+        result = self._public("OHLC", params)
+        key = list(result.keys())[0]
+        raw_bars = result[key]
+
+        # Kraken returns: [time, open, high, low, close, vwap, volume, count]
+        # We normalize to [time, open, high, low, close, volume]
+        bars: list[list[float]] = []
+        for bar in raw_bars:
+            bars.append([
+                float(bar[0]),   # time
+                float(bar[1]),   # open
+                float(bar[2]),   # high
+                float(bar[3]),   # low
+                float(bar[4]),   # close
+                float(bar[6]),   # volume
+            ])
+        return bars
+
     # ------------------------------------------------------------------
     # Order placement
     # ------------------------------------------------------------------
