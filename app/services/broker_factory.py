@@ -38,6 +38,7 @@ class BrokerFactory:
         "glint",
         "ctrader",
         "ctrader_direct",
+        "ctrader_fix",
     }
 
     @classmethod
@@ -69,6 +70,17 @@ class BrokerFactory:
             from app.services.ctrader_broker import CTraderBroker
             return CTraderBroker(journal_path=journal_path)
 
+        if mode == "ctrader_fix":
+            from app.services.ctrader_fix_broker import CTraderFixBroker, CTraderFixConfig
+            config = CTraderFixConfig(
+                enabled=True,
+                host="demo-uk-eqx-01.p.c-trader.com",
+                port=5212,
+                sender_comp_id="",
+                password="",
+            )
+            return CTraderFixBroker(config=config, journal_path=journal_path)
+
         # Fallback
         return SimulationBroker()
 
@@ -94,5 +106,6 @@ class BrokerFactory:
             "glint": "GLINT (Hyperliquid)",
             "ctrader": "cTrader Direct",
             "ctrader_direct": "cTrader Direct",
+            "ctrader_fix": "cTrader FIX",
         }
         return mapping.get(mode.strip().lower(), mode)

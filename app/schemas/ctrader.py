@@ -91,3 +91,19 @@ class CTraderOrderResponse(BaseModel):
     margin_checked: bool = False
     free_margin_before: float | None = None
     estimated_margin_required: float | None = None
+
+
+class CTraderAccountItem(BaseModel):
+    ctidTraderAccountId: int
+    traderLogin: str | None = None
+    traderAccountName: str | None = None
+    brokerName: str | None = None
+    accountType: str | None = None
+    live: bool | None = None
+
+
+class CTraderAccountsResponse(BaseModel):
+    status: str = "ok"
+    accounts: list[CTraderAccountItem] = Field(default_factory=list)
+    error: str | None = None
+    setup_guide: str | None = None

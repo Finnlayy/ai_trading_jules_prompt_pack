@@ -237,6 +237,50 @@ class CTraderClientBridge:
         trader = getattr(response, "trader", response)
         return self._message_to_dict(trader)
 
+    def list_trader_accounts(self) -> list[dict[str, Any]]:
+        """Fetch all trader accounts linked to the configured access token."""
+        if not self.config.enabled:
+            raise CTraderBridgeError("CTRADER_DISABLED")
+        if not self.config.client_id or not self.config.client_secret:
+            raise CTraderBridgeError("CTRADER_CREDENTIALS_MISSING")
+        if not self.config.access_token:
+            raise CTraderBridgeError("CTRADER_ACCESS_TOKEN_MISSING")
+
+        with self._lock:
+            sdk = self._load_sdk()
+            self._ensure_reactor_running(sdk["reactor"])
+
+            if not self.connected or not self.app_authenticated:
+                self.connected = False
+                self.app_authenticated = False
+                self.account_authenticated = False
+
+                self.client = sdk["Client"](
+                    self.config.effective_host,
+                    self.config.port,
+                    sdk["TcpProtocol"],
+                )
+                self.client.setConnectedCallback(self._on_connected)
+                self.client.setDisconnectedCallback(self._on_disconnected)
+                self.client.setMessageReceivedCallback(self._on_message)
+
+                sdk["reactor"].callFromThread(self.client.startService)
+                self._wait_until(lambda: self.connected, "CTRADER_CONNECT_TIMEOUT")
+
+                app_req = sdk["ProtoOAApplicationAuthReq"]()
+                app_req.clientId = self.config.client_id
+                app_req.clientSecret = self.config.client_secret
+                self._send_and_extract(app_req)
+                self.app_authenticated = True
+
+            req = sdk["ProtoOAGetAccountListByAccessTokenReq"]()
+            req.accessToken = self.config.access_token
+            response = self._send_and_extract(req)
+            accounts = []
+            for acc in getattr(response, "ctidTraderAccount", []):
+                accounts.append(self._message_to_dict(acc))
+            return accounts
+
     # ------------------------------------------------------------------
     # Twisted internals
     # ------------------------------------------------------------------
@@ -399,6 +443,7 @@ class CTraderClientBridge:
                 ProtoOANewOrderReq,
                 ProtoOAReconcileReq,
                 ProtoOASymbolsListReq,
+                ProtoOAGetAccountListByAccessTokenReq,
                 ProtoOATraderReq,
                 ProtoOATraderUpdatedEvent,
             )
@@ -426,6 +471,7 @@ class CTraderClientBridge:
             "ProtoOAReconcileReq": ProtoOAReconcileReq,
             "ProtoOASymbolsListReq": ProtoOASymbolsListReq,
             "ProtoOATradeSide": ProtoOATradeSide,
+            "ProtoOAGetAccountListByAccessTokenReq": ProtoOAGetAccountListByAccessTokenReq,
             "ProtoOATraderReq": ProtoOATraderReq,
             "ProtoOATraderUpdatedEvent": ProtoOATraderUpdatedEvent,
         }
@@ -770,6 +816,14 @@ class CTraderBroker(BaseBroker):
     def get_symbols(self) -> dict[str, int]:
         """Return the cached symbol map."""
         return dict(self.symbol_map)
+
+    def list_accounts(self) -> list[dict[str, Any]]:
+        """Fetch available trader accounts from cTrader (requires app auth only)."""
+        try:
+            return self.bridge.list_trader_accounts()
+        except Exception as exc:
+            logger.warning("cTrader list_accounts failed: %s", exc)
+            return []
 
     # ------------------------------------------------------------------
     # Trade execution helpers

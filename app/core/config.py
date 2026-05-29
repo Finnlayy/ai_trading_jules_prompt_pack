@@ -99,6 +99,14 @@ CTRADER_HOST = os.getenv("CTRADER_HOST", "demo.ctraderapi.com").strip()
 CTRADER_PORT = _as_int(os.getenv("CTRADER_PORT"), 5035)
 CTRADER_SYMBOL_MAP_PATH = os.getenv("CTRADER_SYMBOL_MAP_PATH", "ctrader_symbols.json")
 
+# cTrader FIX API (alternative to Open API)
+CTRADER_FIX_ENABLED = _as_bool(os.getenv("CTRADER_FIX_ENABLED"), False)
+CTRADER_FIX_HOST = os.getenv("CTRADER_FIX_HOST", "demo-uk-eqx-01.p.c-trader.com").strip()
+CTRADER_FIX_PORT = _as_int(os.getenv("CTRADER_FIX_PORT"), 5212)
+CTRADER_FIX_SENDER_COMP_ID = os.getenv("CTRADER_FIX_SENDER_COMP_ID", "")
+CTRADER_FIX_TARGET_COMP_ID = os.getenv("CTRADER_FIX_TARGET_COMP_ID", "cServer")
+CTRADER_FIX_PASSWORD = os.getenv("CTRADER_FIX_PASSWORD", "")
+
 # Kelly sizing controls
 KELLY_DEPLOY_MODE = os.getenv("KELLY_DEPLOY_MODE", "half").strip().lower()  # half|full|fixed
 KELLY_LOOKBACK_TRADES = _as_int(os.getenv("KELLY_LOOKBACK_TRADES"), 50)
