@@ -39,6 +39,7 @@ class BrokerFactory:
         "ctrader",
         "ctrader_direct",
         "ctrader_fix",
+        "kraken",
     }
 
     @classmethod
@@ -81,6 +82,10 @@ class BrokerFactory:
             )
             return CTraderFixBroker(config=config, journal_path=journal_path)
 
+        if mode == "kraken":
+            from app.services.kraken_broker import KrakenBroker, KrakenConfig
+            return KrakenBroker(config=KrakenConfig(), journal_path=journal_path)
+
         # Fallback
         return SimulationBroker()
 
@@ -107,5 +112,6 @@ class BrokerFactory:
             "ctrader": "cTrader Direct",
             "ctrader_direct": "cTrader Direct",
             "ctrader_fix": "cTrader FIX",
+            "kraken": "Kraken",
         }
         return mapping.get(mode.strip().lower(), mode)

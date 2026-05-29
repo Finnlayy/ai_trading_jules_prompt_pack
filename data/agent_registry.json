@@ -38,9 +38,9 @@
       "cautious": 0.4,
       "momentum_driven": 0.8
     },
-    "total_calls": 343,
-    "correct_calls": 292,
-    "accuracy": 0.8513119533527697,
+    "total_calls": 497,
+    "correct_calls": 342,
+    "accuracy": 0.6881287726358148,
     "current_streak": 0,
     "confidence_level": 0.5,
     "experience_level": "Novice"
@@ -84,10 +84,10 @@
       "cautious": 0.5,
       "momentum_driven": 0.9
     },
-    "total_calls": 319,
-    "correct_calls": 278,
-    "accuracy": 0.8714733542319749,
-    "current_streak": 13,
+    "total_calls": 473,
+    "correct_calls": 335,
+    "accuracy": 0.7082452431289641,
+    "current_streak": 0,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -130,10 +130,10 @@
       "cautious": 0.95,
       "momentum_driven": 0.1
     },
-    "total_calls": 319,
-    "correct_calls": 267,
-    "accuracy": 0.8369905956112853,
-    "current_streak": 1,
+    "total_calls": 473,
+    "correct_calls": 321,
+    "accuracy": 0.678646934460888,
+    "current_streak": 0,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -176,10 +176,10 @@
       "cautious": 0.7,
       "momentum_driven": 0.5
     },
-    "total_calls": 319,
-    "correct_calls": 275,
-    "accuracy": 0.8620689655172413,
-    "current_streak": 15,
+    "total_calls": 473,
+    "correct_calls": 392,
+    "accuracy": 0.828752642706131,
+    "current_streak": 0,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -222,9 +222,9 @@
       "cautious": 0.8,
       "momentum_driven": 0.2
     },
-    "total_calls": 315,
-    "correct_calls": 259,
-    "accuracy": 0.8222222222222222,
+    "total_calls": 469,
+    "correct_calls": 325,
+    "accuracy": 0.6929637526652452,
     "current_streak": 0,
     "confidence_level": 0.5,
     "experience_level": "Novice"
@@ -268,10 +268,10 @@
       "cautious": 0.85,
       "momentum_driven": 0.1
     },
-    "total_calls": 315,
-    "correct_calls": 274,
-    "accuracy": 0.8698412698412699,
-    "current_streak": 6,
+    "total_calls": 469,
+    "correct_calls": 328,
+    "accuracy": 0.6993603411513859,
+    "current_streak": 0,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   }

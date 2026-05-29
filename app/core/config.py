@@ -107,6 +107,17 @@ CTRADER_FIX_SENDER_COMP_ID = os.getenv("CTRADER_FIX_SENDER_COMP_ID", "")
 CTRADER_FIX_TARGET_COMP_ID = os.getenv("CTRADER_FIX_TARGET_COMP_ID", "cServer")
 CTRADER_FIX_PASSWORD = os.getenv("CTRADER_FIX_PASSWORD", "")
 
+# Kraken broker configuration
+KRAKEN_ENABLED = _as_bool(os.getenv("KRAKEN_ENABLED"), False)
+KRAKEN_LIVE_TRADING_ENABLED = _as_bool(os.getenv("KRAKEN_LIVE_TRADING_ENABLED"), False)
+KRAKEN_API_KEY = os.getenv("KRAKEN_API_KEY", "")
+KRAKEN_API_SECRET = os.getenv("KRAKEN_API_SECRET", "")
+KRAKEN_TIMEOUT_SECONDS = _as_float(os.getenv("KRAKEN_TIMEOUT_SECONDS"), 20.0)
+KRAKEN_DEMO_MODE = _as_bool(os.getenv("KRAKEN_DEMO_MODE"), True)
+KRAKEN_SPOT_ONLY = _as_bool(os.getenv("KRAKEN_SPOT_ONLY"), True)
+KRAKEN_MAX_ORDER_USD = _as_float(os.getenv("KRAKEN_MAX_ORDER_USD"), 100.0)
+KRAKEN_MIN_ORDER_USD = _as_float(os.getenv("KRAKEN_MIN_ORDER_USD"), 10.0)
+
 # Kelly sizing controls
 KELLY_DEPLOY_MODE = os.getenv("KELLY_DEPLOY_MODE", "half").strip().lower()  # half|full|fixed
 KELLY_LOOKBACK_TRADES = _as_int(os.getenv("KELLY_LOOKBACK_TRADES"), 50)
