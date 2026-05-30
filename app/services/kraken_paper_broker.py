@@ -315,17 +315,23 @@ class KrakenPaperBroker(BaseBroker):
                 }
 
             # For SHORT in spot paper, check if we have the asset
+            # Allow flip (larger counter-trade) if an opposite position exists
             if dir_norm == "SHORT":
                 pos = (
                     db.query(PaperPosition)
                     .filter(PaperPosition.symbol == pair, PaperPosition.status == "open")
                     .first()
                 )
-                if pos is None or pos.volume < volume:
-                    avail = pos.volume if pos else 0.0
+                if pos is None:
                     return {
                         "status": "error",
-                        "error": f"Insufficient {pair} to sell: {avail:.6f} < {volume:.6f}",
+                        "error": f"Insufficient {pair} to sell: no open position",
+                    }
+                # Allow flip even if volume > position (net position will flip)
+                if pos.direction == "SHORT" and pos.volume < volume:
+                    return {
+                        "status": "error",
+                        "error": f"Insufficient {pair} to sell: {pos.volume:.6f} < {volume:.6f}",
                     }
 
             # Create trade record
