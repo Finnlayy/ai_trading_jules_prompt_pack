@@ -11,3 +11,6 @@
 ## 2024-05-29 - Inefficient Statistical Baseline Recalculation inside Tight Loops
 **Learning:** The Ljung-Box test function (`ljung_box`) inside `app/services/statistical_battery.py` repeatedly called `_autocorr`, which recalculated the array's mean and variance (`c0`) for every single lag (e.g. 20 times for 20 lags).
 **Action:** Inline the autocorrelation logic inside `ljung_box` to compute the mean, centered array, and variance once outside the loop. Then iteratively compute only the specific lag's covariance inside the loop, effectively halving the computation time (~0.20s down to ~0.10s for 100 runs). This avoids redundant O(N) operations inside loops.
+## 2024-05-30 - Inefficient Statistical Baseline Recalculation inside Tight Loops
+**Learning:** List comprehensions and generator expressions incur overhead due to memory allocation and iteration costs, which become bottlenecks in performance hot paths when processing large datasets (like calculating Sharpe or Sortino ratios on tick/candle data).
+**Action:** Replace generators and comprehensions with explicitly unrolled `for` loops and direct mathematical reductions to calculate sums and squares in a single pass, bypassing generator overhead and minimizing memory allocations.
