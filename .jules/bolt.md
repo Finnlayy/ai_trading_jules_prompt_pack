@@ -14,3 +14,7 @@
 ## 2024-06-25 - Python memory allocations in high-frequency calculations
 **Learning:** For performance-critical arrays (like calculating metric indicators on millions of tick/candle returns), native python `sum()` over unrolled arrays or explicit tracking counters can be ~4x faster than list comprehensions because it avoids creating intermediate large list objects and overhead associated with Python generators.
 **Action:** When working on backends analyzing large series or arrays of returns in Python where external dependencies like numpy aren't immediately available, prefer explicitly unrolled loop structures and native mathematical reductions over memory-intensive generator comprehensions.
+
+## 2024-05-30 - E2E Testing without npm
+**Learning:** For projects without a JS build step or node package manager (no `package.json`), using Python Playwright bindings (`pytest-playwright`) provides an effective E2E testing solution without introducing architectural complexity or breaking the Single-Page stand-alone paradigm.
+**Action:** Default to Python-based Playwright testing for single-file, dependency-free frontends unless explicitly requested otherwise.
