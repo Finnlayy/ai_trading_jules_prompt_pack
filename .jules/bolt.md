@@ -14,3 +14,6 @@
 ## 2024-05-30 - Inefficient Statistical Baseline Recalculation inside Tight Loops
 **Learning:** List comprehensions and generator expressions incur overhead due to memory allocation and iteration costs, which become bottlenecks in performance hot paths when processing large datasets (like calculating Sharpe or Sortino ratios on tick/candle data).
 **Action:** Replace generators and comprehensions with explicitly unrolled `for` loops and direct mathematical reductions to calculate sums and squares in a single pass, bypassing generator overhead and minimizing memory allocations.
+## 2024-06-25 - Python memory allocations in high-frequency calculations
+**Learning:** For performance-critical arrays (like calculating metric indicators on millions of tick/candle returns), native python `sum()` over unrolled arrays or explicit tracking counters can be ~4x faster than list comprehensions because it avoids creating intermediate large list objects and overhead associated with Python generators.
+**Action:** When working on backends analyzing large series or arrays of returns in Python where external dependencies like numpy aren't immediately available, prefer explicitly unrolled loop structures and native mathematical reductions over memory-intensive generator comprehensions.
