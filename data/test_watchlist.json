@@ -11,7 +11,7 @@
       "strategy_id": null,
       "min_confluence": null,
       "max_position_size_usdt": null,
-      "added_at": "2026-05-29T21:17:36.870473+00:00"
+      "added_at": "2026-05-30T00:09:33.142077+00:00"
     },
     {
       "symbol": "ETHUSDT",
@@ -24,8 +24,8 @@
       "strategy_id": null,
       "min_confluence": null,
       "max_position_size_usdt": null,
-      "added_at": "2026-05-29T21:17:36.892961+00:00"
+      "added_at": "2026-05-30T00:09:33.166187+00:00"
     }
   ],
-  "updated_at": "2026-05-29T21:17:36.893270+00:00"
+  "updated_at": "2026-05-30T00:09:33.166490+00:00"
 }

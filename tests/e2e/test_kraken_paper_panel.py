@@ -16,7 +16,7 @@ import re
 
 import requests
 
-BASE_URL = "http://localhost:8001"
+BASE_URL = "http://localhost:8002"
 
 
 def test_html_contains_kraken_paper_nav():
@@ -117,6 +117,14 @@ def test_paper_panel_shows_open_positions_table():
     assert data["status"] == "ok"
     assert "positions" in data
     assert "count" in data
+
+
+def test_paper_panel_shows_backtest_report():
+    """The Kraken Paper panel must reference the backtest report endpoint."""
+    resp = requests.get(f"{BASE_URL}/", timeout=30)
+    html = resp.text
+    assert "Backtest Report" in html, "Panel missing Backtest Report section"
+    assert "/backtest/report" in html, "Panel does not fetch from /backtest/report"
 
 
 def test_balance_display_would_render_dollar_sign():

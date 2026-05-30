@@ -2512,6 +2512,7 @@
             const [orderType, setOrderType] = useState("market");
             const [volume, setVolume] = useState("0.5");
             const [positions, setPositions] = useState([]);
+            const [report, setReport] = useState(null);
 
             async function refreshBalance() {
                 setLoading(true);
@@ -2531,6 +2532,15 @@
                     setPositions(data.positions || []);
                 } catch (e) {
                     addLog("error", "Kraken paper positions failed", { error: e.message });
+                }
+            }
+
+            async function refreshReport() {
+                try {
+                    const data = await request(`/backtest/report?symbol=${symbol}&days=7`);
+                    setReport(data.metrics || null);
+                } catch (e) {
+                    addLog("error", "Backtest report failed", { error: e.message });
                 }
             }
 
@@ -2558,12 +2568,14 @@
             useEffect(() => {
                 refreshBalance();
                 refreshPositions();
+                refreshReport();
                 const timer = setInterval(() => {
                     refreshBalance();
                     refreshPositions();
+                    refreshReport();
                 }, 5000);
                 return () => clearInterval(timer);
-            }, []);
+            }, [symbol]);
 
             return (
                 <div className="grid" data-testid="kraken-paper-panel">
@@ -2649,6 +2661,32 @@
                                 )}
                             </tbody>
                         </table>
+                    </div>
+
+                    <div className="panel span-12">
+                        <div className="panel-title">Backtest Report <span className="pill">{symbol}</span></div>
+                        {report ? (
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 16, padding: 20 }}>
+                                <div style={{ textAlign: "center" }}>
+                                    <div style={{ fontSize: 11, color: "var(--muted)" }}>Winrate</div>
+                                    <div style={{ fontSize: 22, fontWeight: 600, color: report.winrate_pct >= 50 ? "var(--ok)" : "var(--danger)" }}>{report.winrate_pct}%</div>
+                                </div>
+                                <div style={{ textAlign: "center" }}>
+                                    <div style={{ fontSize: 11, color: "var(--muted)" }}>Max Drawdown</div>
+                                    <div style={{ fontSize: 22, fontWeight: 600, color: "var(--danger)" }}>{report.max_drawdown_pct}%</div>
+                                </div>
+                                <div style={{ textAlign: "center" }}>
+                                    <div style={{ fontSize: 11, color: "var(--muted)" }}>Trades</div>
+                                    <div style={{ fontSize: 22, fontWeight: 600 }}>{report.total_trades}</div>
+                                </div>
+                                <div style={{ textAlign: "center" }}>
+                                    <div style={{ fontSize: 11, color: "var(--muted)" }}>Profit Factor</div>
+                                    <div style={{ fontSize: 22, fontWeight: 600, color: (report.profit_factor || 0) >= 1 ? "var(--ok)" : "var(--danger)" }}>{report.profit_factor || "—"}</div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div style={{ padding: 20, color: "var(--muted)", textAlign: "center" }}>No backtest data available</div>
+                        )}
                     </div>
                 </div>
             );
