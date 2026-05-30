@@ -29,6 +29,7 @@ from app.api.kraken import router as kraken_router
 from app.api.kraken_paper import router as kraken_paper_router
 from app.api.webhook_signal import router as webhook_signal_router
 from app.services.webhook_consumer import webhook_consumer_instance
+from app.services.position_monitor import paper_position_monitor_instance
 
 app = FastAPI(
     title="Agent-Reflex Hybrid Trader API",
@@ -172,6 +173,8 @@ def startup_event():
     _shadow_queue_task = asyncio.create_task(_shadow_queue_loop())
     # Start webhook consumer for autonomous signal → paper order execution
     webhook_consumer_instance.start()
+    # Start position monitor for auto SL/TP
+    paper_position_monitor_instance.start()
 
 
 @app.on_event("shutdown")
@@ -181,6 +184,7 @@ def shutdown_event():
     from app.services.price_poller import price_poller
     autonomous_loop_instance.stop()
     webhook_consumer_instance.stop()
+    paper_position_monitor_instance.stop()
     price_poller.stop()
     if _heartbeat_task:
         _heartbeat_task.cancel()

@@ -206,6 +206,8 @@ class KrakenPaperBroker(BaseBroker):
                     "unrealized_pnl": pos.unrealized_pnl,
                     "realized_pnl": pos.realized_pnl,
                     "fee_paid": pos.fee_paid,
+                    "stop_loss": pos.stop_loss,
+                    "take_profit": pos.take_profit,
                     "created_at": pos.created_at.isoformat() if pos.created_at else None,
                 })
 
@@ -264,6 +266,8 @@ class KrakenPaperBroker(BaseBroker):
         volume: float,
         order_type: str = "market",
         price: Optional[float] = None,
+        stop_loss: Optional[float] = None,
+        take_profit: Optional[float] = None,
     ) -> dict[str, Any]:
         """Place a paper order and simulate immediate fill at live price.
 
@@ -372,6 +376,8 @@ class KrakenPaperBroker(BaseBroker):
                     volume=volume,
                     avg_entry_price=fill_price,
                     fee_paid=fee,
+                    stop_loss=stop_loss,
+                    take_profit=take_profit,
                     status="open",
                 )
                 db.add(position)
@@ -447,6 +453,8 @@ class KrakenPaperBroker(BaseBroker):
                             volume=remaining,
                             avg_entry_price=fill_price,
                             fee_paid=fee,
+                            stop_loss=stop_loss,
+                            take_profit=take_profit,
                             status="open",
                         )
                         db.add(new_pos)

@@ -70,6 +70,8 @@ class PaperPosition(Base):
     unrealized_pnl = Column(Float, default=0.0)
     realized_pnl = Column(Float, default=0.0)
     fee_paid = Column(Float, default=0.0)
+    stop_loss = Column(Float, nullable=True)
+    take_profit = Column(Float, nullable=True)
     status = Column(String, default="open")  # open, closed
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     closed_at = Column(DateTime(timezone=True), nullable=True)
