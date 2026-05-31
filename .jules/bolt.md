@@ -18,3 +18,7 @@
 ## 2024-05-30 - E2E Testing without npm
 **Learning:** For projects without a JS build step or node package manager (no `package.json`), using Python Playwright bindings (`pytest-playwright`) provides an effective E2E testing solution without introducing architectural complexity or breaking the Single-Page stand-alone paradigm.
 **Action:** Default to Python-based Playwright testing for single-file, dependency-free frontends unless explicitly requested otherwise.
+
+## 2024-05-31 - Optimized JournalLogger's get_entries File Parsing Strategy
+**Learning:** We had an unintended performance bottleneck when parsing the historical log files (`trade_journal.jsonl`). Previously `json.loads` was executed for every single historical trade entry globally over thousands of lines prior to keeping only the required final subset using standard array slicing `entries[-limit:]`.
+**Action:** Always parse lines conditionally at the very last moment or use structure limiting queues such as `collections.deque(maxlen=limit)` when loading JSON history sequentially rather than eagerly building full lists of parsed objects.
