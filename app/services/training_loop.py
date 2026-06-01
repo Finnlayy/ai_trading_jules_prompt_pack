@@ -68,9 +68,6 @@ class TrainingLoopService:
             # 1. Generate Drill
             drill = training_drills.generate_random_drill(scout, difficulty=random.randint(1, 3))
 
-            # 2. Simulate AI decision (for MVP, we use simple random/weighted logic instead of full LLM call)
-            # In a real impl, we would call `ai_kimi.py` or similar
-            # We mock it based on their accuracy to keep it somewhat realistic
             identity = agent_registry.get_identity(scout)
             acc = identity.accuracy if identity and identity.accuracy > 0 else 0.5
 
