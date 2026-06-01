@@ -187,3 +187,13 @@ MAX_MC_DISPERSION = 5.0
 MAX_DAILY_DRAWDOWN = _as_float(os.getenv("MAX_DAILY_DRAWDOWN"), 5.0)
 MAX_TRADES_PER_DAY = 5
 COOLDOWN_BARS = 3
+
+# Validate webhook security if a live broker mode is active
+if not WEBHOOK_SECRET:
+    if PIONEX_RELAY_ENABLED or PIONEX_DIRECT_ENABLED or CTRADER_ENABLED or GLINT_ENABLED:
+        raise ValueError(
+            "SECURITY RISK: WEBHOOK_SECRET must be set when a live broker mode is enabled. "
+            "Refusing to start to prevent unauthenticated webhook requests from placing live orders."
+        )
+    import warnings
+    warnings.warn("WEBHOOK_SECRET is not set. Webhook endpoint will accept unauthenticated requests.")
