@@ -10,6 +10,16 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from dataclasses import dataclass, field, asdict
+
+@dataclass
+class ScoutReviewParams:
+    symbol: str
+    scout_name: str
+    direction: str
+    decision: str
+    confidence: float
+    was_correct: bool | None = None
+
 from typing import Any
 from app.schemas.academy import CareerEntry
 from app.services.agent_registry import agent_registry
@@ -203,20 +213,12 @@ class ConfidenceRegistry:
             self._symbols[symbol] = SymbolStats(symbol=symbol)
         return self._symbols[symbol]
 
-    def record_scout_review(
-        self,
-        symbol: str,
-        scout_name: str,
-        direction: str,
-        decision: str,
-        confidence: float,
-        was_correct: bool | None = None,
-    ) -> None:
+    def record_scout_review(self, params: ScoutReviewParams) -> None:
         """Call after a scout renders its review."""
-        stats = self.get_symbol_stats(symbol)
-        if scout_name not in stats.scout_stats:
-            stats.scout_stats[scout_name] = ScoutStats()
-        stats.scout_stats[scout_name].record_call(decision, confidence, was_correct)
+        stats = self.get_symbol_stats(params.symbol)
+        if params.scout_name not in stats.scout_stats:
+            stats.scout_stats[params.scout_name] = ScoutStats()
+        stats.scout_stats[params.scout_name].record_call(params.decision, params.confidence, params.was_correct)
         self._save()
 
     def record_signal_review(

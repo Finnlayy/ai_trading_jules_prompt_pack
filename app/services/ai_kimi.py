@@ -18,7 +18,7 @@ from app.core.config import (
     OPENAI_MODEL,
 )
 from app.services.ai_layer_memory import ai_layer_memory_instance
-from app.services.confidence_registry import confidence_registry
+from app.services.confidence_registry import confidence_registry, ScoutReviewParams
 from app.services.telegram_advisors import telegram_advisor_hub
 from app.services.ai_mock import MockAIReviewLayer
 
@@ -145,7 +145,7 @@ class KimiSwarmService:
             # 4. Record scout calls in confidence registry (outcome = None for now)
             for scout_name, report in scout_reports.items():
                 confidence = self._extract_confidence_from_report(report)
-                confidence_registry.record_scout_review(
+                params = ScoutReviewParams(
                     symbol=payload.symbol,
                     scout_name=scout_name,
                     direction=payload.direction,
@@ -153,6 +153,7 @@ class KimiSwarmService:
                     confidence=confidence,
                     was_correct=None,
                 )
+                confidence_registry.record_scout_review(params)
 
             confidence_registry.record_signal_review(
                 symbol=payload.symbol,
