@@ -219,23 +219,10 @@ class LiveFillTracker:
 
     # -- Public API --------------------------------------------------------
 
-    def record_intent(self, trade_id: str, symbol: str, direction: str,
-                      entry_price: float, stop_price: float, target_price: float,
-                      decision: str, strategy_id: str | None = None,
-                      size: float | None = None, ai_trace: dict | None = None) -> None:
+    def record_intent(self, intent: PositionIntent) -> None:
         """Record a trade intent before execution."""
-        self._intents[trade_id] = PositionIntent(
-            trade_id=trade_id,
-            symbol=_normalize_symbol(symbol),
-            direction=direction,
-            entry_price=entry_price,
-            stop_price=stop_price,
-            target_price=target_price,
-            size=size,
-            strategy_id=strategy_id,
-            decision=decision,
-            ai_trace=ai_trace,
-        )
+        intent.symbol = _normalize_symbol(intent.symbol)
+        self._intents[intent.trade_id] = intent
 
     def record_fill(self, trade_id: str, fill_data: FillData) -> None:
         """Record a fill and create/update an open position."""

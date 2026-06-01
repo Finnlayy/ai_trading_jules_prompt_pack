@@ -8,7 +8,7 @@ from datetime import datetime, timezone, timedelta
 import pytest
 
 from app.services.position_monitor import PositionMonitor, ExitResult
-from app.services.live_fill_tracker import live_fill_tracker, FillData
+from app.services.live_fill_tracker import live_fill_tracker, FillData, PositionIntent
 
 
 @pytest.fixture
@@ -27,16 +27,18 @@ def _create_position(trade_id: str, symbol: str, direction: str,
                      entry: float, stop: float, target: float,
                      size: float = 1.0, minutes_ago: float = 0):
     """Helper to create an open position via intent+fill."""
-    live_fill_tracker.record_intent(
+    intent = PositionIntent(
         trade_id=trade_id,
         symbol=symbol,
         direction=direction,
         entry_price=entry,
         stop_price=stop,
         target_price=target,
-        decision="PROCEED_TO_SIMULATION",
         size=size,
+        strategy_id=None,
+        decision="PROCEED_TO_SIMULATION",
     )
+    live_fill_tracker.record_intent(intent)
     fill_time = datetime.now(timezone.utc) - timedelta(minutes=minutes_ago)
     live_fill_tracker.record_fill(
         trade_id,
