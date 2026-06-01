@@ -2,7 +2,7 @@ import pytest
 import json
 from unittest.mock import AsyncMock, patch
 
-from app.services.ai_kimi import KimiSwarmService
+from app.services.ai_kimi import AIProviderConfig, KimiSwarmService, _resolve_scout_model
 from app.schemas.m8_payload import M8Payload
 from app.schemas.ai_review import DecisionEnum
 from app.services.confidence_registry import confidence_registry
@@ -38,7 +38,7 @@ async def test_kimi_swarm_success():
     service = KimiSwarmService(provider="moonshot")
     payload = create_valid_payload()
 
-    async def mock_call_kimi(prompt: str, system: str = "", response_format=None):
+    async def mock_call_kimi(scout_name: str, prompt: str, system: str = "", response_format=None):
         if response_format:
             return json.dumps({
                 "schema_version": "1.0",
@@ -52,7 +52,7 @@ async def test_kimi_swarm_success():
             })
         return "Confidence: 0.75\nmocked scout response"
 
-    with patch.object(service, "_call_llm", new_callable=AsyncMock) as mock_method:
+    with patch.object(service, "_call_llm_for_scout", new_callable=AsyncMock) as mock_method:
         mock_method.side_effect = mock_call_kimi
 
         review = await service.review_signal(payload)
@@ -87,7 +87,7 @@ async def test_kimi_swarm_api_failure_fallback():
     async def mock_fail(*args, **kwargs):
         raise Exception("API Timeout")
 
-    with patch.object(service, "_call_llm", new_callable=AsyncMock) as mock_method:
+    with patch.object(service, "_call_llm_for_scout", new_callable=AsyncMock) as mock_method:
         mock_method.side_effect = mock_fail
 
         review = await service.review_signal(payload)
@@ -99,7 +99,12 @@ async def test_kimi_swarm_api_failure_fallback():
 
 
 @pytest.mark.asyncio
-async def test_kimi_swarm_invalid_provider_fallback():
+async def test_kimi_swarm_invalid_provider_fallback(monkeypatch):
+    from app.core import config
+
+    for scout in KimiSwarmService.SCOUT_NAMES:
+        monkeypatch.setattr(config, f"AI_PROVIDER_{scout.upper()}", "")
+
     service = KimiSwarmService(provider="unknown-provider")
     payload = create_valid_payload()
 
@@ -116,3 +121,17 @@ def test_extract_confidence_from_report():
     assert service._extract_confidence_from_report("confidence: 0.33") == 0.33
     assert service._extract_confidence_from_report("No confidence here") == 0.5
     assert service._extract_confidence_from_report("") == 0.5
+
+
+def test_gemini_scout_model_falls_back_from_non_gemini_override():
+    provider_config = AIProviderConfig(
+        provider="gemini",
+        api_key="test",
+        api_key_env="GEMINI_API_KEY",
+        base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+        model="gemini-2.5-flash",
+        unavailable_flag="GEMINI_UNAVAILABLE",
+    )
+
+    assert _resolve_scout_model(provider_config, "google/gemma-4-e2b:3") == "gemini-2.5-flash"
+    assert _resolve_scout_model(provider_config, "models/gemini-2.5-pro") == "gemini-2.5-pro"

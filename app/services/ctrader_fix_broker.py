@@ -19,6 +19,7 @@ from typing import Any, Optional
 from app.core.config import (
     CTRADER_FIX_ENABLED,
     CTRADER_FIX_HOST,
+    CTRADER_FIX_LIVE_TRADING_ENABLED,
     CTRADER_FIX_PASSWORD,
     CTRADER_FIX_PORT,
     CTRADER_FIX_SENDER_COMP_ID,
@@ -43,19 +44,23 @@ class CTraderFixConfig:
 
     def __init__(
         self,
-        enabled: bool = False,
+        enabled: bool = CTRADER_FIX_ENABLED,
+        live_trading_enabled: bool = CTRADER_FIX_LIVE_TRADING_ENABLED,
         host: str = "",
         port: int = 5212,
         sender_comp_id: str = "",
         target_comp_id: str = "cServer",
         password: str = "",
+        sender_sub_id: str = "",
     ) -> None:
         self.enabled = enabled
+        self.live_trading_enabled = live_trading_enabled
         self.host = host or "demo-uk-eqx-01.p.c-trader.com"
         self.port = port
         self.sender_comp_id = sender_comp_id
         self.target_comp_id = target_comp_id
         self.password = password
+        self.sender_sub_id = sender_sub_id or ("TRADE" if port == 5212 or port == 5202 else "QUOTE")
         self.fix_version = "FIX.4.4"
 
     def has_credentials(self) -> bool:
@@ -203,9 +208,14 @@ class CTraderFixClient:
             f"35={msg_type}".encode("ascii"),
             f"49={self.config.sender_comp_id}".encode("ascii"),
             f"56={self.config.target_comp_id}".encode("ascii"),
+        ]
+        if getattr(self.config, "sender_sub_id", None):
+            header.append(f"50={self.config.sender_sub_id}".encode("ascii"))
+
+        header.extend([
             f"34={self.seq_num}".encode("ascii"),
             f"52={sending_time}".encode("ascii"),
-        ]
+        ])
 
         body = SOH.join(header + body_parts) + SOH
         body_len = len(body)
@@ -440,6 +450,21 @@ class CTraderFixBroker(BaseBroker):
             "lots": lots,
         }
 
+        if not self.config.live_trading_enabled:
+            return self._build_entry(
+                payload,
+                ai_decision,
+                FinalDecisionEnum.EXECUTED_SIM,
+                simulated_fill={
+                    "mode": "CTRADER_FIX_DRY_RUN",
+                    "symbol": payload.symbol,
+                    "side": side,
+                    "lots": lots,
+                    "cl_ord_id": cl_ord_id,
+                },
+                result=result,
+            )
+
         try:
             fix_result = self.client.send_market_order(
                 symbol=payload.symbol,
@@ -488,7 +513,11 @@ class CTraderFixBroker(BaseBroker):
         return {"status": "not_implemented", "balances": [], "error": "FIX_API_NO_BALANCE_ENDPOINT"}
 
     def is_live_capable(self) -> bool:
-        return bool(self.config.enabled and self.config.has_credentials())
+        return bool(
+            self.config.enabled
+            and self.config.live_trading_enabled
+            and self.config.has_credentials()
+        )
 
     def is_ready(self) -> bool:
         return bool(self.config.enabled and self.config.has_credentials())
@@ -515,7 +544,7 @@ class CTraderFixBroker(BaseBroker):
             "ready": self.is_ready(),
             "live_capable": self.is_live_capable(),
             "enabled": self.config.enabled,
-            "live_trading_enabled": self.config.enabled,
+            "live_trading_enabled": self.config.live_trading_enabled,
             "host": self.config.host,
             "port": self.config.port,
             "symbols_cached": 0,
@@ -547,6 +576,26 @@ class CTraderFixBroker(BaseBroker):
 
         side = "BUY" if direction.upper() in {"BUY", "LONG"} else "SELL"
         cl_ord_id = (label or f"metricfix-direct-{datetime.now(timezone.utc).strftime('%H%M%S')}")[:20]
+
+        if not self.config.live_trading_enabled:
+            return {
+                "status": "DRY_RUN_CTRADER_FIX",
+                "order_id": None,
+                "position_id": None,
+                "symbol": symbol,
+                "direction": direction,
+                "volume_lots": volume_lots,
+                "fill_price": None,
+                "error": None,
+                "preview": {
+                    "symbol": symbol,
+                    "side": side,
+                    "qty": volume_lots,
+                    "cl_ord_id": cl_ord_id,
+                    "stop_loss": stop_loss,
+                    "take_profit": take_profit,
+                },
+            }
 
         try:
             result = self.client.send_market_order(

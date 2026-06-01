@@ -39,6 +39,12 @@ CTRADER_LIVE_HOST = "live.ctraderapi.com"
 DEFAULT_LOTS = 0.01
 LOTS_TO_UNITS = 100_000
 CTRADER_VOLUME_CENTS = 100
+DRY_RUN_SYMBOL_IDS = {
+    "EURUSD": 1,
+    "GBPUSD": 2,
+    "BTCUSDT": 3,
+    "ETHUSDT": 4,
+}
 
 
 class CTraderBridgeError(RuntimeError):
@@ -658,6 +664,8 @@ class CTraderBroker(BaseBroker):
 
         symbol_name = _compact_symbol(symbol)
         symbol_id = self._resolve_symbol_id(symbol_name, refresh=self.config.live_trading_enabled)
+        if symbol_id is None and not self.config.live_trading_enabled:
+            symbol_id = DRY_RUN_SYMBOL_IDS.get(symbol_name)
         if symbol_id is None:
             return {
                 "status": "REJECTED",

@@ -79,6 +79,8 @@ async def test_fix_status_endpoint():
 
 @pytest.mark.asyncio
 async def test_fix_order_endpoint(fake_fix_broker):
+    fake_fix_broker.config.live_trading_enabled = True
+
     async with AsyncClient(transport=ASGITransport(app=_test_app()), base_url="http://test") as ac:
         response = await ac.post("/ctrader-fix/order", json={
             "symbol": "EURUSD",
@@ -91,6 +93,22 @@ async def test_fix_order_endpoint(fake_fix_broker):
     assert data["status"] == "FILLED"
     assert data["symbol"] == "EURUSD"
     assert data["direction"] == "BUY"
+
+
+@pytest.mark.asyncio
+async def test_fix_order_dry_run_when_live_trading_disabled(fake_fix_broker):
+    async with AsyncClient(transport=ASGITransport(app=_test_app()), base_url="http://test") as ac:
+        response = await ac.post("/ctrader-fix/order", json={
+            "symbol": "EURUSD",
+            "direction": "BUY",
+            "volume_lots": 0.01,
+        })
+
+    assert response.status_code == 200, f"Unexpected: {response.status_code} {response.text[:200]}"
+    data = response.json()
+    assert data["status"] == "DRY_RUN_CTRADER_FIX"
+    assert data["symbol"] == "EURUSD"
+    assert fake_fix_broker.client.orders == []
 
 
 @pytest.mark.asyncio

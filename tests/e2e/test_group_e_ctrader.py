@@ -49,7 +49,7 @@ def test_ctrader_panel_has_order_form(page: Page):
     expect(page.locator('button:has-text("Sell")')).to_be_visible()
 
     # Lots input (number type)
-    lots_input = page.locator('input[type="number"]').first
+    lots_input = page.locator('section:not(.hidden) input[type="number"]').first
     expect(lots_input).to_be_visible()
 
     # Place order button

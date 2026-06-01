@@ -90,7 +90,41 @@ class AgentRegistryService:
     def get_all_identities(self) -> List[ScoutIdentity]:
         return list(self._identities.values())
 
-    async def log_career_event(self, entry: CareerEntry):
+    def _next_deployed_name(self) -> str:
+        index = len(self._identities) + 1
+        while f"ui-agent-{index}" in self._identities:
+            index += 1
+        return f"ui-agent-{index}"
+
+    def deploy_identity(
+        self,
+        name: str | None = None,
+        archetype: str = "Analyst",
+        personality_vector: Dict[str, float] | None = None,
+        specialization_symbols: List[str] | None = None,
+    ) -> ScoutIdentity:
+        agent_name = (name or "").strip() or self._next_deployed_name()
+        if agent_name in self._identities:
+            raise ValueError(f"Agent {agent_name} already exists")
+
+        identity = ScoutIdentity(
+            name=agent_name,
+            archetype=archetype,
+            born_from="ui_deploy",
+            specialization_symbols=specialization_symbols or [],
+            personality_vector=personality_vector or {},
+        )
+        self._identities[identity.name] = identity
+        self.save_registry()
+        return identity
+
+    async def log_career_event(
+        self,
+        entry: CareerEntry,
+        *,
+        save_registry: bool = True,
+        write_log: bool = True,
+    ):
         # Update identity stats if applicable
         ident = self._identities.get(entry.scout_name)
         if ident:
@@ -106,7 +140,12 @@ class AgentRegistryService:
                 ident.accuracy = ident.correct_calls / ident.total_calls if ident.total_calls > 0 else 0.0
 
                 # Check for new badges
-                await self._check_badges(ident, entry)
+                await self._check_badges(
+                    ident,
+                    entry,
+                    save_registry=save_registry,
+                    write_log=write_log,
+                )
 
             elif entry.event_type == "badge_earned":
                 badge_data = entry.details.get("badge", {})
@@ -114,8 +153,11 @@ class AgentRegistryService:
                     badge = Badge(**badge_data)
                     ident.badges.append(badge)
 
-            # Save the updated stats synchronously for now (MVP)
-            self.save_registry()
+            if save_registry:
+                self.save_registry()
+
+        if not write_log:
+            return
 
         def _write_log():
             with open(CAREER_LOG_FILE, "a", encoding="utf-8") as f:
@@ -124,7 +166,14 @@ class AgentRegistryService:
         # Offload file write to thread
         await asyncio.to_thread(_write_log)
 
-    async def _check_badges(self, ident: ScoutIdentity, entry: CareerEntry):
+    async def _check_badges(
+        self,
+        ident: ScoutIdentity,
+        entry: CareerEntry,
+        *,
+        save_registry: bool = True,
+        write_log: bool = True,
+    ):
         # Evaluate badges based on current stats
         existing_badge_names = {b.name for b in ident.badges}
         new_badges = []
@@ -147,7 +196,11 @@ class AgentRegistryService:
                 event_type="badge_earned",
                 details={"badge": badge.model_dump()}
             )
-            await self.log_career_event(badge_entry)
+            await self.log_career_event(
+                badge_entry,
+                save_registry=save_registry,
+                write_log=write_log,
+            )
 
     def get_career_log(self, scout_name: str) -> List[CareerEntry]:
         entries = []

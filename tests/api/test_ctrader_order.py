@@ -7,12 +7,33 @@ from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
 from app.api.ctrader import router as ctrader_router
+from app.services.ctrader_broker import CTraderBroker, CTraderConfig
 
 
 def _test_app():
     test_app = FastAPI()
     test_app.include_router(ctrader_router, prefix="/ctrader")
     return test_app
+
+
+def test_ctrader_broker_dry_run_allows_default_ui_symbol_without_cache(tmp_path):
+    broker = CTraderBroker(
+        config=CTraderConfig(
+            enabled=True,
+            live_trading_enabled=False,
+            client_id="",
+            client_secret="",
+            access_token="",
+            account_id=0,
+            symbol_map_path=str(tmp_path / "missing-symbol-map.json"),
+        )
+    )
+
+    result = broker.place_direct_order("EURUSD", "BUY", 0.01)
+
+    assert result["status"] == "DRY_RUN"
+    assert result["symbol"] == "EURUSD"
+    assert result["direction"] == "BUY"
 
 
 class FakeCTraderBrokerWithOrder:

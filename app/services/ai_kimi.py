@@ -10,6 +10,9 @@ from app.core.config import (
     GEMINI_API_KEY,
     GEMINI_BASE_URL,
     GEMINI_MODEL,
+    LMSTUDIO_API_KEY,
+    LMSTUDIO_BASE_URL,
+    LMSTUDIO_MODEL,
     MOONSHOT_API_KEY,
     MOONSHOT_BASE_URL,
     MOONSHOT_MODEL,
@@ -66,9 +69,38 @@ def get_ai_provider_config(provider: str | None = None) -> AIProviderConfig:
             unavailable_flag="GEMINI_UNAVAILABLE",
         )
 
+    if selected in {"lmstudio", "lm-studio", "local"}:
+        return AIProviderConfig(
+            provider="lmstudio",
+            api_key=LMSTUDIO_API_KEY,
+            api_key_env="LMSTUDIO_API_KEY",
+            base_url=LMSTUDIO_BASE_URL,
+            model=LMSTUDIO_MODEL,
+            unavailable_flag="LMSTUDIO_UNAVAILABLE",
+        )
+
     raise ValueError(
-        f"Unsupported AI_PROVIDER '{selected}'. Use one of: moonshot, openai, gemini."
+        f"Unsupported AI_PROVIDER '{selected}'. Use one of: moonshot, openai, gemini, lmstudio."
     )
+
+
+def _canonical_gemini_model(model: str) -> str:
+    normalized = (model or "").strip()
+    if normalized.startswith("models/"):
+        return normalized.removeprefix("models/")
+    return normalized
+
+
+def _is_gemini_chat_model(model: str) -> bool:
+    return _canonical_gemini_model(model).startswith("gemini-")
+
+
+def _resolve_scout_model(provider_config: AIProviderConfig, scout_model: str) -> str:
+    override = (scout_model or "").strip()
+    if provider_config.provider == "gemini":
+        candidate = override if _is_gemini_chat_model(override) else provider_config.model
+        return _canonical_gemini_model(candidate)
+    return override or provider_config.model
 
 
 class KimiSwarmService:
@@ -221,7 +253,7 @@ class KimiSwarmService:
             f"Crisis score: {payload.crisis_score}\n"
             f"Evaluate the following signal:\n{payload.model_dump_json()}"
         )
-        return await self._call_llm(prompt, system=system)
+        return await self._call_llm_for_scout(scout_name, prompt, system=system)
 
     async def _run_sentiment_scout(self, payload: M8Payload, symbol_context: str) -> str:
         # Fetch and score relevant news
@@ -255,7 +287,7 @@ class KimiSwarmService:
             f"\nRecent relevant news:\n{news_block}\n"
             "Assess sentiment landscape and event risk."
         )
-        return await self._call_llm(prompt, system=system)
+        return await self._call_llm_for_scout("sentiment", prompt, system=system)
 
     async def _run_technical_scout(self, payload: M8Payload, symbol_context: str) -> str:
         system = (
@@ -279,7 +311,7 @@ class KimiSwarmService:
             f"Chop index: {payload.chop_index}\n"
             "Assess technical setup quality."
         )
-        return await self._call_llm(prompt, system=system)
+        return await self._call_llm_for_scout("technical", prompt, system=system)
 
     async def _run_risk_scout(self, payload: M8Payload, symbol_context: str) -> str:
         system = (
@@ -303,7 +335,7 @@ class KimiSwarmService:
             f"Market regime: {payload.market_regime}\n"
             "Assess risk profile and flag any danger signs."
         )
-        return await self._call_llm(prompt, system=system)
+        return await self._call_llm_for_scout("risk", prompt, system=system)
 
     async def _run_macro_scout(self, payload: M8Payload, symbol_context: str) -> str:
         system = (
@@ -327,7 +359,7 @@ class KimiSwarmService:
             f"Crisis score: {payload.crisis_score}\n"
             "Assess macro regime fit for this trade direction."
         )
-        return await self._call_llm(prompt, system=system)
+        return await self._call_llm_for_scout("macro", prompt, system=system)
 
     async def _run_external_advisors(
         self, payload: M8Payload, symbol_context: str
@@ -417,7 +449,8 @@ Guidelines:
 {schema_format}
 """
 
-        json_output = await self._call_llm(
+        json_output = await self._call_llm_for_scout(
+            "execution",
             prompt,
             system=(
                 "You are the Lead Trading Orchestrator. You synthesize multi-scout reports into a single trading decision.\n"
@@ -472,6 +505,59 @@ Guidelines:
     # ------------------------------------------------------------------
     # LLM wrapper
     # ------------------------------------------------------------------
+    async def _call_llm_for_scout(
+        self, scout_name: str, prompt: str, system: str = "You are a helpful assistant", response_format: Any = None
+    ) -> str:
+        from app.core import config
+        scout_upper = scout_name.upper()
+        
+        provider_var = f"AI_PROVIDER_{scout_upper}"
+        model_var = f"AI_MODEL_{scout_upper}"
+        
+        scout_provider = getattr(config, provider_var, "")
+        scout_model = getattr(config, model_var, "")
+        
+        resolved_provider = scout_provider if scout_provider else (self.provider or config.AI_PROVIDER)
+        provider_config = get_ai_provider_config(resolved_provider)
+        resolved_model = _resolve_scout_model(provider_config, scout_model)
+        
+        print(f"[SwarmSwarm] Scout '{scout_name}' routed to provider '{resolved_provider}' (Model: '{resolved_model}')")
+        
+        try:
+            from openai import AsyncOpenAI
+        except ImportError as exc:
+            raise RuntimeError("openai package is not installed") from exc
+
+        if not provider_config.api_key:
+            raise RuntimeError(f"{provider_config.api_key_env} is not configured")
+
+        client = AsyncOpenAI(
+            api_key=provider_config.api_key,
+            base_url=provider_config.base_url,
+        )
+
+        kwargs = {
+            "model": resolved_model,
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": prompt},
+            ],
+        }
+
+        if response_format:
+            kwargs["response_format"] = response_format
+
+        try:
+            response = await client.chat.completions.create(**kwargs)
+        except Exception as e:
+            if response_format and self._should_retry_without_response_format(e):
+                kwargs.pop("response_format", None)
+                response = await client.chat.completions.create(**kwargs)
+            else:
+                raise
+
+        return response.choices[0].message.content
+
     async def _call_llm(
         self, prompt: str, system: str = "You are a helpful assistant", response_format: Any = None
     ) -> str:

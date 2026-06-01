@@ -16,14 +16,20 @@ from fastapi.testclient import TestClient
 
 # Patch config BEFORE importing app
 import app.core.config as _config
-_config.WEBHOOK_SECRET = "test-secret-do-not-use"
 
 from app.main import app
 
 client = TestClient(app)
+WEBHOOK_TEST_SECRET = "test-secret-do-not-use"
 
 
-def _sign(payload: str, secret: str = "test-secret-do-not-use") -> str:
+@pytest.fixture(autouse=True)
+def signed_webhook_secret(reset_webhook_secret_config):
+    _config.WEBHOOK_SECRET = WEBHOOK_TEST_SECRET
+    yield
+
+
+def _sign(payload: str, secret: str = WEBHOOK_TEST_SECRET) -> str:
     """Generate HMAC-SHA256 hex signature."""
     return hmac.new(secret.encode(), payload.encode(), hashlib.sha256).hexdigest()
 

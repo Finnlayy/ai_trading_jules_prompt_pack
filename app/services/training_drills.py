@@ -51,7 +51,15 @@ class TrainingDrillsService:
     def generate_drills(self, scout_name: str, count: int = 5) -> List[SyntheticDrill]:
         return [self.generate_random_drill(scout_name, difficulty=random.randint(1, 3)) for _ in range(count)]
 
-    async def evaluate_drill(self, drill: SyntheticDrill, scout_decision: str, confidence: float) -> DrillResult:
+    async def evaluate_drill(
+        self,
+        drill: SyntheticDrill,
+        scout_decision: str,
+        confidence: float,
+        *,
+        persist: bool = True,
+        save_registry: bool = True,
+    ) -> DrillResult:
         # A simple string comparison for the MVP
         is_correct = (scout_decision.upper() == drill.expected_outcome.upper())
 
@@ -76,16 +84,27 @@ class TrainingDrillsService:
                 "drill_id": drill.drill_id
             }
         )
-        await agent_registry.log_career_event(career_entry)
+        await agent_registry.log_career_event(
+            career_entry,
+            save_registry=save_registry,
+            write_log=persist,
+        )
 
-        # Log specific drill result
-        def _write_drill():
-            with open(DRILL_RESULTS_FILE, "a", encoding="utf-8") as f:
-                f.write(result.model_dump_json() + "\n")
-
-        await asyncio.to_thread(_write_drill)
+        if persist:
+            await self.write_results([result])
 
 
         return result
+
+    async def write_results(self, results: List[DrillResult]) -> None:
+        if not results:
+            return
+
+        def _write_drills():
+            with open(DRILL_RESULTS_FILE, "a", encoding="utf-8") as f:
+                for result in results:
+                    f.write(result.model_dump_json() + "\n")
+
+        await asyncio.to_thread(_write_drills)
 
 training_drills = TrainingDrillsService()

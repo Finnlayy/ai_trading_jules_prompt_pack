@@ -197,36 +197,45 @@ class KrakenBroker(BaseBroker):
     ) -> TradeJournalEntry:
         """Execute or simulate a trade based on the signal payload and decision."""
         now = datetime.now(timezone.utc)
+
+        # Calculate risk:reward
+        if payload.direction == "LONG":
+            risk = payload.entry_price - payload.stop_price
+            reward = payload.target_price - payload.entry_price
+        else:
+            risk = payload.stop_price - payload.entry_price
+            reward = payload.entry_price - payload.target_price
+        rr_ratio = reward / risk if risk > 0 else 0.0
+
         entry = TradeJournalEntry(
-            timestamp=now,
+            trade_id=f"kraken-{payload.signal_id}",
+            timestamp=now.isoformat(),
             symbol=payload.symbol,
-            direction=payload.direction or DirectionEnum.LONG,
-            entry_price=payload.price or 0.0,
-            exit_price=None,
-            volume=0.0,
-            pnl=0.0,
-            final_decision=FinalDecisionEnum.SKIPPED,
-            broker=self.get_broker_name(),
-            decision_reason=reject_reason or "",
-            confidence=0.0,
-            ai_decision=ai_decision,
-            human_decision=None,
-            strategy_id=payload.strategy_id,
-            confluence_score=payload.confluence_score,
-            rr_ratio=payload.rr_ratio,
             timeframe=payload.timeframe,
-            model_version="",
+            direction=DirectionEnum(payload.direction or "LONG"),
+            entry_price=payload.entry_price,
+            stop_price=payload.stop_price,
+            target_price=payload.target_price,
+            risk_reward=rr_ratio,
+            m8_score=payload.confluence_score,
+            ai_decision=ai_decision,
+            final_decision=FinalDecisionEnum.SKIPPED,
+            simulated_fill={},
+            result={"status": "PENDING"},
         )
 
         if reject_reason:
             entry.final_decision = FinalDecisionEnum.REJECTED
-            entry.decision_reason = reject_reason
+            entry.result = {"status": "REJECTED", "reject_reason": reject_reason}
             self._append_journal(entry)
             return entry
 
         if not self.is_live_capable():
             entry.final_decision = FinalDecisionEnum.SKIPPED
-            entry.decision_reason = "Kraken not live-capable (check credentials + live_trading_enabled)"
+            entry.result = {
+                "status": "SKIPPED",
+                "reason": "Kraken not live-capable (check credentials + live_trading_enabled)",
+            }
             self._append_journal(entry)
             return entry
 
@@ -237,8 +246,8 @@ class KrakenBroker(BaseBroker):
 
         # Default order size — placeholder until proper sizing is wired
         order_usd = self.config.min_order_usd
-        if payload.price:
-            volume = round(order_usd / payload.price, 8)
+        if payload.entry_price:
+            volume = round(order_usd / payload.entry_price, 8)
         else:
             volume = round(order_usd / 30_000, 8)  # rough BTC fallback
 
@@ -251,15 +260,17 @@ class KrakenBroker(BaseBroker):
                 volume=volume,
                 order_type=order_type,
             )
-            entry.final_decision = FinalDecisionEnum.APPROVED
-            entry.volume = volume
+            entry.final_decision = FinalDecisionEnum.EXECUTED_SIM
+            fill_info = {"volume": volume, "status": "FILLED"}
             if result.get("txid"):
-                entry.decision_reason = f"Kraken order placed: {result['txid']}"
+                fill_info["txid"] = result["txid"]
+                fill_info["detail"] = f"Kraken order placed: {result['txid']}"
             else:
-                entry.decision_reason = f"Kraken order result: {json.dumps(result)}"
+                fill_info["detail"] = f"Kraken order result: {json.dumps(result)}"
+            entry.result = fill_info
         except Exception as exc:
             entry.final_decision = FinalDecisionEnum.REJECTED
-            entry.decision_reason = f"Kraken order failed: {exc}"
+            entry.result = {"status": "ERROR", "error": str(exc)}
             logger.error("Kraken execute_trade failed: %s", exc)
 
         self._append_journal(entry)

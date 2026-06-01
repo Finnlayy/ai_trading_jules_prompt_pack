@@ -64,6 +64,27 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GEMINI_BASE_URL = os.getenv("GEMINI_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai/")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-pro")
 
+LMSTUDIO_API_KEY = os.getenv("LMSTUDIO_API_KEY", "lm-studio")
+LMSTUDIO_BASE_URL = os.getenv("LMSTUDIO_BASE_URL", "http://localhost:1234/v1")
+LMSTUDIO_MODEL = os.getenv("LMSTUDIO_MODEL", "local-model")
+
+# Per-scout AI provider overrides
+AI_PROVIDER_TECHNICAL = os.getenv("AI_PROVIDER_TECHNICAL", "").strip().lower()
+AI_PROVIDER_SENTIMENT = os.getenv("AI_PROVIDER_SENTIMENT", "").strip().lower()
+AI_PROVIDER_RISK = os.getenv("AI_PROVIDER_RISK", "").strip().lower()
+AI_PROVIDER_MACRO = os.getenv("AI_PROVIDER_MACRO", "").strip().lower()
+AI_PROVIDER_EXECUTION = os.getenv("AI_PROVIDER_EXECUTION", "").strip().lower()
+AI_PROVIDER_CORRELATION = os.getenv("AI_PROVIDER_CORRELATION", "").strip().lower()
+
+# Per-scout model overrides
+AI_MODEL_TECHNICAL = os.getenv("AI_MODEL_TECHNICAL", "").strip()
+AI_MODEL_SENTIMENT = os.getenv("AI_MODEL_SENTIMENT", "").strip()
+AI_MODEL_RISK = os.getenv("AI_MODEL_RISK", "").strip()
+AI_MODEL_MACRO = os.getenv("AI_MODEL_MACRO", "").strip()
+AI_MODEL_EXECUTION = os.getenv("AI_MODEL_EXECUTION", "").strip()
+AI_MODEL_CORRELATION = os.getenv("AI_MODEL_CORRELATION", "").strip()
+
+
 # Broker mode selection
 BROKER_MODE = os.getenv("BROKER_MODE", "simulation").strip().lower()
 
@@ -101,11 +122,13 @@ CTRADER_SYMBOL_MAP_PATH = os.getenv("CTRADER_SYMBOL_MAP_PATH", "ctrader_symbols.
 
 # cTrader FIX API (alternative to Open API)
 CTRADER_FIX_ENABLED = _as_bool(os.getenv("CTRADER_FIX_ENABLED"), False)
+CTRADER_FIX_LIVE_TRADING_ENABLED = _as_bool(os.getenv("CTRADER_FIX_LIVE_TRADING_ENABLED"), False)
 CTRADER_FIX_HOST = os.getenv("CTRADER_FIX_HOST", "demo-uk-eqx-01.p.c-trader.com").strip()
 CTRADER_FIX_PORT = _as_int(os.getenv("CTRADER_FIX_PORT"), 5212)
 CTRADER_FIX_SENDER_COMP_ID = os.getenv("CTRADER_FIX_SENDER_COMP_ID", "")
 CTRADER_FIX_TARGET_COMP_ID = os.getenv("CTRADER_FIX_TARGET_COMP_ID", "cServer")
 CTRADER_FIX_PASSWORD = os.getenv("CTRADER_FIX_PASSWORD", "")
+CTRADER_FIX_SENDER_SUB_ID = os.getenv("CTRADER_FIX_SENDER_SUB_ID", "TRADE")
 
 # Kraken broker configuration
 KRAKEN_ENABLED = _as_bool(os.getenv("KRAKEN_ENABLED"), False)
@@ -181,6 +204,14 @@ AUTONOMOUS_LOOP_MAX_ERRORS_5MIN = _as_int(os.getenv("AUTONOMOUS_LOOP_MAX_ERRORS_
 AUTONOMOUS_LOOP_PAUSE_ON_ERROR_COUNT = _as_int(os.getenv("AUTONOMOUS_LOOP_PAUSE_ON_ERROR_COUNT"), 5)
 AUTONOMOUS_LOOP_ERROR_PAUSE_SECONDS = _as_float(os.getenv("AUTONOMOUS_LOOP_ERROR_PAUSE_SECONDS"), 60.0)
 AUTONOMOUS_LOOP_STRATEGY_ROTATION_ENABLED = _as_bool(os.getenv("AUTONOMOUS_LOOP_STRATEGY_ROTATION_ENABLED"), True)
+
+# AI Training Academy loop configuration
+TRAINING_LOOP_ENABLED = _as_bool(os.getenv("TRAINING_LOOP_ENABLED"), True)
+TRAINING_LOOP_AUTO_START = _as_bool(os.getenv("TRAINING_LOOP_AUTO_START"), False)
+TRAINING_LOOP_NIGHT_MODE = _as_bool(os.getenv("TRAINING_LOOP_NIGHT_MODE"), True)
+TRAINING_LOOP_NIGHT_START = os.getenv("TRAINING_LOOP_NIGHT_START", "22:00").strip()
+TRAINING_LOOP_NIGHT_END = os.getenv("TRAINING_LOOP_NIGHT_END", "06:00").strip()
+TRAINING_LOOP_DRILLS_PER_HOUR = _as_float(os.getenv("TRAINING_LOOP_DRILLS_PER_HOUR"), 12.0)
 
 # Price Poller / Position Monitor configuration
 PRICE_POLLER_INTERVAL_SECONDS = _as_float(os.getenv("PRICE_POLLER_INTERVAL_SECONDS"), 10.0)

@@ -1,13 +1,37 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
 from app.services.agent_registry import agent_registry
 from typing import List, Dict, Any
 
 router = APIRouter(prefix="/academy", tags=["Academy"])
 
+
+class AgentDeployRequest(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=64, pattern=r"^[A-Za-z0-9_-]+$")
+    archetype: str = Field(default="Analyst", min_length=1, max_length=64)
+    personality_vector: Dict[str, float] = Field(default_factory=dict)
+    specialization_symbols: List[str] = Field(default_factory=list)
+
 @router.get("/agents/registry")
 def get_agents_registry():
     agents = agent_registry.get_all_identities()
     return {"agents": [a.model_dump() for a in agents]}
+
+
+@router.post("/agents/deploy")
+def deploy_agent(req: AgentDeployRequest | None = None):
+    req = req or AgentDeployRequest()
+    try:
+        agent = agent_registry.deploy_identity(
+            name=req.name,
+            archetype=req.archetype,
+            personality_vector=req.personality_vector,
+            specialization_symbols=req.specialization_symbols,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+
+    return {"status": "created", "agent": agent.model_dump()}
 
 @router.get("/agents/{scout_id}/career")
 def get_agent_career(scout_id: str):
@@ -74,8 +98,8 @@ def get_academy_status():
 
 @router.post("/train/start")
 async def start_training():
-    await training_loop.start()
-    return {"status": "started"}
+    result = await training_loop.start()
+    return {"status": "started" if result.get("started") else "not_started", **result}
 
 @router.post("/train/stop")
 async def stop_training():

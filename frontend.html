@@ -668,10 +668,36 @@
             box-shadow: var(--shadow-sm);
             color: var(--indigo);
         }
+        nav button {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            width: 100%;
+            text-align: left;
+            gap: 8px;
+        }
         nav button .nav-icon {
             font-size: 16px;
-            margin-right: 8px;
-            opacity: 0.7;
+            opacity: 0.9;
+            flex-shrink: 0;
+            width: 22px;
+            text-align: center;
+        }
+        nav button .nav-label {
+            font-size: 13px;
+            font-weight: 500;
+            color: #ffffff;
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        nav button .nav-dot {
+            font-size: 8px;
+            color: var(--indigo);
+            flex-shrink: 0;
+            width: 10px;
+            text-align: center;
         }
         nav button.active .nav-icon {
             opacity: 1;
@@ -1749,29 +1775,43 @@
             );
         }
 
+        const DEFAULT_LAYOUT_CONFIG = {
+            mode: "left",
+            locked: false,
+            showSettings: false,
+            panels: {
+                sidebar: true,
+                chart: true,
+                overview: true,
+                wallets: true,
+                control: true,
+                aiLayer: true,
+                logs: true,
+                news: true,
+                agents: true,
+                training: true,
+                strategies: true,
+                ctrader: true
+            }
+        };
+
+        function mergeLayoutConfig(saved) {
+            return {
+                ...DEFAULT_LAYOUT_CONFIG,
+                ...(saved || {}),
+                panels: {
+                    ...DEFAULT_LAYOUT_CONFIG.panels,
+                    ...(saved?.panels || {})
+                }
+            };
+        }
+
         function App() {
             const [tab, setTab] = useState("Overview");
 
             const [layoutConfig, setLayoutConfig] = useState(() => {
                 const saved = localStorage.getItem("metricflow_layout");
-                return saved ? JSON.parse(saved) : {
-                    mode: "left",
-                    locked: false,
-                    showSettings: false,
-                    panels: {
-                        sidebar: true,
-                        chart: true,
-                        overview: true,
-                        wallets: true,
-                        control: true,
-                        aiLayer: true,
-                        logs: true,
-                        news: true,
-                        agents: true,
-                        training: true,
-                        strategies: true
-                    }
-                };
+                return saved ? mergeLayoutConfig(JSON.parse(saved)) : DEFAULT_LAYOUT_CONFIG;
             });
 
             useEffect(() => {
@@ -1780,8 +1820,9 @@
 
             const [health, setHealth] = useState({ status: "checking" });
             const [status, setStatus] = useState(null);
+            const brokerTypeRef = React.useRef("ctrader");
             const [signal, setSignal] = useState(freshSignal());
-            const [backtest, setBacktest] = useState({ symbol: "HYPEUSDT", timeframe: "1m", bars: 500, max_signals: 10, min_confluence: "" });
+            const [backtest, setBacktest] = useState({ symbol: "HYPEUSDT", timeframe: "1m", strategy_id: "", bars: 500, max_signals: 10, min_confluence: "" });
             const [orders, setOrders] = useState(() => readStorage(ORDER_KEY, []));
             const [logs, setLogs] = useState(() => readStorage(LOG_KEY, []));
             const [raw, setRaw] = useState(null);
@@ -1824,10 +1865,15 @@
                 const fetchStrats = async () => {
                     try {
                         const strats = await fetch("/strategies").then(r => r.json());
-                        if (strats.strategies) setAvailableStrategies(strats.strategies);
+                        const strategyList = strats.available_strategies || strats.strategies || [];
+                        if (strategyList.length) setAvailableStrategies(strategyList);
 
                         const loopStat = await fetch("/loop/status").then(r => r.json());
-                        if (loopStat.current_strategy_id) setActiveStrategy(loopStat.current_strategy_id);
+                        const currentStrategy = strats.active_strategy_id || loopStat.current_strategy_id || "";
+                        if (currentStrategy) {
+                            setActiveStrategy(currentStrategy);
+                            setBacktest(current => current.strategy_id ? current : { ...current, strategy_id: currentStrategy });
+                        }
                     } catch (e) {}
                 };
                 fetchStrats();
@@ -1944,7 +1990,8 @@
 
             async function fetchCTraderStatus() {
                 try {
-                    const data = await request("/ctrader/status");
+                    const prefix = (brokerTypeRef.current === "ctrader_fix") ? "/ctrader-fix" : "/ctrader";
+                    const data = await request(`${prefix}/status`);
                     setCtraderState(prev => ({ ...prev, status: data, connected: data.connection?.connected || false }));
                 } catch (e) {
                     setCtraderState(prev => ({ ...prev, connected: false, status: null }));
@@ -1953,14 +2000,16 @@
 
             async function fetchCTraderBalance() {
                 try {
-                    const data = await request("/ctrader/balance");
+                    const prefix = (brokerTypeRef.current === "ctrader_fix") ? "/ctrader-fix" : "/ctrader";
+                    const data = await request(`${prefix}/balance`);
                     setCtraderState(prev => ({ ...prev, balance: data }));
                 } catch (e) {}
             }
 
             async function fetchCTraderSymbols() {
                 try {
-                    const data = await request("/ctrader/symbols");
+                    const prefix = (brokerTypeRef.current === "ctrader_fix") ? "/ctrader-fix" : "/ctrader";
+                    const data = await request(`${prefix}/symbols`);
                     setCtraderState(prev => ({ ...prev, symbols: data.symbols || {} }));
                 } catch (e) {}
             }
@@ -1968,7 +2017,8 @@
             async function placeCTraderOrder() {
                 setLoadingKey("ctrader", true);
                 try {
-                    const data = await request("/ctrader/order", {
+                    const prefix = (brokerTypeRef.current === "ctrader_fix") ? "/ctrader-fix" : "/ctrader";
+                    const data = await request(`${prefix}/order`, {
                         method: "POST",
                         body: JSON.stringify({
                             symbol: ctraderState.selectedSymbol,
@@ -2024,6 +2074,24 @@
                 }
             }
 
+            async function deployAgent() {
+                setLoadingKey("agents", true);
+                try {
+                    const data = await request("/academy/agents/deploy", {
+                        method: "POST",
+                        body: JSON.stringify({})
+                    });
+                    addLog("system", `Deployed local agent ${data.agent?.name || ""}`, data);
+                    addToast(`Deployed ${data.agent?.name || "agent"}`, "success");
+                    await fetchAgents();
+                } catch (e) {
+                    addLog("error", "Agent deployment failed", { error: e.message, response: e.response });
+                    addToast(`Agent deployment failed: ${e.message}`, "error");
+                } finally {
+                    setLoadingKey("agents", false);
+                }
+            }
+
             async function refreshStatus() {
                 try {
                     const [healthData, statusData, brokerData] = await Promise.all([
@@ -2032,6 +2100,8 @@
                         request("/broker/status"),
                     ]);
                     setHealth(healthData);
+                    const oldType = brokerTypeRef.current;
+                    brokerTypeRef.current = brokerData.broker_type || "ctrader";
                     setStatus({
                         ...statusData,
                         broker: {
@@ -2039,6 +2109,11 @@
                             ...brokerData
                         }
                     });
+                    if (oldType !== brokerTypeRef.current) {
+                        fetchCTraderStatus();
+                        fetchCTraderBalance();
+                        fetchCTraderSymbols();
+                    }
                 } catch (error) {
                     setHealth({ status: "error", error: error.message });
                     addLog("error", "Status refresh failed", { error: error.message });
@@ -2057,6 +2132,11 @@
             useEffect(() => {
                 refreshStatus();
                 refreshAIProfile();
+                fetchAgents();
+                fetchStrategyHealth();
+                fetchCTraderStatus();
+                fetchCTraderBalance();
+                fetchCTraderSymbols();
                 const timer = setInterval(refreshStatus, 10000);
                 return () => clearInterval(timer);
             }, []);
@@ -2188,6 +2268,7 @@
                     const body = {
                         symbol: backtest.symbol,
                         timeframe: backtest.timeframe,
+                        strategy_id: backtest.strategy_id || null,
                         bars: Number(backtest.bars) || 500,
                         max_signals: Number(backtest.max_signals) || 50,
                         min_confluence: backtest.min_confluence !== "" ? Number(backtest.min_confluence) : null,
@@ -2329,28 +2410,32 @@
                             {["Overview", "Control", "Orders", "Live Paper", "Kraken Paper", "Manual"].map(item => (
                                 <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)} data-label={item}>
                                     <span className="nav-icon">{item === "Overview" ? "🏠" : item === "Control" ? "🎮" : item === "Orders" ? "📋" : item === "Live Paper" ? "📈" : item === "Kraken Paper" ? "🦑" : "✋"}</span>
-                                    <span>{tab === item ? "●" : ""}</span>
+                                    <span className="nav-label">{item}</span>
+                                    <span className="nav-dot">{tab === item ? "●" : ""}</span>
                                 </button>
                             ))}
                             <div className="nav-category">Analyse</div>
                             {["Wallets", "Charts", "Backtest", "Confidence", "Strategies", "cTrader", "AI Layer"].map(item => (
                                 <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)} data-label={item}>
                                     <span className="nav-icon">{item === "Wallets" ? "👛" : item === "Charts" ? "📊" : item === "Backtest" ? "🧪" : item === "Confidence" ? "🎯" : item === "Strategies" ? "🎚️" : item === "cTrader" ? "📉" : "🤖"}</span>
-                                    <span>{tab === item ? "●" : ""}</span>
+                                    <span className="nav-label">{item}</span>
+                                    <span className="nav-dot">{tab === item ? "●" : ""}</span>
                                 </button>
                             ))}
                             <div className="nav-category">System</div>
                             {["News", "Logs"].map(item => (
                                 <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)} data-label={item}>
                                     <span className="nav-icon">{item === "News" ? "📰" : "📜"}</span>
-                                    <span>{tab === item ? "●" : ""}</span>
+                                    <span className="nav-label">{item}</span>
+                                    <span className="nav-dot">{tab === item ? "●" : ""}</span>
                                 </button>
                             ))}
                             <div className="nav-category">Academy</div>
                             {["Agents", "Training"].map(item => (
                                 <button type="button" key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)} data-label={item}>
                                     <span className="nav-icon">{item === "Agents" ? "👤" : "🎓"}</span>
-                                    <span>{tab === item ? "●" : ""}</span>
+                                    <span className="nav-label">{item}</span>
+                                    <span className="nav-dot">{tab === item ? "●" : ""}</span>
                                 </button>
                             ))}
                         </nav>
@@ -2451,7 +2536,7 @@
                         </section>)}
 
                         {layoutConfig.panels.ctrader && (<section className={tab === "cTrader" ? "" : "hidden"}>
-                            <CTraderPanel state={ctraderState} setState={setCtraderState} onPlaceOrder={placeCTraderOrder} loading={loading} />
+                            <CTraderPanel state={ctraderState} setState={setCtraderState} onPlaceOrder={placeCTraderOrder} onRefresh={() => { fetchCTraderStatus(); fetchCTraderBalance(); fetchCTraderSymbols(); }} loading={loading} />
                         </section>)}
 
                         <section className={tab === "Orders" ? "" : "hidden"}>
@@ -2459,7 +2544,7 @@
                         </section>
 
                         <section className={tab === "Backtest" ? "" : "hidden"}>
-                            <Backtest backtest={backtest} setBacktest={setBacktest} runBacktest={runBacktest} orders={filteredOrders} />
+                            <Backtest backtest={backtest} setBacktest={setBacktest} runBacktest={runBacktest} orders={filteredOrders} availableStrategies={availableStrategies} activeStrategy={activeStrategy} />
                         </section>
 
                         {layoutConfig.panels.news && (<section className={tab === "News" ? "" : "hidden"}>
@@ -2468,7 +2553,7 @@
 
 
                         {layoutConfig.panels.agents && (<section className={tab === "Agents" ? "" : "hidden"}>
-                            <AgentsPanel agents={agents} leaderboard={leaderboard} />
+                            <AgentsPanel agents={agents} leaderboard={leaderboard} onDeployAgent={deployAgent} deploying={loading.agents} />
                         </section>)}
 
                         {layoutConfig.panels.training && (<section className={tab === "Training" ? "" : "hidden"}>
@@ -2484,7 +2569,7 @@
                         </section>
 
                         <section className={tab === "Live Paper" ? "" : "hidden"}>
-                            <LivePaperPanel request={request} addLog={addLog} />
+                            <LivePaperPanel request={request} addLog={addLog} setLoadingKey={setLoadingKey} fetchStrategyHealth={fetchStrategyHealth} fetchCTraderStatus={fetchCTraderStatus} fetchCTraderBalance={fetchCTraderBalance} fetchCTraderSymbols={fetchCTraderSymbols} />
                         </section>
 
                         <section className={tab === "Kraken Paper" ? "" : "hidden"}>
@@ -2830,7 +2915,7 @@
             );
         }
 
-        function AgentsPanel({ agents, leaderboard }) {
+        function AgentsPanel({ agents, leaderboard, onDeployAgent, deploying }) {
             const getAvatar = (archetype) => {
                 const map = {
                     "Analyst": "\u{1F9E0}",
@@ -2854,7 +2939,9 @@
                     <div className="card span-12">
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                             <h2>Agent Registry & Leaderboard</h2>
-                            <button id="deploy-new-agent-btn" className="primary">Deploy New Agent</button>
+                            <button id="deploy-new-agent-btn" className="primary" onClick={onDeployAgent} disabled={deploying}>
+                                {deploying ? "Deploying..." : "Deploy New Agent"}
+                            </button>
                         </div>
                         <div className="agent-quick-list" style={{ display: "flex", gap: "12px", flexWrap: "wrap", marginTop: "16px", marginBottom: "16px", minHeight: "32px" }}>
                             {agents.length === 0 && (
@@ -3575,11 +3662,21 @@
             );
         }
 
-        function Backtest({ backtest, setBacktest, runBacktest, orders }) {
+        function Backtest({ backtest, setBacktest, runBacktest, orders, availableStrategies = [], activeStrategy = "" }) {
             const update = (key, value) => setBacktest(current => ({ ...current, [key]: value }));
             const [showModal, setShowModal] = React.useState(false);
             const [backtestResult, setBacktestResult] = React.useState(null);
             const [running, setRunning] = React.useState(false);
+            const strategyOptions = availableStrategies.map(strategy => {
+                if (typeof strategy === "string") {
+                    return { id: strategy, label: strategy, type: "" };
+                }
+                return {
+                    id: strategy.strategy_id || strategy.name || "",
+                    label: strategy.name || strategy.strategy_id || "Unnamed strategy",
+                    type: strategy.strategy_type || strategy.type || ""
+                };
+            }).filter(strategy => strategy.id);
 
             async function handleSubmit(e) {
                 e.preventDefault();
@@ -3601,10 +3698,21 @@
                         <div className="panel-title">Backtest Parameters</div>
                         <div className="form-grid">
                             <Field label="Symbol" name="symbol" value={backtest.symbol} onChange={v => update("symbol", v)} full />
-                            <Field label="Timeframe" value={backtest.timeframe} onChange={v => update("timeframe", v)} />
-                            <Field label="Bars" type="number" value={backtest.bars} onChange={v => update("bars", v)} />
-                            <Field label="Max Signals" type="number" value={backtest.max_signals} onChange={v => update("max_signals", v)} />
-                            <Field label="Min Confluence" type="number" value={backtest.min_confluence} onChange={v => update("min_confluence", v)} />
+                            <label className="full">
+                                <span>Strategy</span>
+                                <select name="strategy_id" value={backtest.strategy_id || ""} onChange={e => update("strategy_id", e.target.value)}>
+                                    <option value="">{activeStrategy ? `Active strategy (${activeStrategy})` : "Active strategy"}</option>
+                                    {strategyOptions.map(strategy => (
+                                        <option key={strategy.id} value={strategy.id}>
+                                            {strategy.label}{strategy.type ? ` (${strategy.type})` : ""}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+                            <Field label="Timeframe" name="timeframe" value={backtest.timeframe} onChange={v => update("timeframe", v)} />
+                            <Field label="Bars" name="bars" type="number" value={backtest.bars} onChange={v => update("bars", v)} />
+                            <Field label="Max Signals" name="max_signals" type="number" value={backtest.max_signals} onChange={v => update("max_signals", v)} />
+                            <Field label="Min Confluence" name="min_confluence" type="number" value={backtest.min_confluence} onChange={v => update("min_confluence", v)} />
                         </div>
                         <div className="row-actions">
                             <button type="submit" className="primary" disabled={running}>Run Backtest</button>
@@ -4126,7 +4234,7 @@
             );
         }
 
-        function CTraderPanel({ state, setState, onPlaceOrder, loading }) {
+        function CTraderPanel({ state, setState, onPlaceOrder, onRefresh, loading }) {
             const status = state.status || {};
             const conn = status.connection || {};
             const balance = state.balance || {};
@@ -4136,47 +4244,89 @@
             const isConnected = conn.connected || false;
             const isReady = status.ready || false;
             const isLive = status.live_capable || false;
+            const canPlaceOrder = isLive ? isReady : status.mode === "dry-run";
+            const isFix = status.type === "ctrader_fix";
 
             return (
                 <div className="grid">
                     <div className="panel span-12">
                         <div className="panel-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <span>cTrader <span className={`pill ${isConnected ? "ok" : "error"}`}>{isConnected ? "Connected" : "Disconnected"}</span></span>
+                            {isFix ? (
+                                <span>cTrader FIX <span className={`pill ${isReady ? "ok" : "error"}`}>{isReady ? "Ready (On-Demand)" : "Not Configured"}</span></span>
+                            ) : (
+                                <span>cTrader <span className={`pill ${isConnected ? "ok" : "error"}`}>{isConnected ? "Connected" : "Disconnected"}</span></span>
+                            )}
                             <div style={{ display: "flex", gap: 8 }}>
-                                <button onClick={() => { fetchCTraderStatus(); fetchCTraderBalance(); fetchCTraderSymbols(); }} disabled={loading.ctrader}>Refresh</button>
+                                <button onClick={onRefresh} disabled={loading.ctrader}>Refresh</button>
                             </div>
                         </div>
-                        <div className="kpi-caption">Direct cTrader Open API integration. Broker mode: <b>{status.mode || "unknown"}</b> · Live capable: <b>{isLive ? "Yes" : "No"}</b></div>
+                        <div className="kpi-caption">
+                            {isFix ? (
+                                <span>Direct cTrader FIX API integration (SSL). Broker mode: <b>{status.mode || "unknown"}</b> · Live capable: <b>{isLive ? "Yes" : "No"}</b></span>
+                            ) : (
+                                <span>Direct cTrader Open API integration. Broker mode: <b>{status.mode || "unknown"}</b> · Live capable: <b>{isLive ? "Yes" : "No"}</b></span>
+                            )}
+                        </div>
                     </div>
 
                     {/* Connection Status */}
                     <div className="panel span-4">
                         <div className="panel-title">Connection</div>
-                        <div style={{ display: "grid", gap: 8, fontSize: 13 }}>
-                            <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                <span style={{ color: "var(--muted)" }}>Socket</span>
-                                <span style={{ color: isConnected ? "var(--emerald)" : "var(--rose)", fontWeight: 600 }}>{isConnected ? "✓ Connected" : "✕ Disconnected"}</span>
+                        {isFix ? (
+                            <div style={{ display: "grid", gap: 8, fontSize: 13 }}>
+                                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                    <span style={{ color: "var(--muted)" }}>API Engine</span>
+                                    <span style={{ color: "var(--emerald)", fontWeight: 600 }}>cTrader FIX (4.4)</span>
+                                </div>
+                                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                    <span style={{ color: "var(--muted)" }}>Status</span>
+                                    <span style={{ color: isReady ? "var(--emerald)" : "var(--rose)", fontWeight: 600 }}>
+                                        {isReady ? "✓ Ready (On-Demand)" : "✕ Config Missing"}
+                                    </span>
+                                </div>
+                                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                    <span style={{ color: "var(--muted)" }}>Comp ID</span>
+                                    <span className="mono" style={{ fontSize: 11 }}>{status.sender_comp_id || "—"}</span>
+                                </div>
+                                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                    <span style={{ color: "var(--muted)" }}>Host</span>
+                                    <span>{status.host || "—"}</span>
+                                </div>
+                                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                    <span style={{ color: "var(--muted)" }}>Port</span>
+                                    <span>{status.port || "—"}</span>
+                                </div>
+                                <div style={{ color: "var(--muted)", fontSize: 11, marginTop: 6, fontStyle: "italic", borderTop: "1px dashed var(--line)", paddingTop: 6 }}>
+                                    Note: FIX session connects dynamically to execute orders, then disconnects immediately to save keep-alive quota.
+                                </div>
                             </div>
-                            <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                <span style={{ color: "var(--muted)" }}>App Auth</span>
-                                <span style={{ color: conn.app_authenticated ? "var(--emerald)" : "var(--rose)", fontWeight: 600 }}>{conn.app_authenticated ? "✓" : "✕"}</span>
+                        ) : (
+                            <div style={{ display: "grid", gap: 8, fontSize: 13 }}>
+                                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                    <span style={{ color: "var(--muted)" }}>Socket</span>
+                                    <span style={{ color: isConnected ? "var(--emerald)" : "var(--rose)", fontWeight: 600 }}>{isConnected ? "✓ Connected" : "✕ Disconnected"}</span>
+                                </div>
+                                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                    <span style={{ color: "var(--muted)" }}>App Auth</span>
+                                    <span style={{ color: conn.app_authenticated ? "var(--emerald)" : "var(--rose)", fontWeight: 600 }}>{conn.app_authenticated ? "✓" : "✕"}</span>
+                                </div>
+                                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                    <span style={{ color: "var(--muted)" }}>Account Auth</span>
+                                    <span style={{ color: conn.account_authenticated ? "var(--emerald)" : "var(--rose)", fontWeight: 600 }}>{conn.account_authenticated ? "✓" : "✕"}</span>
+                                </div>
+                                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                    <span style={{ color: "var(--muted)" }}>Host</span>
+                                    <span>{conn.host || "—"}</span>
+                                </div>
+                                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                    <span style={{ color: "var(--muted)" }}>Port</span>
+                                    <span>{conn.port || "—"}</span>
+                                </div>
+                                {conn.last_error && (
+                                    <div style={{ color: "var(--rose)", fontSize: 12, marginTop: 4 }}>Last error: {conn.last_error}</div>
+                                )}
                             </div>
-                            <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                <span style={{ color: "var(--muted)" }}>Account Auth</span>
-                                <span style={{ color: conn.account_authenticated ? "var(--emerald)" : "var(--rose)", fontWeight: 600 }}>{conn.account_authenticated ? "✓" : "✕"}</span>
-                            </div>
-                            <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                <span style={{ color: "var(--muted)" }}>Host</span>
-                                <span>{conn.host || "—"}</span>
-                            </div>
-                            <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                <span style={{ color: "var(--muted)" }}>Port</span>
-                                <span>{conn.port || "—"}</span>
-                            </div>
-                            {conn.last_error && (
-                                <div style={{ color: "var(--rose)", fontSize: 12, marginTop: 4 }}>Last error: {conn.last_error}</div>
-                            )}
-                        </div>
+                        )}
                     </div>
 
                     {/* Balance */}
@@ -4224,13 +4374,23 @@
                         <div style={{ display: "grid", gap: 12 }}>
                             <div>
                                 <label style={{ fontSize: 12, color: "var(--muted)", display: "block", marginBottom: 4 }}>Symbol</label>
-                                <select
-                                    value={state.selectedSymbol}
-                                    onChange={e => setState(prev => ({ ...prev, selectedSymbol: e.target.value }))}
-                                    disabled={loading.ctrader}
-                                >
-                                    {symbols.length > 0 ? symbols.map(sym => <option key={sym} value={sym}>{sym}</option>) : <option value="EURUSD">EURUSD</option>}
-                                </select>
+                                {isFix ? (
+                                    <input
+                                        type="text"
+                                        value={state.selectedSymbol}
+                                        onChange={e => setState(prev => ({ ...prev, selectedSymbol: e.target.value.toUpperCase() }))}
+                                        placeholder="e.g. EURUSD or BTCUSD"
+                                        disabled={loading.ctrader}
+                                    />
+                                ) : (
+                                    <select
+                                        value={state.selectedSymbol}
+                                        onChange={e => setState(prev => ({ ...prev, selectedSymbol: e.target.value }))}
+                                        disabled={loading.ctrader}
+                                    >
+                                        {symbols.length > 0 ? symbols.map(sym => <option key={sym} value={sym}>{sym}</option>) : <option value="EURUSD">EURUSD</option>}
+                                    </select>
+                                )}
                             </div>
                             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                                 <div>
@@ -4292,12 +4452,12 @@
                             <button
                                 className="primary"
                                 onClick={onPlaceOrder}
-                                disabled={loading.ctrader || !isReady}
+                                disabled={loading.ctrader || !canPlaceOrder}
                                 style={{ marginTop: 4 }}
                             >
                                 {loading.ctrader ? "Placing…" : isLive ? "🚀 Place Live Order" : "📋 Place Dry-Run Order"}
                             </button>
-                            {!isReady && (
+                            {!canPlaceOrder && (
                                 <div style={{ fontSize: 12, color: "var(--rose)" }}>cTrader not ready. Check credentials and connection.</div>
                             )}
                         </div>
@@ -5288,15 +5448,20 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
             );
         }
 
-        function LivePaperPanel({ request, addLog }) {
+        const LivePaperPanel = ({ request, addLog, setLoadingKey, fetchStrategyHealth, fetchCTraderStatus, fetchCTraderBalance, fetchCTraderSymbols }) => {
             const [loopStatus, setLoopStatus] = useState(null);
             const [watchlist, setWatchlist] = useState([]);
             const [positions, setPositions] = useState([]);
             const [performance, setPerformance] = useState(null);
-            const [loading, setLoading] = useState(false);
+            const [loading, setLoading] = useState({ loop: false });
             const [newSymbol, setNewSymbol] = useState("");
             const [newTimeframes, setNewTimeframes] = useState("1h");
             const [sseConnected, setSseConnected] = useState(false);
+
+            function setLoopLoading(value) {
+                setLoading(current => ({ ...current, loop: value }));
+                if (setLoadingKey) setLoadingKey("loop", value);
+            }
 
             async function refreshLoop() {
                 try {
@@ -5335,7 +5500,7 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
             }
 
             async function controlLoop(action) {
-                setLoadingKey("loop", true);
+                setLoopLoading(true);
                 try {
                     const data = await request("/loop/control", {
                         method: "POST",
@@ -5346,13 +5511,13 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                 } catch (e) {
                     addLog("error", `Loop ${action} failed`, { error: e.message });
                 } finally {
-                    setLoadingKey("loop", false);
+                    setLoopLoading(false);
                 }
             }
 
             async function addSymbol() {
                 if (!newSymbol.trim()) return;
-                setLoadingKey("loop", true);
+                setLoopLoading(true);
                 try {
                     console.log("[LivePaper] Adding symbol:", newSymbol.toUpperCase());
                     const result = await request("/loop/watchlist", {
@@ -5371,12 +5536,12 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                     console.error("[LivePaper] Add failed:", e);
                     addLog("error", `Add symbol failed: ${e.message} (status=${e.status || "?"}, path=${e.path || "?"})`, { error: e.message, status: e.status, path: e.path, response: e.response });
                 } finally {
-                    setLoadingKey("loop", false);
+                    setLoopLoading(false);
                 }
             }
 
             async function removeSymbol(symbol) {
-                setLoadingKey("loop", true);
+                setLoopLoading(true);
                 try {
                     await request(`/loop/watchlist/${symbol}`, { method: "DELETE" });
                     addLog("system", `Removed ${symbol} from watchlist`);
@@ -5384,13 +5549,13 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                 } catch (e) {
                     addLog("error", "Remove symbol failed", { error: e.message });
                 } finally {
-                    setLoadingKey("loop", false);
+                    setLoopLoading(false);
                 }
             }
 
             async function emergencyStop() {
                 if (!confirm("EMERGENCY STOP: Pause loop and close all open positions?")) return;
-                setLoadingKey("loop", true);
+                setLoopLoading(true);
                 try {
                     await request("/live/emergency-stop", {
                         method: "POST",
@@ -5401,7 +5566,7 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                 } catch (e) {
                     addLog("error", "Emergency stop failed", { error: e.message });
                 } finally {
-                    setLoadingKey("loop", false);
+                    setLoopLoading(false);
                 }
             }
 

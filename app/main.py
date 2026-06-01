@@ -137,8 +137,22 @@ async def _autonomous_loop_auto_start():
             pass
 
 
+async def _training_loop_auto_start():
+    """Optionally auto-start the academy training loop after startup."""
+    from app.core.config import TRAINING_LOOP_AUTO_START
+    from app.services.training_loop import training_loop
+
+    await asyncio.sleep(5)
+    if TRAINING_LOOP_AUTO_START:
+        try:
+            await training_loop.start()
+        except Exception:
+            pass
+
+
 _news_poll_task = None
 _autostart_task = None
+_training_autostart_task = None
 _price_poller_task = None
 _shadow_queue_task = None
 
@@ -159,13 +173,14 @@ async def _shadow_queue_loop():
 
 @app.on_event("startup")
 def startup_event():
-    global _heartbeat_task, _news_poll_task, _autostart_task, _price_poller_task, _shadow_queue_task
+    global _heartbeat_task, _news_poll_task, _autostart_task, _training_autostart_task, _price_poller_task, _shadow_queue_task
     # Create DB tables
     from app.db import Base, engine
     Base.metadata.create_all(bind=engine)
     _heartbeat_task = asyncio.create_task(_heartbeat_loop())
     _news_poll_task = asyncio.create_task(_news_poll_loop())
     _autostart_task = asyncio.create_task(_autonomous_loop_auto_start())
+    _training_autostart_task = asyncio.create_task(_training_loop_auto_start())
     # Start price poller for live position monitoring
     from app.services.price_poller import price_poller
     price_poller.start()
@@ -179,10 +194,12 @@ def startup_event():
 
 @app.on_event("shutdown")
 def shutdown_event():
-    global _heartbeat_task, _news_poll_task, _autostart_task, _price_poller_task, _shadow_queue_task
+    global _heartbeat_task, _news_poll_task, _autostart_task, _training_autostart_task, _price_poller_task, _shadow_queue_task
     from app.services.autonomous_loop import autonomous_loop_instance
     from app.services.price_poller import price_poller
+    from app.services.training_loop import training_loop
     autonomous_loop_instance.stop()
+    training_loop.stop_now()
     webhook_consumer_instance.stop()
     paper_position_monitor_instance.stop()
     price_poller.stop()
@@ -192,5 +209,7 @@ def shutdown_event():
         _news_poll_task.cancel()
     if _autostart_task:
         _autostart_task.cancel()
+    if _training_autostart_task:
+        _training_autostart_task.cancel()
     if _shadow_queue_task:
         _shadow_queue_task.cancel()

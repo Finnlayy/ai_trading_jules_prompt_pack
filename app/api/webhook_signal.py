@@ -15,7 +15,7 @@ from typing import Any
 
 from fastapi import APIRouter, Header, HTTPException, Request
 
-from app.core.config import WEBHOOK_SECRET
+import app.core.config as config
 from app.schemas.webhook_signal import WebhookSignalPayload, WebhookSignalResponse
 
 logger = logging.getLogger(__name__)
@@ -50,10 +50,11 @@ async def receive_signal(
     body = await request.body()
 
     # Validate signature if a webhook secret is configured
-    if WEBHOOK_SECRET:
+    webhook_secret = config.WEBHOOK_SECRET
+    if webhook_secret:
         if not x_signature:
             raise HTTPException(status_code=401, detail="Missing X-Signature header")
-        if not _verify_signature(body, x_signature, WEBHOOK_SECRET):
+        if not _verify_signature(body, x_signature, webhook_secret):
             raise HTTPException(status_code=401, detail="Invalid signature")
 
     # Parse and validate payload schema
