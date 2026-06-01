@@ -269,9 +269,10 @@ async def emergency_stop(req: EmergencyStopRequest):
 
     positions_closed = 0
     if req.close_open_positions:
-        for p in live_fill_tracker.get_open_positions():
-            live_fill_tracker.record_exit(p.trade_id, p.current_price)
-            positions_closed += 1
+        open_positions = live_fill_tracker.get_open_positions()
+        exits = [{"trade_id": p.trade_id, "exit_price": p.current_price} for p in open_positions]
+        live_fill_tracker.record_exits_batch(exits)
+        positions_closed = len(exits)
 
     autonomous_loop_instance.pause()
     dashboard_sse_manager.broadcast_alert(
