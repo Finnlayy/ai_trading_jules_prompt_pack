@@ -12,7 +12,7 @@ from fastapi import APIRouter, Query
 from pydantic import BaseModel
 
 from app.services.signal_generator import BybitDataFeed, OHLCV
-from app.services.cisd_scorer import CISDScorer, Candle as CISDScorerCandle
+from app.services.cisd_scorer import CISDScorer, Candle as CISDScorerCandle, CISDConfig
 
 logger = logging.getLogger(__name__)
 
@@ -113,19 +113,21 @@ async def get_indicators(
     cisd_candles = _to_cisd_candles(raw)
     # Use the same GA-optimized scorer weights as the signal generator
     scorer = CISDScorer(
-        min_alignment=3,
-        ob_atr_mul=0.798,
-        ob_pivot=6,
-        w_align_full=1,
-        w_align_part=1,
-        w_cisd=2,
-        w_ob_touch=3,
-        w_fvg_touch=2,
-        w_vol_score=2,
-        w_body_score=1,
-        body_atr_mul=0.375,
-        vol_mult=1.103,
-        vol_period=20,
+        config=CISDConfig(
+            min_alignment=3,
+            ob_atr_mul=0.798,
+            ob_pivot=6,
+            w_align_full=1,
+            w_align_part=1,
+            w_cisd=2,
+            w_ob_touch=3,
+            w_fvg_touch=2,
+            w_vol_score=2,
+            w_body_score=1,
+            body_atr_mul=0.375,
+            vol_mult=1.103,
+            vol_period=20,
+        )
     )
     scores = scorer.score_series(cisd_candles)
 

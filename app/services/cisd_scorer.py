@@ -254,41 +254,32 @@ def compute_ob_fvg_touches(
     return bull_ob_touch, bear_ob_touch, bull_fvg_touch, bear_fvg_touch
 
 
+
+@dataclass(frozen=True)
+class CISDConfig:
+    min_alignment: int = 3
+    ob_atr_mul: float = 1.6
+    ob_pivot: int = 6
+    w_align_full: int = 4
+    w_align_part: int = 2
+    w_cisd: int = 3
+    w_ob_touch: int = 3
+    w_fvg_touch: int = 3
+    w_vol_score: int = 2
+    w_body_score: int = 2
+    body_atr_mul: float = 0.5
+    vol_mult: float = 1.05
+    vol_period: int = 20
+
 class CISDScorer:
+
     """
     Computes MTF CISD + OB/FVG confluence scores for a series of candles.
     Produces a confluence_score (0-100) per bar suitable for M8Payload.
     """
 
-    def __init__(
-        self,
-        min_alignment: int = 3,
-        ob_atr_mul: float = 1.6,
-        ob_pivot: int = 6,
-        w_align_full: int = 4,
-        w_align_part: int = 2,
-        w_cisd: int = 3,
-        w_ob_touch: int = 3,
-        w_fvg_touch: int = 3,
-        w_vol_score: int = 2,
-        w_body_score: int = 2,
-        body_atr_mul: float = 0.5,
-        vol_mult: float = 1.05,
-        vol_period: int = 20,
-    ):
-        self.min_alignment = min_alignment
-        self.ob_atr_mul = ob_atr_mul
-        self.ob_pivot = ob_pivot
-        self.w_align_full = w_align_full
-        self.w_align_part = w_align_part
-        self.w_cisd = w_cisd
-        self.w_ob_touch = w_ob_touch
-        self.w_fvg_touch = w_fvg_touch
-        self.w_vol_score = w_vol_score
-        self.w_body_score = w_body_score
-        self.body_atr_mul = body_atr_mul
-        self.vol_mult = vol_mult
-        self.vol_period = vol_period
+    def __init__(self, config: Optional[CISDConfig] = None):
+        self.config = config or CISDConfig()
 
     def score_series(self, candles: Sequence[Candle]) -> List[Dict]:
         """
@@ -306,7 +297,7 @@ class CISDScorer:
         v = [c.v for c in candles]
 
         atr14 = atr(candles, 14)
-        vol_sma = sma(v, self.vol_period)
+        vol_sma = sma(v, self.config.vol_period)
 
         local_state, local_bull_cisd, local_bear_cisd = cisd_sequence(candles)
         state_h4 = mtf_state_for_1m(candles, 48)
@@ -314,7 +305,7 @@ class CISDScorer:
         state_m15 = mtf_state_for_1m(candles, 3)
 
         bull_ob_touch, bear_ob_touch, bull_fvg_touch, bear_fvg_touch = compute_ob_fvg_touches(
-            candles, self.ob_pivot, self.ob_atr_mul
+            candles, self.config.ob_pivot, self.config.ob_atr_mul
         )
 
         en_h4, en_h1, en_m15, en_m5 = True, True, True, False
@@ -334,30 +325,30 @@ class CISDScorer:
                          (1 if en_h1 and sh1 == -1 else 0) + \
                          (1 if en_m15 and sm15 == -1 else 0)
 
-            bull_aligned = bull_count >= self.min_alignment
-            bear_aligned = bear_count >= self.min_alignment
+            bull_aligned = bull_count >= self.config.min_alignment
+            bear_aligned = bear_count >= self.config.min_alignment
 
             # Scoring
             bull_conf = 0
-            bull_conf += self.w_align_full if (bull_count == active_tfs and active_tfs >= 3) else \
-                         (self.w_align_part if bull_aligned else 0)
-            bull_conf += self.w_cisd if local_bull_cisd[i] else 0
-            bull_conf += self.w_ob_touch if bull_ob_touch[i] else 0
-            bull_conf += self.w_fvg_touch if bull_fvg_touch[i] else 0
-            bull_conf += self.w_vol_score if v[i] > vol_sma[i] * self.vol_mult else 0
-            bull_conf += self.w_body_score if (c[i] > o[i] and (c[i] - o[i]) > atr14[i] * self.body_atr_mul) else 0
+            bull_conf += self.config.w_align_full if (bull_count == active_tfs and active_tfs >= 3) else \
+                         (self.config.w_align_part if bull_aligned else 0)
+            bull_conf += self.config.w_cisd if local_bull_cisd[i] else 0
+            bull_conf += self.config.w_ob_touch if bull_ob_touch[i] else 0
+            bull_conf += self.config.w_fvg_touch if bull_fvg_touch[i] else 0
+            bull_conf += self.config.w_vol_score if v[i] > vol_sma[i] * self.config.vol_mult else 0
+            bull_conf += self.config.w_body_score if (c[i] > o[i] and (c[i] - o[i]) > atr14[i] * self.config.body_atr_mul) else 0
 
             bear_conf = 0
-            bear_conf += self.w_align_full if (bear_count == active_tfs and active_tfs >= 3) else \
-                         (self.w_align_part if bear_aligned else 0)
-            bear_conf += self.w_cisd if local_bear_cisd[i] else 0
-            bear_conf += self.w_ob_touch if bear_ob_touch[i] else 0
-            bear_conf += self.w_fvg_touch if bear_fvg_touch[i] else 0
-            bear_conf += self.w_vol_score if v[i] > vol_sma[i] * self.vol_mult else 0
-            bear_conf += self.w_body_score if (o[i] > c[i] and (o[i] - c[i]) > atr14[i] * self.body_atr_mul) else 0
+            bear_conf += self.config.w_align_full if (bear_count == active_tfs and active_tfs >= 3) else \
+                         (self.config.w_align_part if bear_aligned else 0)
+            bear_conf += self.config.w_cisd if local_bear_cisd[i] else 0
+            bear_conf += self.config.w_ob_touch if bear_ob_touch[i] else 0
+            bear_conf += self.config.w_fvg_touch if bear_fvg_touch[i] else 0
+            bear_conf += self.config.w_vol_score if v[i] > vol_sma[i] * self.config.vol_mult else 0
+            bear_conf += self.config.w_body_score if (o[i] > c[i] and (o[i] - c[i]) > atr14[i] * self.config.body_atr_mul) else 0
 
             # Normalize to 0-100 scale
-            max_possible = self.w_align_full + self.w_cisd + self.w_ob_touch + self.w_fvg_touch + self.w_vol_score + self.w_body_score
+            max_possible = self.config.w_align_full + self.config.w_cisd + self.config.w_ob_touch + self.config.w_fvg_touch + self.config.w_vol_score + self.config.w_body_score
             norm_bull = (bull_conf / max_possible * 100) if max_possible > 0 else 0
             norm_bear = (bear_conf / max_possible * 100) if max_possible > 0 else 0
 

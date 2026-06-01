@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Sequence
 
 from app.core.config import SIGNAL_MIN_CONFLUENCE_OVERRIDE
-from app.services.cisd_scorer import CISDScorer, Candle as CISDCandle
+from app.services.cisd_scorer import CISDScorer, Candle as CISDCandle, CISDConfig
 
 
 # ---------------------------------------------------------------------------
@@ -112,19 +112,21 @@ class CISDStrategy(BaseStrategy):
     ) -> None:
         super().__init__(strategy_id, name, description)
         self.scorer = scorer or CISDScorer(
-            min_alignment=3,
-            ob_atr_mul=0.798,
-            ob_pivot=6,
-            w_align_full=1,
-            w_align_part=1,
-            w_cisd=2,
-            w_ob_touch=3,
-            w_fvg_touch=2,
-            w_vol_score=2,
-            w_body_score=1,
-            body_atr_mul=0.375,
-            vol_mult=1.103,
-            vol_period=20,
+            config=CISDConfig(
+                min_alignment=3,
+                ob_atr_mul=0.798,
+                ob_pivot=6,
+                w_align_full=1,
+                w_align_part=1,
+                w_cisd=2,
+                w_ob_touch=3,
+                w_fvg_touch=2,
+                w_vol_score=2,
+                w_body_score=1,
+                body_atr_mul=0.5,
+                vol_mult=1.05,
+                vol_period=20,
+            )
         )
 
     def score_bars(self, bars: Sequence) -> list[StrategyScore]:
