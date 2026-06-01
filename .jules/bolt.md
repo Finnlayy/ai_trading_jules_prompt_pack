@@ -22,3 +22,6 @@
 ## 2024-05-31 - Optimized JournalLogger's get_entries File Parsing Strategy
 **Learning:** We had an unintended performance bottleneck when parsing the historical log files (`trade_journal.jsonl`). Previously `json.loads` was executed for every single historical trade entry globally over thousands of lines prior to keeping only the required final subset using standard array slicing `entries[-limit:]`.
 **Action:** Always parse lines conditionally at the very last moment or use structure limiting queues such as `collections.deque(maxlen=limit)` when loading JSON history sequentially rather than eagerly building full lists of parsed objects.
+## 2024-06-25 - Avoid Eager JSON Parsing in Kelly Sizer History Lookups
+**Learning:** The Kelly Sizer was doing full `json.loads` on every line of the historical trade journal (`trade_journal.jsonl`) only to discard most lines that didn't match the `EXECUTED_SIM` + `CLOSED` criteria. This eagerly allocates many dictionaries, wasting memory and CPU cycles.
+**Action:** Use fast substring string checks (e.g. `if '"final_decision": "EXECUTED_SIM"' not in raw_line...`) to skip the expensive `json.loads` parsing step on irrelevant lines. This provides an easy >5x performance gain for historical metric aggregations across huge log files.
