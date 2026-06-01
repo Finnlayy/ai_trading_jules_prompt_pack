@@ -13,10 +13,7 @@ router = APIRouter()
 
 def _verify_webhook_signature(body: bytes, signature: str | None) -> bool:
     """Verify HMAC-SHA256 signature of the raw request body."""
-    if not WEBHOOK_SECRET:
-        # If no secret is configured, skip verification (backward compatible)
-        return True
-    if not signature:
+    if not WEBHOOK_SECRET or not signature:
         return False
     expected = hmac.new(
         WEBHOOK_SECRET.encode("utf-8"),
@@ -32,7 +29,9 @@ async def receive_m8_payload(request: Request):
     signature = request.headers.get("x-m8-signature")
 
     if not _verify_webhook_signature(body, signature):
-        raise HTTPException(status_code=401, detail="Invalid or missing webhook signature")
+        raise HTTPException(
+            status_code=401, detail="Invalid or missing webhook signature"
+        )
 
     try:
         data = json.loads(body)
