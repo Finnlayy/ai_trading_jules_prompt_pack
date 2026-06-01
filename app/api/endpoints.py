@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import json
+import logging
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import ValidationError
@@ -9,6 +10,7 @@ from app.api.orchestrator import process_signal
 from app.core.config import WEBHOOK_SECRET
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 def _verify_webhook_signature(body: bytes, signature: str | None) -> bool:
@@ -48,4 +50,5 @@ async def receive_m8_payload(request: Request):
         result = await process_signal(payload)
         return {"status": "success", "result": result}
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.exception("Error processing M8 payload")
+        raise HTTPException(status_code=500, detail="Internal server error processing payload")
