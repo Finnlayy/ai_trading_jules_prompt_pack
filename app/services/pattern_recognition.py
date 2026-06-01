@@ -59,17 +59,9 @@ def _local_extrema(
 # Head and Shoulders
 # ---------------------------------------------------------------------------
 
-def detect_head_and_shoulders(
-    closes: np.ndarray, highs: np.ndarray, lows: np.ndarray, order: int = 5
+def _detect_standard_hs(
+    closes: np.ndarray, highs: np.ndarray, lows: np.ndarray, peaks: np.ndarray, troughs: np.ndarray, order: int
 ) -> PatternMatch | None:
-    """
-    Detect classic Head-and-Shoulders (bearish reversal) and
-    Inverse Head-and-Shoulders (bullish reversal).
-    """
-    peaks, troughs = _local_extrema(highs, lows, order)
-    if len(peaks) < 3 or len(troughs) < 2:
-        return None
-
     best: PatternMatch | None = None
     best_score = 0.0
 
@@ -129,7 +121,14 @@ def detect_head_and_shoulders(
                 target_price=round(target, 4),
             )
 
-    # Inverse H&S (bullish) — scan troughs
+    return best
+
+def _detect_inverse_hs(
+    closes: np.ndarray, highs: np.ndarray, lows: np.ndarray, peaks: np.ndarray, troughs: np.ndarray, order: int
+) -> PatternMatch | None:
+    best: PatternMatch | None = None
+    best_score = 0.0
+
     if len(troughs) >= 3 and len(peaks) >= 2:
         for i in range(len(troughs) - 2):
             ls_idx = troughs[i]
@@ -182,6 +181,30 @@ def detect_head_and_shoulders(
                 )
 
     return best
+
+def detect_head_and_shoulders(
+    closes: np.ndarray, highs: np.ndarray, lows: np.ndarray, order: int = 5
+) -> PatternMatch | None:
+    """
+    Detect classic Head-and-Shoulders (bearish reversal) and
+    Inverse Head-and-Shoulders (bullish reversal).
+    """
+    peaks, troughs = _local_extrema(highs, lows, order)
+    if len(peaks) < 3 and len(troughs) < 3:
+        return None
+
+    best_match: PatternMatch | None = None
+
+    if len(peaks) >= 3 and len(troughs) >= 2:
+        best_match = _detect_standard_hs(closes, highs, lows, peaks, troughs, order)
+
+    if len(troughs) >= 3 and len(peaks) >= 2:
+        inv_match = _detect_inverse_hs(closes, highs, lows, peaks, troughs, order)
+        if inv_match is not None:
+            if best_match is None or inv_match.confidence > best_match.confidence:
+                best_match = inv_match
+
+    return best_match
 
 
 # ---------------------------------------------------------------------------
