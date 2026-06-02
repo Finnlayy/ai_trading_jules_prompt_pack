@@ -153,6 +153,7 @@ async def close_position(trade_id: str):
     if p is None:
         raise HTTPException(status_code=404, detail="Position not found")
     live_fill_tracker.record_exit(trade_id, p.current_price)
+    live_fill_tracker.flush_db_exit_queue()
     return {"success": True, "trade_id": trade_id, "closed_at": datetime.now(timezone.utc).isoformat()}
 
 
@@ -272,6 +273,8 @@ async def emergency_stop(req: EmergencyStopRequest):
         for p in live_fill_tracker.get_open_positions():
             live_fill_tracker.record_exit(p.trade_id, p.current_price)
             positions_closed += 1
+        if positions_closed > 0:
+            live_fill_tracker.flush_db_exit_queue()
 
     autonomous_loop_instance.pause()
     dashboard_sse_manager.broadcast_alert(

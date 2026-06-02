@@ -228,6 +228,10 @@ class PositionMonitor:
                 level="info" if ex.exit_reason == "TAKE_PROFIT" else "warning",
             )
 
+        # Ensure queued DB exits are flushed
+        if exits:
+            live_fill_tracker.flush_db_exit_queue()
+
         if closed:
             # Broadcast updated positions
             positions = live_fill_tracker.get_open_positions()

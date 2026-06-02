@@ -1,0 +1,45 @@
+--- app/services/live_fill_tracker.py
++++ app/services/live_fill_tracker.py
+@@ -357,17 +357,36 @@
+         except Exception:
+             pass
+         # Also update SQLite
++        self._db_exit_queue.append((trade_id, exit_price, pnl, exit))
++
++        # Flush DB exit queue if it reaches batch size
++        if len(self._db_exit_queue) >= 50:
++            self.flush_db_exit_queue()
++
++    def flush_db_exit_queue(self) -> None:
++        """Flush the queued DB updates for exited positions."""
++        if not self._db_exit_queue:
++            return
+         try:
+             from app.db import SessionLocal
+             from app.db.models import Position
+             db = SessionLocal()
+-            db_pos = db.query(Position).filter(Position.trade_id == trade_id).first()
+-            if db_pos:
+-                db_pos.is_open = False
+-                db_pos.current_price = exit_price
+-                db_pos.realized_pnl = pnl
+-                db_pos.closed_at = exit
++
++            trade_ids = [q[0] for q in self._db_exit_queue]
++            db_positions = db.query(Position).filter(Position.trade_id.in_(trade_ids)).all()
++
++            pos_map = {p.trade_id: p for p in db_positions}
++
++            for trade_id, exit_price, pnl, exit_time in self._db_exit_queue:
++                db_pos = pos_map.get(trade_id)
++                if db_pos:
++                    db_pos.is_open = False
++                    db_pos.current_price = exit_price
++                    db_pos.realized_pnl = pnl
++                    db_pos.closed_at = exit_time
++
+             db.commit()
+             db.close()
++            self._db_exit_queue.clear()
+         except Exception:
+             pass
