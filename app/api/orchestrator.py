@@ -85,7 +85,6 @@ async def _execute_trade_with_broker(payload, decision_result, ai_decision):
         "reject_reason": decision_result["reject_reason"],
         "ai_decision": ai_decision,
     }
-    import asyncio
     if _should_execute_broker_in_thread(broker_instance):
         journal_entry = await asyncio.to_thread(broker_instance.execute_trade, **execute_kwargs)
     else:
@@ -249,7 +248,7 @@ async def process_signal(payload: M8Payload):
     )
     
     # 5. Journaling
-    journal_logger_instance.log(journal_entry)
+    await asyncio.to_thread(journal_logger_instance.log, journal_entry)
 
     # 6. Record fill if trade executed
     # We only record an entry fill for ENTRY intents. (For CLOSE intents, this should be handled separately).
@@ -260,7 +259,6 @@ async def process_signal(payload: M8Payload):
 
     # Dispatch learning feedback for rejected trades (simulated outcome)
     if decision_result["decision"] == DecisionEnum.REJECT and payload.intent == "ENTRY":
-        import asyncio
         asyncio.create_task(_dispatch_learning_feedback(payload, ai_review))
         # Also queue for delayed shadow evaluation when future bars are available
         from app.services.shadow_queue import shadow_queue
@@ -368,7 +366,7 @@ async def process_manual_signal(payload: M8Payload):
     )
 
     # 5. Journaling
-    journal_logger_instance.log(journal_entry)
+    await asyncio.to_thread(journal_logger_instance.log, journal_entry)
 
     # 6. Record fill if trade executed
     _record_trade_fill(payload, decision_result, journal_entry)
