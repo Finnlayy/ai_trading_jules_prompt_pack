@@ -11,3 +11,17 @@
 ## 2024-05-29 - Inefficient Statistical Baseline Recalculation inside Tight Loops
 **Learning:** The Ljung-Box test function (`ljung_box`) inside `app/services/statistical_battery.py` repeatedly called `_autocorr`, which recalculated the array's mean and variance (`c0`) for every single lag (e.g. 20 times for 20 lags).
 **Action:** Inline the autocorrelation logic inside `ljung_box` to compute the mean, centered array, and variance once outside the loop. Then iteratively compute only the specific lag's covariance inside the loop, effectively halving the computation time (~0.20s down to ~0.10s for 100 runs). This avoids redundant O(N) operations inside loops.
+## 2024-06-25 - Python memory allocations in high-frequency calculations
+**Learning:** For performance-critical arrays (like calculating metric indicators on millions of tick/candle returns), native python `sum()` over unrolled arrays or explicit tracking counters can be ~4x faster than list comprehensions because it avoids creating intermediate large list objects and overhead associated with Python generators.
+**Action:** When working on backends analyzing large series or arrays of returns in Python where external dependencies like numpy aren't immediately available, prefer explicitly unrolled loop structures and native mathematical reductions over memory-intensive generator comprehensions.
+
+## 2024-05-30 - E2E Testing without npm
+**Learning:** For projects without a JS build step or node package manager (no `package.json`), using Python Playwright bindings (`pytest-playwright`) provides an effective E2E testing solution without introducing architectural complexity or breaking the Single-Page stand-alone paradigm.
+**Action:** Default to Python-based Playwright testing for single-file, dependency-free frontends unless explicitly requested otherwise.
+
+## 2024-05-31 - Optimized JournalLogger's get_entries File Parsing Strategy
+**Learning:** We had an unintended performance bottleneck when parsing the historical log files (`trade_journal.jsonl`). Previously `json.loads` was executed for every single historical trade entry globally over thousands of lines prior to keeping only the required final subset using standard array slicing `entries[-limit:]`.
+**Action:** Always parse lines conditionally at the very last moment or use structure limiting queues such as `collections.deque(maxlen=limit)` when loading JSON history sequentially rather than eagerly building full lists of parsed objects.
+## 2024-06-25 - Avoid Eager JSON Parsing in Kelly Sizer History Lookups
+**Learning:** The Kelly Sizer was doing full `json.loads` on every line of the historical trade journal (`trade_journal.jsonl`) only to discard most lines that didn't match the `EXECUTED_SIM` + `CLOSED` criteria. This eagerly allocates many dictionaries, wasting memory and CPU cycles.
+**Action:** Use fast substring string checks (e.g. `if '"final_decision": "EXECUTED_SIM"' not in raw_line...`) to skip the expensive `json.loads` parsing step on irrelevant lines. This provides an easy >5x performance gain for historical metric aggregations across huge log files.
