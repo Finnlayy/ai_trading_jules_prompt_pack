@@ -121,3 +121,11 @@ def test_learning_tab_surfaces_lifecycle_endpoints():
     assert 'data-testid="paper-outcomes-table"' in html
     assert 'data-testid="scout-learning-table"' in html
     assert 'data-testid="academy-career-outcomes-table"' in html
+
+
+def test_ai_detail_surfaces_weighted_scout_vote():
+    html = _frontend_source()
+
+    assert "latestTrace.weighted_scout_vote" in html
+    assert 'data-testid="weighted-scout-vote-panel"' in html
+    assert "Confidence call dedupe" in html

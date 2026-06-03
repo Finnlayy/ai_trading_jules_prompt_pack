@@ -4127,6 +4127,22 @@
                         </div>
                         {latestTrace && latestTrace.scouts ? (
                             <div>
+                                {latestTrace.weighted_scout_vote && (
+                                    <div className="panel" data-testid="weighted-scout-vote-panel" style={{ marginBottom: 12, boxShadow: "none" }}>
+                                        <div className="panel-title">
+                                            <span>Weighted Scout Vote</span>
+                                            <span className={`pill ${latestTrace.weighted_scout_vote.decision_hint === "PROCEED_TO_SIMULATION" ? "ok" : latestTrace.weighted_scout_vote.decision_hint === "REJECT" ? "error" : "warn"}`}>
+                                                {latestTrace.weighted_scout_vote.decision_hint || "UNKNOWN"}
+                                            </span>
+                                        </div>
+                                        <div className="grid" style={{ gap: 8 }}>
+                                            <div className="span-3"><Kpi title="Approval" value={`${((latestTrace.weighted_scout_vote.approval_ratio || 0) * 100).toFixed(0)}%`} caption={`Score ${latestTrace.weighted_scout_vote.approval_score || 0}`} tone="ok" /></div>
+                                            <div className="span-3"><Kpi title="Rejection" value={`${(100 - ((latestTrace.weighted_scout_vote.approval_ratio || 0) * 100)).toFixed(0)}%`} caption={`Score ${latestTrace.weighted_scout_vote.rejection_score || 0}`} tone="warn" /></div>
+                                            <div className="span-3"><Kpi title="Weighted Conf" value={`${((latestTrace.weighted_scout_vote.weighted_confidence || 0) * 100).toFixed(0)}%`} caption="Outcome-calibrated" tone="info" /></div>
+                                            <div className="span-3"><Kpi title="Recorded" value={latestTrace.confidence_recorded ? "Yes" : "No"} caption="Confidence call dedupe" tone={latestTrace.confidence_recorded ? "ok" : "warn"} /></div>
+                                        </div>
+                                    </div>
+                                )}
                                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 12, marginBottom: 12 }}>
                                     {["technical", "sentiment", "risk", "macro"].map(name => {
                                         const scout = latestTrace.scouts[name] || {};

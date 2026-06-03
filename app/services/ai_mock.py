@@ -27,21 +27,21 @@ class MockAIReviewLayer:
                 "decision": individual_decision,
             }
 
-        # Orchestrator synthesizes majority vote
-        approvals = sum(1 for s in scout_reports.values() if s["decision"] == DecisionEnum.PROCEED_TO_SIMULATION.value)
-        rejections = len(scout_reports) - approvals
+        weighted_vote = self._weighted_scout_vote(payload, scout_reports)
+        approvals = weighted_vote["approval_score"]
+        rejections = weighted_vote["rejection_score"]
 
         if rejections > approvals:
             decision = DecisionEnum.REJECT
-            confidence = 0.85
-            reason_codes = ["SCOUT_MAJORITY_REJECT"]
+            confidence = weighted_vote["weighted_confidence"]
+            reason_codes = ["WEIGHTED_SCOUT_REJECT"]
             risk_flags = []
             requires_human_review = True
-            reject_reason = f"{rejections}/{len(scout_reports)} scouts rejected"
+            reject_reason = "Weighted scout vote rejected the candidate"
         else:
             decision = DecisionEnum.PROCEED_TO_SIMULATION
-            confidence = 0.85
-            reason_codes = ["FAVORABLE_SETUP"]
+            confidence = weighted_vote["weighted_confidence"]
+            reason_codes = ["FAVORABLE_SETUP", "WEIGHTED_SCOUT_APPROVE"]
             risk_flags = []
             requires_human_review = False
             reject_reason = None
@@ -104,6 +104,8 @@ class MockAIReviewLayer:
                     name: confidence_registry.get_scout_weight(payload.symbol, name)
                     for name in self.SCOUT_NAMES
                 },
+                "weighted_scout_vote": weighted_vote,
+                "confidence_recorded": True,
                 "final_summary": {
                     "decision": decision.value,
                     "confidence": confidence,
@@ -129,6 +131,49 @@ class MockAIReviewLayer:
         if scout_name == "correlation":
             return DecisionEnum.PROCEED_TO_SIMULATION.value
         return DecisionEnum.PROCEED_TO_SIMULATION.value
+
+    def _weighted_scout_vote(self, payload: M8Payload, scout_reports: dict) -> dict:
+        rows = {}
+        approval_score = 0.0
+        rejection_score = 0.0
+        total_weight = 0.0
+        weighted_confidence = 0.0
+
+        for scout_name, data in scout_reports.items():
+            weight = confidence_registry.get_scout_weight(payload.symbol, scout_name)
+            confidence = self._extract_confidence(data["report"])
+            decision = data["decision"]
+            score = weight * confidence
+            if decision == DecisionEnum.REJECT.value:
+                rejection_score += score
+            else:
+                approval_score += score
+            total_weight += weight
+            weighted_confidence += score
+            rows[scout_name] = {
+                "decision": decision,
+                "confidence": round(confidence, 4),
+                "weight": round(weight, 4),
+                "score": round(score, 4),
+            }
+
+        total_score = approval_score + rejection_score
+        approval_ratio = approval_score / total_score if total_score else 0.5
+        if approval_ratio >= 0.62:
+            decision_hint = DecisionEnum.PROCEED_TO_SIMULATION.value
+        elif approval_ratio <= 0.38:
+            decision_hint = DecisionEnum.REJECT.value
+        else:
+            decision_hint = DecisionEnum.HUMAN_REVIEW.value
+
+        return {
+            "approval_score": round(approval_score, 4),
+            "rejection_score": round(rejection_score, 4),
+            "approval_ratio": round(approval_ratio, 4),
+            "weighted_confidence": round(weighted_confidence / total_weight, 4) if total_weight else 0.5,
+            "decision_hint": decision_hint,
+            "scouts": rows,
+        }
 
     def _mock_technical(self, payload: M8Payload) -> str:
         conf = min(1.0, payload.confluence_score / 100 + 0.1)

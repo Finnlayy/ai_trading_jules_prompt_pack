@@ -210,3 +210,38 @@ def test_lifecycle_recorder_records_paper_outcome_and_learning_events():
     assert confidence.scout_outcomes[0]["details"]["strategy_id"] == "default"
     assert confidence.scout_outcomes[0]["details"]["timeframe"] == "1m"
     assert confidence.scout_outcomes[0]["details"]["outcome_source"] == "live_paper"
+
+
+def test_lifecycle_recorder_skips_duplicate_confidence_reviews_when_ai_layer_recorded():
+    Session = _session_factory()
+    confidence = FakeConfidenceRegistry()
+    recorder = LifecycleRecorder(Session, confidence_registry=confidence)
+    payload = _payload()
+    candidate_id = recorder.record_candidate(payload)
+
+    ai_review = SignalReview(
+        schema_version="1.0",
+        signal_id=payload.signal_id,
+        decision=AIDecisionEnum.PROCEED_TO_SIMULATION,
+        confidence=0.82,
+        reason_codes=["TEST_APPROVED"],
+        risk_flags=[],
+        requires_human_review=False,
+        audit_trace={
+            "confidence_recorded": True,
+            "scouts": {
+                "technical": {
+                    "decision": "PROCEED_TO_SIMULATION",
+                    "confidence": 0.84,
+                    "report": "Confidence: 0.84\ntrend aligned",
+                }
+            },
+        },
+    )
+
+    recorder.record_ai_review(candidate_id=candidate_id, payload=payload, ai_review=ai_review)
+
+    with Session() as db:
+        assert db.query(AgentReviewEvent).count() == 1
+    assert confidence.signal_reviews == []
+    assert confidence.scout_reviews == []

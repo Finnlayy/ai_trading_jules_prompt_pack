@@ -154,11 +154,12 @@ class LifecycleRecorder:
             db.commit()
             event_count = len(events)
 
-        self._record_confidence_reviews(
-            payload=payload,
-            ai_review=ai_review,
-            events=confidence_snapshots,
-        )
+        if not (ai_review.audit_trace or {}).get("confidence_recorded"):
+            self._record_confidence_reviews(
+                payload=payload,
+                ai_review=ai_review,
+                events=confidence_snapshots,
+            )
         return event_count
 
     def record_risk_decision(
