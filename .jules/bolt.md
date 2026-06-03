@@ -25,3 +25,6 @@
 ## 2024-06-25 - Avoid Eager JSON Parsing in Kelly Sizer History Lookups
 **Learning:** The Kelly Sizer was doing full `json.loads` on every line of the historical trade journal (`trade_journal.jsonl`) only to discard most lines that didn't match the `EXECUTED_SIM` + `CLOSED` criteria. This eagerly allocates many dictionaries, wasting memory and CPU cycles.
 **Action:** Use fast substring string checks (e.g. `if '"final_decision": "EXECUTED_SIM"' not in raw_line...`) to skip the expensive `json.loads` parsing step on irrelevant lines. This provides an easy >5x performance gain for historical metric aggregations across huge log files.
+## 2024-05-24 - Fast JSON Parsing via String Matching
+**Learning:** In autonomous systems where JSONL files grow continuously (like `agent_careers.jsonl`), line-by-line parsing with `json.loads()` becomes an O(N) bottleneck. For simple key-value lookups (e.g., checking `event_type` or `scout_name`), scanning the raw string before parsing yields massive speedups.
+**Action:** Before parsing JSON lines, use `if "key" not in line: continue` to prune irrelevant lines. Use a bounded `deque` when fetching a limited set of recent events to prevent unneeded memory allocation and postpone `json.loads()` strictly for the matched, final limited set.
