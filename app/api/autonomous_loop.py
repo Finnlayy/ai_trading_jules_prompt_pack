@@ -43,6 +43,8 @@ async def get_loop_status():
             timestamp=health.get("timestamp"),
         ),
         current_strategy_id=status["current_strategy_id"],
+        last_generation_summary=status.get("last_generation_summary", {}),
+        last_processed_bars=status.get("last_processed_bars", {}),
     )
 
 

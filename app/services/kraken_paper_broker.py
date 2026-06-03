@@ -18,7 +18,7 @@ from typing import Any, Optional
 
 from sqlalchemy.orm import Session
 
-from app.db import SessionLocal
+from app.db import Base, SessionLocal, engine
 from app.db.models import PaperBalance, PaperPosition, PaperTrade
 from app.services.broker_interface import BaseBroker
 from app.services.kraken_broker import KrakenBroker
@@ -62,6 +62,7 @@ class KrakenPaperBroker(BaseBroker):
 
     def _init_balance(self) -> None:
         """Seed the paper balance if none exists."""
+        Base.metadata.create_all(bind=engine)
         with self._db() as db:
             bal = db.query(PaperBalance).filter(PaperBalance.currency == "USD").first()
             if bal is None:
@@ -268,6 +269,15 @@ class KrakenPaperBroker(BaseBroker):
         price: Optional[float] = None,
         stop_loss: Optional[float] = None,
         take_profit: Optional[float] = None,
+        candidate_id: Optional[str] = None,
+        signal_id: Optional[str] = None,
+        strategy_id: Optional[str] = None,
+        timeframe: Optional[str] = None,
+        ai_trace_json: Optional[str] = None,
+        risk_decision: Optional[str] = None,
+        risk_reason: Optional[str] = None,
+        opened_by_loop: bool = False,
+        outcome_source: str = "live_paper",
     ) -> dict[str, Any]:
         """Place a paper order and simulate immediate fill at live price.
 
@@ -342,12 +352,20 @@ class KrakenPaperBroker(BaseBroker):
             trade_id = f"paper_{uuid.uuid4().hex[:12]}"
             trade = PaperTrade(
                 trade_id=trade_id,
+                candidate_id=candidate_id,
+                signal_id=signal_id,
                 symbol=pair,
                 direction=dir_norm,
+                strategy_id=strategy_id,
+                timeframe=timeframe,
                 order_type=order_type.lower(),
                 volume=volume,
                 entry_price=fill_price,
                 fee=fee,
+                ai_trace_json=ai_trace_json,
+                risk_decision=risk_decision,
+                risk_reason=risk_reason,
+                outcome_source=outcome_source,
                 status="open",
             )
             db.add(trade)
@@ -371,13 +389,20 @@ class KrakenPaperBroker(BaseBroker):
 
             if position is None:
                 position = PaperPosition(
+                    candidate_id=candidate_id,
+                    signal_id=signal_id,
                     symbol=pair,
                     direction=dir_norm,
+                    strategy_id=strategy_id,
+                    timeframe=timeframe,
                     volume=volume,
                     avg_entry_price=fill_price,
                     fee_paid=fee,
                     stop_loss=stop_loss,
                     take_profit=take_profit,
+                    ai_trace_json=ai_trace_json,
+                    risk_decision=risk_decision,
+                    opened_by_loop=opened_by_loop,
                     status="open",
                 )
                 db.add(position)
@@ -392,6 +417,15 @@ class KrakenPaperBroker(BaseBroker):
                     )
                     position.volume = total_vol
                     position.fee_paid += fee
+                    position.candidate_id = candidate_id or position.candidate_id
+                    position.signal_id = signal_id or position.signal_id
+                    position.strategy_id = strategy_id or position.strategy_id
+                    position.timeframe = timeframe or position.timeframe
+                    position.stop_loss = stop_loss if stop_loss is not None else position.stop_loss
+                    position.take_profit = take_profit if take_profit is not None else position.take_profit
+                    position.ai_trace_json = ai_trace_json or position.ai_trace_json
+                    position.risk_decision = risk_decision or position.risk_decision
+                    position.opened_by_loop = opened_by_loop or position.opened_by_loop
                 else:
                     # Reducing / closing / flipping
                     if volume < position.volume:
@@ -448,13 +482,20 @@ class KrakenPaperBroker(BaseBroker):
 
                         # Open new position in opposite direction
                         new_pos = PaperPosition(
+                            candidate_id=candidate_id,
+                            signal_id=signal_id,
                             symbol=pair,
                             direction=dir_norm,
+                            strategy_id=strategy_id,
+                            timeframe=timeframe,
                             volume=remaining,
                             avg_entry_price=fill_price,
                             fee_paid=fee,
                             stop_loss=stop_loss,
                             take_profit=take_profit,
+                            ai_trace_json=ai_trace_json,
+                            risk_decision=risk_decision,
+                            opened_by_loop=opened_by_loop,
                             status="open",
                         )
                         db.add(new_pos)
@@ -467,12 +508,20 @@ class KrakenPaperBroker(BaseBroker):
                         # Create a new trade for the flipped portion
                         new_trade = PaperTrade(
                             trade_id=f"paper_{uuid.uuid4().hex[:12]}",
+                            candidate_id=candidate_id,
+                            signal_id=signal_id,
                             symbol=pair,
                             direction=dir_norm,
+                            strategy_id=strategy_id,
+                            timeframe=timeframe,
                             order_type=order_type.lower(),
                             volume=remaining,
                             entry_price=fill_price,
                             fee=0.0,
+                            ai_trace_json=ai_trace_json,
+                            risk_decision=risk_decision,
+                            risk_reason=risk_reason,
+                            outcome_source=outcome_source,
                             status="open",
                         )
                         db.add(new_trade)
