@@ -263,6 +263,7 @@ position_monitor = PositionMonitor()
 from app.db import SessionLocal
 from app.db.models import PaperPosition
 from app.services.kraken_paper_broker import KrakenPaperBroker
+from app.services.lifecycle_recorder import lifecycle_recorder
 
 
 class PaperPositionMonitor:
@@ -326,17 +327,53 @@ class PaperPositionMonitor:
                             "SL hit for %s: current=%.4f, sl=%.4f",
                             pos.symbol, current, pos.stop_loss
                         )
-                        self.broker.close_paper_position(pos.symbol, pos.volume)
+                        snapshot = self._position_snapshot(pos)
+                        result = self.broker.close_paper_position(
+                            pos.symbol,
+                            pos.volume,
+                            close_reason="STOP_LOSS",
+                        )
+                        lifecycle_recorder.record_paper_outcome(
+                            position_snapshot=snapshot,
+                            close_result=result,
+                            close_reason="STOP_LOSS",
+                        )
 
                     elif tp_hit:
                         logger.info(
                             "TP hit for %s: current=%.4f, tp=%.4f",
                             pos.symbol, current, pos.take_profit
                         )
-                        self.broker.close_paper_position(pos.symbol, pos.volume)
+                        snapshot = self._position_snapshot(pos)
+                        result = self.broker.close_paper_position(
+                            pos.symbol,
+                            pos.volume,
+                            close_reason="TAKE_PROFIT",
+                        )
+                        lifecycle_recorder.record_paper_outcome(
+                            position_snapshot=snapshot,
+                            close_result=result,
+                            close_reason="TAKE_PROFIT",
+                        )
 
                 except Exception as exc:
                     logger.warning("Could not check SL/TP for %s: %s", pos.symbol, exc)
+
+    @staticmethod
+    def _position_snapshot(pos: PaperPosition) -> dict:
+        return {
+            "candidate_id": pos.candidate_id,
+            "signal_id": pos.signal_id,
+            "symbol": pos.symbol,
+            "direction": pos.direction,
+            "strategy_id": pos.strategy_id,
+            "timeframe": pos.timeframe,
+            "volume": pos.volume,
+            "avg_entry_price": pos.avg_entry_price,
+            "stop_loss": pos.stop_loss,
+            "take_profit": pos.take_profit,
+            "created_at": pos.created_at,
+        }
 
 
 # Singleton instance for paper trading

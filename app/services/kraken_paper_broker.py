@@ -549,6 +549,7 @@ class KrakenPaperBroker(BaseBroker):
         symbol: str,
         volume: Optional[float] = None,
         order_type: str = "market",
+        close_reason: Optional[str] = None,
     ) -> dict[str, Any]:
         """Close (part of) an open paper position.
 
@@ -613,16 +614,25 @@ class KrakenPaperBroker(BaseBroker):
                 position.closed_at = datetime.now(timezone.utc)
 
             # Create closing trade
+            close_trade_id = f"paper_{uuid.uuid4().hex[:12]}"
             trade = PaperTrade(
-                trade_id=f"paper_{uuid.uuid4().hex[:12]}",
+                trade_id=close_trade_id,
+                candidate_id=position.candidate_id,
+                signal_id=position.signal_id,
                 symbol=pair,
                 direction=close_dir,
+                strategy_id=position.strategy_id,
+                timeframe=position.timeframe,
                 order_type=order_type.lower(),
                 volume=close_vol,
                 entry_price=fill_price,
                 exit_price=fill_price,
                 fee=fee,
                 pnl=pnl,
+                ai_trace_json=position.ai_trace_json,
+                risk_decision=position.risk_decision,
+                close_reason=close_reason,
+                outcome_source="live_paper",
                 status="closed",
                 closed_at=datetime.now(timezone.utc),
             )
@@ -631,12 +641,16 @@ class KrakenPaperBroker(BaseBroker):
 
             return {
                 "status": "ok",
+                "trade_id": close_trade_id,
+                "candidate_id": position.candidate_id,
+                "signal_id": position.signal_id,
                 "symbol": pair,
                 "direction": close_dir,
                 "volume": close_vol,
                 "fill_price": fill_price,
                 "pnl": round(pnl, 8),
                 "fee": fee,
+                "close_reason": close_reason,
                 "balance_after": round(bal.balance, 8),
                 "position_remaining": position.volume if position.status == "open" else 0.0,
                 "mode": "paper",
