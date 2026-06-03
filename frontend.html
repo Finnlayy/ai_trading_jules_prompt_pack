@@ -2431,7 +2431,7 @@
                                 </button>
                             ))}
                             <div className="nav-category">Academy</div>
-                            {["Agents", "Training"].map(item => (
+                            {["Agents", "Training", "Learning"].map(item => (
                                 <button type="button" key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)} data-label={item}>
                                     <span className="nav-icon">{item === "Agents" ? "👤" : "🎓"}</span>
                                     <span className="nav-label">{item}</span>
@@ -2559,6 +2559,10 @@
                         {layoutConfig.panels.training && (<section className={tab === "Training" ? "" : "hidden"}>
                             <TrainingPanel curriculum={curriculum} abTests={abTests} academyStatus={academyStatus} onToggleLoop={toggleTrainingLoop} onTriggerDrill={triggerManualDrill} />
                         </section>)}
+
+                        <section className={tab === "Learning" ? "" : "hidden"}>
+                            <LifecycleLearningPanel request={request} addLog={addLog} />
+                        </section>
 
                         {layoutConfig.panels.logs && (<section className={tab === "Logs" ? "" : "hidden"}>
                             <Logs logs={logs} raw={raw} status={{ health, status }} />
@@ -4744,6 +4748,164 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                             <button className="small" onClick={() => setSelectedSymbol("")}>Close</button>
                         </div>
                     )}
+                </div>
+            );
+        }
+
+        function LifecycleLearningPanel({ request, addLog }) {
+            const [summary, setSummary] = React.useState(null);
+            const [outcomes, setOutcomes] = React.useState([]);
+            const [learning, setLearning] = React.useState([]);
+            const [candidates, setCandidates] = React.useState([]);
+            const [loading, setLoading] = React.useState(false);
+
+            async function loadLifecycle() {
+                setLoading(true);
+                try {
+                    const [summaryData, outcomeData, learningData, candidateData] = await Promise.all([
+                        request("/lifecycle/summary"),
+                        request("/lifecycle/outcomes?limit=25"),
+                        request("/lifecycle/learning?limit=50"),
+                        request("/lifecycle/candidates?limit=25"),
+                    ]);
+                    setSummary(summaryData);
+                    setOutcomes(outcomeData.items || []);
+                    setLearning(learningData.items || []);
+                    setCandidates(candidateData.items || []);
+                } catch (err) {
+                    addLog("error", "Failed to load lifecycle learning data", { error: err.message });
+                } finally {
+                    setLoading(false);
+                }
+            }
+
+            React.useEffect(() => {
+                loadLifecycle();
+                const timer = setInterval(loadLifecycle, 15000);
+                return () => clearInterval(timer);
+            }, []);
+
+            const outcomeStats = summary?.outcomes || {};
+            const candidateStats = summary?.candidates || {};
+            const learningStats = summary?.learning || {};
+            const scoutAccuracy = learningStats.scout_accuracy || {};
+            const scoutRows = Object.entries(scoutAccuracy).sort((a, b) => (b[1].total || 0) - (a[1].total || 0));
+
+            function formatNumber(value, decimals = 2) {
+                const n = Number(value || 0);
+                return Number.isFinite(n) ? n.toFixed(decimals) : "0.00";
+            }
+
+            function shortId(value) {
+                if (!value) return "--";
+                return String(value).length > 18 ? `${String(value).slice(0, 18)}...` : String(value);
+            }
+
+            return (
+                <div className="grid" data-testid="lifecycle-learning-panel">
+                    <div className="panel span-12">
+                        <div className="panel-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span>Paper Outcome Learning <span className="pill">{outcomeStats.total || 0} outcomes</span></span>
+                            <button type="button" onClick={loadLifecycle} disabled={loading}>{loading ? "Loading..." : "Refresh"}</button>
+                        </div>
+                        <div className="kpi-caption">Closed paper positions become PaperOutcome rows, then AgentLearningEvent rows update scout confidence and academy careers.</div>
+                    </div>
+
+                    <div className="panel span-3">
+                        <Kpi title="Candidates" value={candidateStats.total || 0} caption={`${candidateStats.closed || 0} closed`} tone="ok" />
+                    </div>
+                    <div className="panel span-3">
+                        <Kpi title="Winrate" value={`${formatNumber((outcomeStats.win_rate || 0) * 100, 1)}%`} caption={`${outcomeStats.wins || 0}W / ${outcomeStats.losses || 0}L`} tone={(outcomeStats.win_rate || 0) >= 0.5 ? "ok" : "warn"} />
+                    </div>
+                    <div className="panel span-3">
+                        <Kpi title="Total PnL" value={formatNumber(outcomeStats.total_pnl || 0, 4)} caption={`Avg R ${formatNumber(outcomeStats.avg_r_multiple || 0, 2)}`} tone={(outcomeStats.total_pnl || 0) >= 0 ? "ok" : "warn"} />
+                    </div>
+                    <div className="panel span-3">
+                        <Kpi title="Learning Events" value={learningStats.events || 0} caption={`${scoutRows.length} scouts`} tone="info" />
+                    </div>
+
+                    <div className="panel span-6">
+                        <div className="panel-title">Recent Paper Outcomes</div>
+                        <table className="ordertable" data-testid="paper-outcomes-table">
+                            <thead>
+                                <tr><th>Symbol</th><th>Dir</th><th>Reason</th><th>PnL</th><th>R</th><th>Strategy</th></tr>
+                            </thead>
+                            <tbody>
+                                {outcomes.map(row => (
+                                    <tr key={row.trade_id}>
+                                        <td><b>{row.symbol}</b></td>
+                                        <td>{row.direction}</td>
+                                        <td>{row.close_reason}</td>
+                                        <td style={{ color: row.pnl >= 0 ? "var(--emerald)" : "var(--rose)" }}>{row.pnl >= 0 ? "+" : ""}{formatNumber(row.pnl, 4)}</td>
+                                        <td>{formatNumber(row.r_multiple, 2)}</td>
+                                        <td>{row.strategy_id || "--"}</td>
+                                    </tr>
+                                ))}
+                                {outcomes.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", color: "var(--muted)" }}>No paper outcomes yet</td></tr>}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div className="panel span-6">
+                        <div className="panel-title">Scout Outcome Accuracy</div>
+                        <table className="ordertable" data-testid="scout-learning-table">
+                            <thead>
+                                <tr><th>Scout</th><th>Correct</th><th>Total</th><th>Accuracy</th></tr>
+                            </thead>
+                            <tbody>
+                                {scoutRows.map(([name, row]) => (
+                                    <tr key={name}>
+                                        <td><b>{name}</b></td>
+                                        <td>{row.correct || 0}</td>
+                                        <td>{row.total || 0}</td>
+                                        <td style={{ color: (row.accuracy || 0) >= 0.5 ? "var(--emerald)" : "var(--rose)" }}>{formatNumber((row.accuracy || 0) * 100, 0)}%</td>
+                                    </tr>
+                                ))}
+                                {scoutRows.length === 0 && <tr><td colSpan={4} style={{ textAlign: "center", color: "var(--muted)" }}>No scout learning events yet</td></tr>}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div className="panel span-7">
+                        <div className="panel-title">Recent Learning Events</div>
+                        <table className="ordertable">
+                            <thead>
+                                <tr><th>Scout</th><th>Symbol</th><th>Dir</th><th>Correct</th><th>Trade</th></tr>
+                            </thead>
+                            <tbody>
+                                {learning.slice(0, 12).map((row, index) => (
+                                    <tr key={`${row.trade_id}-${row.scout_name}-${index}`}>
+                                        <td><b>{row.scout_name}</b></td>
+                                        <td>{row.symbol}</td>
+                                        <td>{row.direction}</td>
+                                        <td><span className={`pill ${row.was_correct ? "ok" : "error"}`}>{row.was_correct ? "yes" : "no"}</span></td>
+                                        <td>{shortId(row.trade_id)}</td>
+                                    </tr>
+                                ))}
+                                {learning.length === 0 && <tr><td colSpan={5} style={{ textAlign: "center", color: "var(--muted)" }}>No learning events yet</td></tr>}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div className="panel span-5">
+                        <div className="panel-title">Recent Candidates</div>
+                        <table className="ordertable">
+                            <thead>
+                                <tr><th>Symbol</th><th>TF</th><th>Status</th><th>Score</th></tr>
+                            </thead>
+                            <tbody>
+                                {candidates.slice(0, 12).map(row => (
+                                    <tr key={row.candidate_id}>
+                                        <td><b>{row.symbol}</b></td>
+                                        <td>{row.timeframe}</td>
+                                        <td><span className={`pill ${row.status === "paper_closed" ? "ok" : row.status === "risk_rejected" ? "error" : "warn"}`}>{row.status}</span></td>
+                                        <td>{formatNumber(row.confluence_score, 1)}</td>
+                                    </tr>
+                                ))}
+                                {candidates.length === 0 && <tr><td colSpan={4} style={{ textAlign: "center", color: "var(--muted)" }}>No candidates yet</td></tr>}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             );
         }

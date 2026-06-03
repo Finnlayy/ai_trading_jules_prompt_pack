@@ -102,3 +102,17 @@ def test_deploy_agent_button_calls_backend_endpoint():
     assert 'id="deploy-new-agent-btn"' in html
     assert "onClick={onDeployAgent}" in html
     assert '"/academy/agents/deploy"' in html
+
+
+def test_learning_tab_surfaces_lifecycle_endpoints():
+    html = _frontend_source()
+
+    assert '"Learning"' in html
+    assert "function LifecycleLearningPanel({ request, addLog })" in html
+    assert 'request("/lifecycle/summary")' in html
+    assert 'request("/lifecycle/outcomes?limit=25")' in html
+    assert 'request("/lifecycle/learning?limit=50")' in html
+    assert 'request("/lifecycle/candidates?limit=25")' in html
+    assert 'data-testid="lifecycle-learning-panel"' in html
+    assert 'data-testid="paper-outcomes-table"' in html
+    assert 'data-testid="scout-learning-table"' in html
