@@ -1015,7 +1015,34 @@
         .pill.ok { background: var(--mint); color: #155932; }
         .pill.warn { background: var(--butter); color: #795404; }
         .pill.bad { background: var(--peach); color: #88361f; }
+        .pill.error { background: var(--peach); color: #88361f; }
         .pill.ai { background: var(--lilac); color: #493c78; }
+        .pill.info { background: var(--sky); color: #1e3a8a; }
+        .pill.neutral { background: var(--surface-soft); color: var(--muted); }
+
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            margin: 10px 0;
+        }
+
+        .notice {
+            margin-top: 10px;
+            padding: 10px 12px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--line);
+            background: var(--surface-soft);
+            color: var(--text);
+            font-size: 12px;
+        }
+
+        .notice.warn {
+            border-color: var(--amber);
+            background: var(--butter);
+            color: #795404;
+        }
 
         .form-grid {
             display: grid;
@@ -4754,21 +4781,25 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
 
         function LifecycleLearningPanel({ request, addLog }) {
             const [summary, setSummary] = React.useState(null);
+            const [engineStatus, setEngineStatus] = React.useState(null);
             const [outcomes, setOutcomes] = React.useState([]);
             const [learning, setLearning] = React.useState([]);
             const [candidates, setCandidates] = React.useState([]);
             const [loading, setLoading] = React.useState(false);
+            const [engineLoading, setEngineLoading] = React.useState(false);
 
             async function loadLifecycle() {
                 setLoading(true);
                 try {
-                    const [summaryData, outcomeData, learningData, candidateData] = await Promise.all([
+                    const [summaryData, engineData, outcomeData, learningData, candidateData] = await Promise.all([
                         request("/lifecycle/summary"),
+                        request("/lifecycle/engine/status"),
                         request("/lifecycle/outcomes?limit=25"),
                         request("/lifecycle/learning?limit=50"),
                         request("/lifecycle/candidates?limit=25"),
                     ]);
                     setSummary(summaryData);
+                    setEngineStatus(engineData);
                     setOutcomes(outcomeData.items || []);
                     setLearning(learningData.items || []);
                     setCandidates(candidateData.items || []);
@@ -4776,6 +4807,23 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                     addLog("error", "Failed to load lifecycle learning data", { error: err.message });
                 } finally {
                     setLoading(false);
+                }
+            }
+
+            async function controlEngine(action) {
+                setEngineLoading(true);
+                try {
+                    const data = await request("/lifecycle/engine/control", {
+                        method: "POST",
+                        body: JSON.stringify({ action })
+                    });
+                    setEngineStatus(data);
+                    addLog("system", `Paper training engine ${action}`, data.engine);
+                    await loadLifecycle();
+                } catch (err) {
+                    addLog("error", `Paper training engine ${action} failed`, { error: err.message });
+                } finally {
+                    setEngineLoading(false);
                 }
             }
 
@@ -4790,6 +4838,13 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
             const learningStats = summary?.learning || {};
             const scoutAccuracy = learningStats.scout_accuracy || {};
             const scoutRows = Object.entries(scoutAccuracy).sort((a, b) => (b[1].total || 0) - (a[1].total || 0));
+            const engine = engineStatus?.engine || {};
+            const components = engineStatus?.components || {};
+            const loopComponent = components.autonomous_loop || {};
+            const monitorComponent = components.position_monitor || {};
+            const engineWarnings = engineStatus?.warnings || [];
+            const engineRunning = engine.state === "running";
+            const enginePaused = engine.state === "paused";
 
             function formatNumber(value, decimals = 2) {
                 const n = Number(value || 0);
@@ -4809,6 +4864,22 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                             <button type="button" onClick={loadLifecycle} disabled={loading}>{loading ? "Loading..." : "Refresh"}</button>
                         </div>
                         <div className="kpi-caption">Closed paper positions become PaperOutcome rows, then AgentLearningEvent rows update scout confidence and academy careers.</div>
+                    </div>
+
+                    <div className="panel span-12">
+                        <div className="panel-title">Paper Training Engine <span className={`pill ${engineRunning ? "ok" : enginePaused ? "warn" : "neutral"}`}>{engine.state || "unknown"}</span></div>
+                        <div className="actions" data-testid="paper-training-engine-controls">
+                            <button type="button" className="primary" disabled={engineLoading || engineRunning} onClick={() => controlEngine("start")}>Start Engine</button>
+                            <button type="button" disabled={engineLoading || !engineRunning} onClick={() => controlEngine("pause")}>Pause</button>
+                            <button type="button" disabled={engineLoading || !enginePaused} onClick={() => controlEngine("resume")}>Resume</button>
+                            <button type="button" className="danger" disabled={engineLoading || engine.state === "stopped"} onClick={() => controlEngine("stop")}>Stop</button>
+                        </div>
+                        <div className="kpi-caption">
+                            Loop {loopComponent.running ? "running" : "stopped"} · Monitor {monitorComponent.running ? "running" : "stopped"} · Mode {engine.execution_mode || "paper"}
+                        </div>
+                        {engineWarnings.length > 0 && (
+                            <div className="notice warn">{engineWarnings.join(" ")}</div>
+                        )}
                     </div>
 
                     <div className="panel span-3">

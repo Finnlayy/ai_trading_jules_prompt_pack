@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 
 from app.db import SessionLocal
 from app.db.models import AgentLearningEvent, AgentReviewEvent, PaperOutcome, SignalCandidate
+from app.services.paper_training_engine import PaperTrainingEngine
 from app.main import app
 
 
@@ -113,3 +114,61 @@ def test_lifecycle_lists_candidates_outcomes_learning_and_reviews():
     assert learning["items"][0]["was_correct"] is True
     assert reviews["count"] == 1
     assert reviews["items"][0]["scout_name"] == "technical"
+
+
+class FakeLoop:
+    def __init__(self) -> None:
+        self.is_running = False
+        self.is_paused = False
+
+    def start(self) -> None:
+        self.is_running = True
+        self.is_paused = False
+
+    def stop(self) -> None:
+        self.is_running = False
+        self.is_paused = False
+
+    def pause(self) -> None:
+        self.is_paused = True
+
+    def resume(self) -> None:
+        self.is_paused = False
+
+    def get_status(self) -> dict:
+        return {
+            "is_running": self.is_running,
+            "is_paused": self.is_paused,
+            "active_symbols": ["BTCUSDT"],
+            "poll_interval_seconds": 60.0,
+            "loop_stats": {"cycles_completed": 0},
+        }
+
+
+class FakeMonitor:
+    check_interval_seconds = 5.0
+
+    def __init__(self) -> None:
+        self.is_running = False
+
+    def start(self) -> None:
+        self.is_running = True
+
+    def stop(self) -> None:
+        self.is_running = False
+
+
+def test_lifecycle_engine_status_and_control(monkeypatch):
+    import app.api.lifecycle as lifecycle_api
+
+    fake_engine = PaperTrainingEngine(loop=FakeLoop(), monitor=FakeMonitor())
+    monkeypatch.setattr(lifecycle_api, "paper_training_engine", fake_engine)
+
+    started = client.post("/lifecycle/engine/control", json={"action": "start"}).json()
+    status = client.get("/lifecycle/engine/status").json()
+
+    assert started["action"] == "start"
+    assert status["engine"]["state"] == "running"
+    assert status["components"]["autonomous_loop"]["running"] is True
+    assert status["components"]["position_monitor"]["running"] is True
+    assert status["engine"]["live_trading_enabled"] is False

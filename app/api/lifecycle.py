@@ -4,13 +4,19 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.db.models import AgentLearningEvent, AgentReviewEvent, PaperOutcome, SignalCandidate
+from app.services.paper_training_engine import EngineAction, paper_training_engine
 
 router = APIRouter()
+
+
+class EngineControlRequest(BaseModel):
+    action: EngineAction
 
 
 def _dt(value) -> str | None:
@@ -64,6 +70,23 @@ def lifecycle_summary(db: Session = Depends(get_db)) -> dict[str, Any]:
             "scout_accuracy": scout_accuracy,
         },
     }
+
+
+@router.get("/engine/status")
+def paper_training_engine_status() -> dict[str, Any]:
+    """Return the combined paper-training engine runtime status."""
+    return paper_training_engine.status()
+
+
+@router.post("/engine/control")
+def control_paper_training_engine(req: EngineControlRequest) -> dict[str, Any]:
+    """Control the live-paper training engine as one coordinated runtime."""
+    try:
+        return paper_training_engine.control(req.action)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=403, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 
 @router.get("/candidates")
