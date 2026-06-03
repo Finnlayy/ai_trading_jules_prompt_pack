@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.api.academy import router
+from app.schemas.academy import CareerEntry
 from app.services.agent_registry import agent_registry
 
 
@@ -52,3 +53,34 @@ def test_deploy_agent_endpoint_rejects_duplicate_names(monkeypatch):
         assert second.status_code == 409
     finally:
         agent_registry._identities = original_identities
+
+
+def test_recent_agent_careers_endpoint(monkeypatch):
+    monkeypatch.setattr(
+        agent_registry,
+        "get_recent_career_events",
+        lambda limit=50, event_type=None: [
+            CareerEntry(
+                scout_name="technical",
+                event_type="prediction_result",
+                details={
+                    "symbol": "BTCUSDT",
+                    "strategy_id": "default",
+                    "is_correct": True,
+                    "outcome_source": "live_paper",
+                },
+            )
+        ],
+    )
+
+    app = FastAPI()
+    app.include_router(router)
+    client = TestClient(app)
+
+    response = client.get("/academy/agents/careers/recent?limit=10&event_type=prediction_result")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["count"] == 1
+    assert data["career"][0]["scout_name"] == "technical"
+    assert data["career"][0]["details"]["outcome_source"] == "live_paper"

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 from app.services.agent_registry import agent_registry
 from typing import List, Dict, Any
@@ -38,6 +38,14 @@ def get_agent_career(scout_id: str):
     # Using scout_id as scout_name for now since that's what's tracked mostly
     entries = agent_registry.get_career_log(scout_id)
     return {"career": [e.model_dump() for e in entries]}
+
+@router.get("/agents/careers/recent")
+def get_recent_agent_careers(
+    limit: int = Query(default=50, ge=1, le=500),
+    event_type: str | None = Query(default=None),
+):
+    entries = agent_registry.get_recent_career_events(limit=limit, event_type=event_type)
+    return {"career": [e.model_dump() for e in entries], "count": len(entries)}
 
 @router.get("/agents/leaderboard")
 def get_leaderboard():

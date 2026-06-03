@@ -218,4 +218,28 @@ class AgentRegistryService:
             print(f"Error reading career log: {e}")
         return entries
 
+    def get_recent_career_events(
+        self,
+        *,
+        limit: int = 50,
+        event_type: str | None = None,
+    ) -> List[CareerEntry]:
+        entries: List[CareerEntry] = []
+        if not CAREER_LOG_FILE.exists():
+            return entries
+
+        try:
+            with open(CAREER_LOG_FILE, "r", encoding="utf-8") as f:
+                lines = [line for line in f if line.strip()]
+            for line in reversed(lines):
+                data = json.loads(line)
+                if event_type and data.get("event_type") != event_type:
+                    continue
+                entries.append(CareerEntry(**data))
+                if len(entries) >= limit:
+                    break
+        except Exception as e:
+            print(f"Error reading recent career events: {e}")
+        return entries
+
 agent_registry = AgentRegistryService()

@@ -11,6 +11,26 @@ from app.schemas.m8_payload import M8Payload
 from app.services.lifecycle_recorder import LifecycleRecorder, candidate_id_for_signal
 
 
+class FakeConfidenceRegistry:
+    def __init__(self) -> None:
+        self.signal_reviews: list[dict] = []
+        self.scout_reviews: list[dict] = []
+        self.trade_outcomes: list[dict] = []
+        self.scout_outcomes: list[dict] = []
+
+    def record_signal_review(self, **kwargs) -> None:
+        self.signal_reviews.append(kwargs)
+
+    def record_scout_review(self, **kwargs) -> None:
+        self.scout_reviews.append(kwargs)
+
+    def record_trade_outcome(self, **kwargs) -> None:
+        self.trade_outcomes.append(kwargs)
+
+    def mark_scout_outcome(self, **kwargs) -> None:
+        self.scout_outcomes.append(kwargs)
+
+
 def _session_factory():
     engine = create_engine("sqlite:///:memory:", echo=False)
     Base.metadata.create_all(bind=engine)
@@ -39,7 +59,8 @@ def _payload() -> M8Payload:
 
 def test_lifecycle_recorder_writes_candidate_ai_and_risk_events():
     Session = _session_factory()
-    recorder = LifecycleRecorder(Session)
+    confidence = FakeConfidenceRegistry()
+    recorder = LifecycleRecorder(Session, confidence_registry=confidence)
     payload = _payload()
     candidate_id = candidate_id_for_signal(payload.signal_id)
 
@@ -90,6 +111,16 @@ def test_lifecycle_recorder_writes_candidate_ai_and_risk_events():
     assert review.scout_name == "technical"
     assert review.confidence == 0.84
     assert risk.decision == "PROCEED_TO_SIMULATION"
+    assert confidence.signal_reviews == [
+        {
+            "symbol": "BTCUSDT",
+            "confluence": 82.0,
+            "crisis": 5.0,
+            "direction": "LONG",
+        }
+    ]
+    assert confidence.scout_reviews[0]["scout_name"] == "technical"
+    assert confidence.scout_reviews[0]["was_correct"] is None
 
 
 def test_lifecycle_recorder_can_update_candidate_status():
@@ -109,7 +140,8 @@ def test_lifecycle_recorder_can_update_candidate_status():
 
 def test_lifecycle_recorder_records_paper_outcome_and_learning_events():
     Session = _session_factory()
-    recorder = LifecycleRecorder(Session)
+    confidence = FakeConfidenceRegistry()
+    recorder = LifecycleRecorder(Session, confidence_registry=confidence)
     payload = _payload()
     candidate_id = recorder.record_candidate(payload)
     ai_review = SignalReview(
@@ -173,3 +205,8 @@ def test_lifecycle_recorder_records_paper_outcome_and_learning_events():
     assert round(outcome.r_multiple, 2) == 2.0
     assert learning == {"technical": True, "risk": False}
     assert candidate.status == "paper_closed"
+    assert confidence.trade_outcomes[0]["win"] is True
+    assert confidence.scout_outcomes[0]["details"]["trade_id"] == "paper-close-001"
+    assert confidence.scout_outcomes[0]["details"]["strategy_id"] == "default"
+    assert confidence.scout_outcomes[0]["details"]["timeframe"] == "1m"
+    assert confidence.scout_outcomes[0]["details"]["outcome_source"] == "live_paper"

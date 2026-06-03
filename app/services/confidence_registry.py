@@ -251,6 +251,7 @@ class ConfidenceRegistry:
         symbol: str,
         scout_names: list[str],
         was_correct: bool,
+        details: dict[str, Any] | None = None,
     ) -> None:
         """
         Mark already-recorded scout calls as correct after a paper/live outcome is known.
@@ -280,6 +281,7 @@ class ConfidenceRegistry:
                 scout_name=scout_name,
                 event_type="prediction_result",
                 details={
+                    **(details or {}),
                     "symbol": symbol,
                     "is_correct": was_correct,
                     "accuracy": sstats.accuracy,

@@ -114,8 +114,10 @@ def test_learning_tab_surfaces_lifecycle_endpoints():
     assert 'request("/lifecycle/engine/control"' in html
     assert 'request("/lifecycle/outcomes?limit=25")' in html
     assert 'request("/lifecycle/learning?limit=50")' in html
+    assert 'request("/academy/agents/careers/recent?limit=25&event_type=prediction_result")' in html
     assert 'request("/lifecycle/candidates?limit=25")' in html
     assert 'data-testid="lifecycle-learning-panel"' in html
     assert 'data-testid="paper-training-engine-controls"' in html
     assert 'data-testid="paper-outcomes-table"' in html
     assert 'data-testid="scout-learning-table"' in html
+    assert 'data-testid="academy-career-outcomes-table"' in html

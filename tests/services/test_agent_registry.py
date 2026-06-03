@@ -46,3 +46,32 @@ async def test_agent_registry_log_career_event_and_badges(registry):
     badge_names = [b.name for b in tech_scout.badges]
     assert "Apprentice" in badge_names
     assert "Streak" in badge_names
+
+
+@pytest.mark.asyncio
+async def test_agent_registry_reads_recent_paper_career_events(registry):
+    await registry.log_career_event(
+        CareerEntry(
+            scout_name="technical",
+            event_type="prediction_result",
+            details={
+                "symbol": "BTCUSDT",
+                "strategy_id": "default",
+                "outcome_source": "live_paper",
+                "is_correct": True,
+            },
+        )
+    )
+    await registry.log_career_event(
+        CareerEntry(
+            scout_name="risk",
+            event_type="badge_earned",
+            details={"badge": {"name": "x", "description": "x", "icon": "x"}},
+        )
+    )
+
+    recent = registry.get_recent_career_events(limit=5, event_type="prediction_result")
+
+    assert len(recent) == 1
+    assert recent[0].scout_name == "technical"
+    assert recent[0].details["outcome_source"] == "live_paper"

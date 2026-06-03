@@ -46,8 +46,13 @@ def candidate_id_for_signal(signal_id: str) -> str:
 class LifecycleRecorder:
     """Records candidate, AI-review, and risk-decision lifecycle events."""
 
-    def __init__(self, session_factory: Callable[[], Session] = SessionLocal) -> None:
+    def __init__(
+        self,
+        session_factory: Callable[[], Session] = SessionLocal,
+        confidence_registry: Any | None = None,
+    ) -> None:
         self._session_factory = session_factory
+        self._confidence_registry = confidence_registry
 
     def record_candidate(
         self,
@@ -135,11 +140,26 @@ class LifecycleRecorder:
                 )
             )
 
+        confidence_snapshots = [
+            {
+                "scout_name": event.scout_name,
+                "decision": event.decision,
+                "confidence": event.confidence,
+            }
+            for event in events
+        ]
         with self._session_factory() as db:
             db.add_all(events)
             self._update_candidate_status(db, candidate_id, "ai_reviewed")
             db.commit()
-            return len(events)
+            event_count = len(events)
+
+        self._record_confidence_reviews(
+            payload=payload,
+            ai_review=ai_review,
+            events=confidence_snapshots,
+        )
+        return event_count
 
     def record_risk_decision(
         self,
@@ -254,8 +274,15 @@ class LifecycleRecorder:
             db.commit()
 
         self._update_confidence_from_outcome(
+            candidate_id=candidate_id,
+            signal_id=signal_id,
+            trade_id=trade_id,
             symbol=symbol,
             direction=direction,
+            strategy_id=position_snapshot.get("strategy_id"),
+            timeframe=position_snapshot.get("timeframe"),
+            close_reason=close_reason,
+            outcome_source=outcome_source,
             pnl_pct=pnl_pct,
             r_multiple=r_multiple,
             win=win,
@@ -322,17 +349,24 @@ class LifecycleRecorder:
             )
         return events
 
-    @staticmethod
     def _update_confidence_from_outcome(
+        self,
         *,
+        candidate_id: str | None,
+        signal_id: str | None,
+        trade_id: str,
         symbol: str,
         direction: str,
+        strategy_id: str | None,
+        timeframe: str | None,
+        close_reason: str,
+        outcome_source: str,
         pnl_pct: float,
         r_multiple: float,
         win: bool,
         learning_events: list[tuple[str, bool]],
     ) -> None:
-        from app.services.confidence_registry import confidence_registry
+        confidence_registry = self._get_confidence_registry()
 
         confidence_registry.record_trade_outcome(
             symbol=symbol,
@@ -346,7 +380,51 @@ class LifecycleRecorder:
                 symbol=symbol,
                 scout_names=[scout_name],
                 was_correct=was_correct,
+                details={
+                    "candidate_id": candidate_id,
+                    "signal_id": signal_id,
+                    "trade_id": trade_id,
+                    "strategy_id": strategy_id,
+                    "timeframe": timeframe,
+                    "direction": direction,
+                    "close_reason": close_reason,
+                    "outcome_source": outcome_source,
+                    "win": win,
+                    "pnl_pct": pnl_pct,
+                    "r_multiple": r_multiple,
+                },
             )
+
+    def _record_confidence_reviews(
+        self,
+        *,
+        payload: M8Payload,
+        ai_review: SignalReview,
+        events: list[dict[str, Any]],
+    ) -> None:
+        confidence_registry = self._get_confidence_registry()
+        confidence_registry.record_signal_review(
+            symbol=payload.symbol,
+            confluence=payload.confluence_score,
+            crisis=payload.crisis_score,
+            direction=payload.direction,
+        )
+        for event in events:
+            confidence_registry.record_scout_review(
+                symbol=payload.symbol,
+                scout_name=str(event.get("scout_name") or ""),
+                direction=payload.direction,
+                decision=str(event.get("decision") or ""),
+                confidence=float(event.get("confidence") or ai_review.confidence),
+                was_correct=None,
+            )
+
+    def _get_confidence_registry(self) -> Any:
+        if self._confidence_registry is None:
+            from app.services.confidence_registry import confidence_registry
+
+            self._confidence_registry = confidence_registry
+        return self._confidence_registry
 
     @staticmethod
     def _decision_is_approval(decision: str | None) -> bool:
