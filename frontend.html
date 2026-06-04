@@ -4985,18 +4985,21 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                         <div className="panel-title">Recent Candidates</div>
                         <table className="ordertable">
                             <thead>
-                                <tr><th>Symbol</th><th>TF</th><th>Status</th><th>Score</th></tr>
+                                <tr><th>Symbol</th><th>TF</th><th>Status</th><th>Risk</th><th>Reason</th><th>Vote</th><th>Score</th></tr>
                             </thead>
                             <tbody>
                                 {candidates.slice(0, 12).map(row => (
-                                    <tr key={row.candidate_id}>
+                                    <tr key={row.candidate_id} title={row.confidence_context || ""}>
                                         <td><b>{row.symbol}</b></td>
                                         <td>{row.timeframe}</td>
                                         <td><span className={`pill ${row.status === "paper_closed" ? "ok" : row.status === "risk_rejected" ? "error" : "warn"}`}>{row.status}</span></td>
+                                        <td>{row.risk_decision ? <span className={`pill ${row.risk_decision === 'PROCEED_TO_SIMULATION' ? 'ok' : 'error'}`}>{shortId(row.risk_decision)}</span> : "-"}</td>
+                                        <td>{shortId(row.reject_reason) || "-"}</td>
+                                        <td>{row.weighted_scout_vote !== undefined && row.weighted_scout_vote !== null ? formatNumber(row.weighted_scout_vote, 2) : "-"}</td>
                                         <td>{formatNumber(row.confluence_score, 1)}</td>
                                     </tr>
                                 ))}
-                                {candidates.length === 0 && <tr><td colSpan={4} style={{ textAlign: "center", color: "var(--muted)" }}>No candidates yet</td></tr>}
+                                {candidates.length === 0 && <tr><td colSpan={7} style={{ textAlign: "center", color: "var(--muted)" }}>No candidates yet</td></tr>}
                             </tbody>
                         </table>
                     </div>

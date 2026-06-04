@@ -27,6 +27,15 @@ class MockAIReviewLayer:
                 "decision": individual_decision,
             }
 
+        total_weight = 0.0
+        weighted_sum = 0.0
+        for scout_name, data in scout_reports.items():
+            weight = confidence_registry.get_scout_weight(payload.symbol, scout_name)
+            conf = self._extract_confidence(data["report"])
+            total_weight += weight
+            weighted_sum += conf * weight
+        weighted_scout_vote = weighted_sum / total_weight if total_weight > 0 else 0.5
+
         # Orchestrator synthesizes majority vote
         approvals = sum(1 for s in scout_reports.values() if s["decision"] == DecisionEnum.PROCEED_TO_SIMULATION.value)
         rejections = len(scout_reports) - approvals
@@ -104,6 +113,7 @@ class MockAIReviewLayer:
                     name: confidence_registry.get_scout_weight(payload.symbol, name)
                     for name in self.SCOUT_NAMES
                 },
+                "weighted_scout_vote": weighted_scout_vote,
                 "final_summary": {
                     "decision": decision.value,
                     "confidence": confidence,
