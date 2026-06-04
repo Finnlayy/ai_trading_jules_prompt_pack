@@ -41,7 +41,9 @@
     "total_calls": 364,
     "correct_calls": 311,
     "accuracy": 0.8543956043956044,
-    "current_streak": 0
+    "current_streak": 0,
+    "confidence_level": 0.5,
+    "experience_level": "Novice"
   },
   {
     "scout_id": "8589bbb2-ddcc-410e-8bb9-45717a852987",
@@ -85,7 +87,9 @@
     "total_calls": 358,
     "correct_calls": 312,
     "accuracy": 0.8715083798882681,
-    "current_streak": 19
+    "current_streak": 19,
+    "confidence_level": 0.5,
+    "experience_level": "Novice"
   },
   {
     "scout_id": "0d4342f0-4031-4334-9b90-0013bf190452",
@@ -129,7 +133,9 @@
     "total_calls": 358,
     "correct_calls": 298,
     "accuracy": 0.8324022346368715,
-    "current_streak": 10
+    "current_streak": 10,
+    "confidence_level": 0.5,
+    "experience_level": "Novice"
   },
   {
     "scout_id": "34059d23-47bf-4280-ba75-dea7348866eb",
@@ -173,7 +179,9 @@
     "total_calls": 358,
     "correct_calls": 304,
     "accuracy": 0.8491620111731844,
-    "current_streak": 1
+    "current_streak": 1,
+    "confidence_level": 0.5,
+    "experience_level": "Novice"
   },
   {
     "scout_id": "cc5331fa-28cd-479e-acfc-da0c9c3cc521",
@@ -217,7 +225,9 @@
     "total_calls": 354,
     "correct_calls": 294,
     "accuracy": 0.8305084745762712,
-    "current_streak": 1
+    "current_streak": 1,
+    "confidence_level": 0.5,
+    "experience_level": "Novice"
   },
   {
     "scout_id": "c5d87a22-e700-4f06-a2a8-5b3a4190327d",
@@ -261,6 +271,8 @@
     "total_calls": 354,
     "correct_calls": 310,
     "accuracy": 0.8757062146892656,
-    "current_streak": 20
+    "current_streak": 20,
+    "confidence_level": 0.5,
+    "experience_level": "Novice"
   }
 ]

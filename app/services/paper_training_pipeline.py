@@ -180,6 +180,12 @@ class PaperTrainingPipeline:
         regime_result: dict[str, Any],
         ai_review: SignalReview,
     ) -> dict[str, Any]:
+        weighted_scout_vote = None
+        confidence_context = None
+        if ai_review.audit_trace:
+            weighted_scout_vote = ai_review.audit_trace.get("weighted_scout_vote")
+            confidence_context = ai_review.audit_trace.get("symbol_context")
+
         return {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "symbol": payload.symbol,
