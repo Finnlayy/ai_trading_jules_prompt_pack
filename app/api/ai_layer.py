@@ -16,6 +16,13 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+AI_PROMPTS_DIR = Path(__file__).resolve().parents[1] / "ai_prompts"
+
+DEFAULT_CHAT_SYSTEM_PROMPT = (
+    "Prompt file unavailable. Act as a safe AI behavior profile assistant and return JSON with "
+    "reply and profile_patch only; never bypass risk gates or place trades."
+)
+
 
 def _extract_json_object(text: str) -> dict[str, Any]:
     start = text.find("{")
@@ -54,18 +61,33 @@ def _local_profile_patch(message: str) -> dict[str, Any]:
     return patch
 
 
+def _resolve_active_prompt(prompt_name: str, default: str) -> str:
+    prompt_path = AI_PROMPTS_DIR / prompt_name / "v_active.md"
+    if not prompt_path.exists():
+        return default
+
+    active_text = prompt_path.read_text(encoding="utf-8").strip()
+    if active_text and "\n" not in active_text and active_text.endswith(".md"):
+        candidate = (prompt_path.parent / active_text).resolve()
+        try:
+            candidate.relative_to(prompt_path.parent.resolve())
+        except ValueError:
+            return active_text
+        if candidate.is_file():
+            return candidate.read_text(encoding="utf-8").strip()
+    return active_text or default
+
+
+def _chat_system_prompt() -> str:
+    return _resolve_active_prompt("chat", DEFAULT_CHAT_SYSTEM_PROMPT)
+
+
 def _build_prompt(request: AIChatRequest) -> tuple[str, str]:
     """Build the system prompt and user prompt dict for the AI chat."""
     profile = ai_layer_memory_instance.get_profile()
     memory = ai_layer_memory_instance.get_memory()
 
-    system = (
-        "You are the configuration assistant for a multi-agent trading bot AI layer. "
-        "Help the user translate behavior preferences into review-layer guidance. "
-        "Never claim to train a model, never bypass deterministic risk gates, and never place trades. "
-        "Return concise JSON with keys reply and profile_patch. profile_patch may contain only fields "
-        "from AIBehaviorProfile."
-    )
+    system = _chat_system_prompt()
 
     prompt: dict[str, Any] = {
         "current_profile": profile.model_dump(),

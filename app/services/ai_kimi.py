@@ -1,6 +1,7 @@
 import json
 import asyncio
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from app.schemas.m8_payload import M8Payload
@@ -132,13 +133,22 @@ class KimiSwarmService:
         return ai_layer_memory_instance.behavior_prompt()
 
 
+    def _prompt_base_dir(self) -> Path:
+        return Path(__file__).resolve().parents[1] / "ai_prompts"
+
     def get_prompt_for_scout(self, scout_name: str) -> str:
-        import os
-        from pathlib import Path
-        prompt_path = Path(f"app/ai_prompts/{scout_name}/v_active.md")
+        prompt_path = self._prompt_base_dir() / scout_name / "v_active.md"
         if prompt_path.exists():
-            with open(prompt_path, "r") as f:
-                return f.read()
+            active_text = prompt_path.read_text(encoding="utf-8").strip()
+            if active_text and "\n" not in active_text and active_text.endswith(".md"):
+                candidate = (prompt_path.parent / active_text).resolve()
+                try:
+                    candidate.relative_to(prompt_path.parent.resolve())
+                except ValueError:
+                    return active_text
+                if candidate.is_file():
+                    return candidate.read_text(encoding="utf-8")
+            return active_text
         return f"You are the {scout_name.capitalize()} Scout. Analyze the signal from a {scout_name} perspective."
 
     def _trace_base(self) -> dict[str, Any]:
@@ -355,8 +365,10 @@ class KimiSwarmService:
             for n in relevant if n.symbol_relevance >= 0.3
         ) or "No relevant recent news."
 
+        base_prompt = self.get_prompt_for_scout("sentiment")
         system = (
             "You are the Sentiment Scout — a market sentiment analyst.\n"
+            f"{base_prompt}\n"
             "Analyze news flow, social sentiment, and event risk for this signal.\n"
             "Return a concise paragraph (2-4 sentences) with:\n"
             "  - Sentiment bias (bullish/bearish/neutral)\n"
@@ -377,8 +389,10 @@ class KimiSwarmService:
         return await self._call_llm_for_scout("sentiment", prompt, system=system)
 
     async def _run_technical_scout(self, payload: M8Payload, symbol_context: str) -> str:
+        base_prompt = self.get_prompt_for_scout("technical")
         system = (
             "You are the Technical Scout — a quant technical analyst.\n"
+            f"{base_prompt}\n"
             "Assess chart setup quality, indicator confluence, and price structure.\n"
             "Return a concise paragraph (2-4 sentences) with:\n"
             "  - Setup quality (excellent/good/fair/poor)\n"
@@ -401,8 +415,10 @@ class KimiSwarmService:
         return await self._call_llm_for_scout("technical", prompt, system=system)
 
     async def _run_risk_scout(self, payload: M8Payload, symbol_context: str) -> str:
+        base_prompt = self.get_prompt_for_scout("risk")
         system = (
             "You are the Risk Scout — a risk management specialist.\n"
+            f"{base_prompt}\n"
             "Evaluate position sizing, leverage, drawdown exposure, and tail risks.\n"
             "Return a concise paragraph (2-4 sentences) with:\n"
             "  - Risk assessment (low/moderate/high/critical)\n"
@@ -425,8 +441,10 @@ class KimiSwarmService:
         return await self._call_llm_for_scout("risk", prompt, system=system)
 
     async def _run_macro_scout(self, payload: M8Payload, symbol_context: str) -> str:
+        base_prompt = self.get_prompt_for_scout("macro")
         system = (
             "You are the Macro Scout — a macro regime analyst.\n"
+            f"{base_prompt}\n"
             "Evaluate broader market regime, correlations, and structural factors.\n"
             "For crypto: consider BTC dominance, funding rates, ETF flows.\n"
             "For forex: consider DXY trend, rate differentials, central bank posture.\n"
@@ -503,6 +521,7 @@ class KimiSwarmService:
             for name, w in weights.items()
         )
         advisor_block = self._format_advisor_reports(advisor_reports)
+        execution_prompt = self.get_prompt_for_scout("execution")
 
         prompt = f"""Signal ID: {payload.signal_id}
 Symbol: {payload.symbol} | Direction: {payload.direction} | Timeframe: {payload.timeframe}
@@ -541,6 +560,7 @@ Guidelines:
             prompt,
             system=(
                 "You are the Lead Trading Orchestrator. You synthesize multi-scout reports into a single trading decision.\n"
+                f"{execution_prompt}\n"
                 "You MUST return strictly valid JSON. Do not include markdown code blocks.\n"
                 f"\n{self._behavior_guidance()}"
             ),

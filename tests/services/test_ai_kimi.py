@@ -140,6 +140,42 @@ def test_gemini_scout_model_falls_back_from_non_gemini_override():
     assert _resolve_scout_model(provider_config, "models/gemini-2.5-pro") == "gemini-2.5-pro"
 
 
+def test_get_prompt_for_scout_resolves_active_pointer(tmp_path, monkeypatch):
+    scout_dir = tmp_path / "technical"
+    scout_dir.mkdir()
+    (scout_dir / "v_active.md").write_text("v2_gemini_backend.md\n", encoding="utf-8")
+    (scout_dir / "v2_gemini_backend.md").write_text("Gemini backend prompt", encoding="utf-8")
+
+    service = KimiSwarmService(provider="gemini")
+    monkeypatch.setattr(service, "_prompt_base_dir", lambda: tmp_path)
+
+    assert service.get_prompt_for_scout("technical") == "Gemini backend prompt"
+
+
+@pytest.mark.asyncio
+async def test_specialized_scout_includes_resolved_prompt(tmp_path, monkeypatch):
+    scout_dir = tmp_path / "technical"
+    scout_dir.mkdir()
+    (scout_dir / "v_active.md").write_text("v2_gemini_backend.md\n", encoding="utf-8")
+    (scout_dir / "v2_gemini_backend.md").write_text("Gemini backend prompt", encoding="utf-8")
+
+    service = KimiSwarmService(provider="gemini")
+    monkeypatch.setattr(service, "_prompt_base_dir", lambda: tmp_path)
+    captured = {}
+
+    async def fake_call(scout_name: str, prompt: str, system: str = "", response_format=None):
+        captured["scout_name"] = scout_name
+        captured["system"] = system
+        return "Confidence: 0.75\nMocked technical scout."
+
+    monkeypatch.setattr(service, "_call_llm_for_scout", fake_call)
+
+    await service._run_technical_scout(create_valid_payload(), "Symbol context")
+
+    assert captured["scout_name"] == "technical"
+    assert "Gemini backend prompt" in captured["system"]
+
+
 def test_weighted_vote_rejects_low_confidence_reports():
     service = KimiSwarmService(provider="moonshot")
     payload = create_valid_payload()
