@@ -28,3 +28,6 @@
 ## 2024-06-26 - Avoid Eager JSON Parsing in Position Ledger History Lookups
 **Learning:** `restore_from_journal` in `app/services/pionex_position_ledger.py` was previously calling `json.loads` for every line when reloading history, even when most lines do not contain a "ledger_delta". This created slow loading and a performance bottleneck.
 **Action:** By adding a fast string substring filter `if "ledger_delta" not in raw_line: continue` before trying to strip or load JSON, execution time improved by roughly 85% in benchmarking, saving memory and CPU by avoiding eagerly creating dict objects.
+## 2024-06-27 - Optimizing Python Generator overhead in array calculations
+**Learning:** Functions like `sum()`, `max()`, `min()` with generator expressions (e.g., `max(x.h for x in rows)`) and list slicing for finding min/max (e.g., `min(lows[left:right + 1])`) are highly inefficient inside hot loop paths in Python.
+**Action:** Unroll loops directly maintaining state inline instead of using generator expressions inside hot loops. Use explicit inline loops to check for min/max conditions and break early where possible. This improves speed significantly and avoids generator overhead.
