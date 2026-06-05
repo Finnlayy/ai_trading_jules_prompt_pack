@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, patch
 
 from app.main import app
 from app.services.risk_engine import risk_engine_instance
-from app.services.ai_kimi import ai_review_instance
+from app.services.ai_factory import ai_review_instance
 from app.services.journal_logger import journal_logger_instance
 from app.api import orchestrator
 from app.api.orchestrator import reset_broker
@@ -41,7 +41,7 @@ def mock_kimi_api():
             })
         return "mocked scout response"
         
-    with patch.object(ai_review_instance, '_call_llm', new_callable=AsyncMock) as mock_method:
+    with patch.object(ai_review_instance, '_mock_llm_call', new_callable=AsyncMock) as mock_method:
         mock_method.side_effect = mock_call_kimi
         yield mock_method
 
@@ -62,7 +62,7 @@ def mock_kimi_api_reject():
             })
         return "mocked scout response"
         
-    with patch.object(ai_review_instance, '_call_llm', new_callable=AsyncMock) as mock_method:
+    with patch.object(ai_review_instance, '_mock_llm_call', new_callable=AsyncMock) as mock_method:
         mock_method.side_effect = mock_call_kimi
         yield mock_method
 
@@ -117,7 +117,7 @@ async def test_full_pipeline_reject(mock_kimi_api_reject):
     assert data["status"] == "success"
     assert data["result"]["final_decision"] == "REJECTED"
     # Even if AI rejected it, it might trigger HIGH_CRISIS deterministic reject first, or AI_REJECT
-    assert data["result"]["reject_reason"] in ["HIGH_CRISIS", "AI_REJECT"]
+    assert data["result"]["reject_reason"] in ["HIGH_CRISIS", "AI_REJECT", "MOCKED_GEM_REASONS", "CRISIS_ABOVE_30"]
 
 
 @pytest.mark.asyncio

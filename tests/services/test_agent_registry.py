@@ -18,26 +18,26 @@ async def test_agent_registry_defaults(registry):
     identities = registry.get_all_identities()
     assert len(identities) >= 4
     names = [i.name for i in identities]
-    assert "technical" in names
-    assert "sentiment" in names
+    assert "market_dna" in names
+    assert "harmony_coordinator" in names
 
 @pytest.mark.asyncio
 async def test_agent_registry_log_career_event_and_badges(registry):
-    tech_scout = registry.get_identity("technical")
+    tech_scout = registry.get_identity("market_dna")
     assert tech_scout.total_calls == 0
     assert len(tech_scout.badges) == 0
 
     # Simulate 10 successful calls to trigger Apprentice and Streak badges
     for i in range(10):
         entry = CareerEntry(
-            scout_name="technical",
+            scout_name="market_dna",
             event_type="prediction_result",
             details={"is_correct": True}
         )
         await registry.log_career_event(entry)
 
     # Reload or check in-memory
-    tech_scout = registry.get_identity("technical")
+    tech_scout = registry.get_identity("market_dna")
     assert tech_scout.total_calls == 10
     assert tech_scout.correct_calls == 10
     assert tech_scout.accuracy == 1.0
@@ -52,7 +52,7 @@ async def test_agent_registry_log_career_event_and_badges(registry):
 async def test_agent_registry_reads_recent_paper_career_events(registry):
     await registry.log_career_event(
         CareerEntry(
-            scout_name="technical",
+            scout_name="market_dna",
             event_type="prediction_result",
             details={
                 "symbol": "BTCUSDT",
@@ -64,7 +64,7 @@ async def test_agent_registry_reads_recent_paper_career_events(registry):
     )
     await registry.log_career_event(
         CareerEntry(
-            scout_name="risk",
+            scout_name="risk_kernel",
             event_type="badge_earned",
             details={"badge": {"name": "x", "description": "x", "icon": "x"}},
         )
@@ -73,5 +73,5 @@ async def test_agent_registry_reads_recent_paper_career_events(registry):
     recent = registry.get_recent_career_events(limit=5, event_type="prediction_result")
 
     assert len(recent) == 1
-    assert recent[0].scout_name == "technical"
+    assert recent[0].scout_name == "market_dna"
     assert recent[0].details["outcome_source"] == "live_paper"

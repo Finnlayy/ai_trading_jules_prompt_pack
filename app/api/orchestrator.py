@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 from app.schemas.m8_payload import M8Payload
 from app.services.risk_engine import risk_engine_instance
-from app.services.ai_kimi import ai_review_instance
+from app.services.ai_factory import ai_review_instance
 from app.services.broker_factory import BrokerFactory
 from app.services.journal_logger import journal_logger_instance
 from app.services.regime_engine import regime_engine_instance

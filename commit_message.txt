@@ -1,0 +1,9 @@
+feat(ai): Implement gem10_native mode with 10 native gems
+
+- Introduces AI_REVIEW_ENGINE config to switch between legacy6 and gem10_native.
+- Implements GemNativeReviewService utilizing 10 new distinct gems:
+  macro_sentinel, market_dna, structural_architect, harmony_coordinator,
+  indicator_fusion, risk_kernel, pine_core, payload_qa, execution_watchdog,
+  evolution_optimizer.
+- Updates agent and confidence registries to recognize the new gem names.
+- Adds mock tests and updates E2E/integration tests to accommodate the factory pattern.
