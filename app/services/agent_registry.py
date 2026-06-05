@@ -6,6 +6,7 @@ from pathlib import Path
 from datetime import datetime
 
 from app.schemas.academy import ScoutIdentity, CareerEntry, Badge, AgentLeaderboardEntry
+from app.services.ai.gem_agents import GEM_AGENT_DEFINITIONS
 
 DATA_DIR = Path("data")
 CAREER_LOG_FILE = DATA_DIR / "agent_careers.jsonl"
@@ -43,6 +44,16 @@ SCOUT_DEFAULTS = [
         "personality_vector": {"analytical": 0.85, "cautious": 0.85, "momentum_driven": 0.1}
     }
 ]
+
+for definition in GEM_AGENT_DEFINITIONS:
+    if not any(item["name"] == definition.name for item in SCOUT_DEFAULTS):
+        SCOUT_DEFAULTS.append(
+            {
+                "name": definition.name,
+                "archetype": definition.archetype,
+                "personality_vector": definition.personality_vector,
+            }
+        )
 
 class AgentRegistryService:
     def __init__(self):

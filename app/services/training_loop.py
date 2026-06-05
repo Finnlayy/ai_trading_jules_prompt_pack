@@ -17,6 +17,7 @@ from app.services.academy_curriculum import academy_curriculum
 from app.services.agent_registry import agent_registry
 from app.services.prompt_evolution import prompt_evolution
 from app.services.ab_testing import ab_testing
+from app.services.ai.gem_agents import LEGACY_SCOUT_NAMES
 
 class TrainingLoopService:
     def __init__(self):
@@ -111,7 +112,7 @@ class TrainingLoopService:
 
     async def _run_cycle(self):
         self.last_run_time = datetime.now().astimezone().isoformat()
-        scouts = ["technical", "sentiment", "risk", "macro", "execution", "correlation"]
+        scouts = list(LEGACY_SCOUT_NAMES)
 
         # Track agreements for diversity monitor
         decisions = []

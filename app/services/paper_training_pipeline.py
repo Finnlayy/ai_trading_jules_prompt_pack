@@ -10,7 +10,7 @@ from typing import Any
 from app.schemas.ai_review import SignalReview
 from app.schemas.journal import DecisionEnum
 from app.schemas.m8_payload import M8Payload
-from app.services.ai_kimi import ai_review_instance
+from app.services.ai_factory import ai_review_instance
 from app.services.kraken_paper_broker import KrakenPaperBroker
 from app.services.lifecycle_recorder import (
     _json_dumps,

@@ -9,6 +9,8 @@ from fastapi import APIRouter
 
 from app.core.config import AI_PROVIDER
 from app.schemas.ai_layer import AIBehaviorProfile, AIChatRequest, AIChatResponse
+from app.schemas.gem_pipeline import GemPipelineRequest, GemPipelineResponse
+from app.services.ai.gem_native_review import GemNativeReviewService
 from app.services.ai_kimi import KimiSwarmService
 from app.services.ai_layer_memory import ai_layer_memory_instance
 
@@ -199,6 +201,20 @@ async def chat_with_ai_layer(request: AIChatRequest):
         generated_prompt=user_prompt,
         system_prompt=system,
     )
+
+
+@router.post("/gems/review", response_model=GemPipelineResponse)
+async def review_with_gem_pipeline(request: GemPipelineRequest):
+    service = GemNativeReviewService(provider=AI_PROVIDER)
+    result = await service.review_pipeline(
+        mode=request.mode,
+        context=request.context,
+        symbol=request.symbol,
+        direction=request.direction,
+        output_contract=request.output_contract,
+        return_prompt_only=request.return_prompt_only,
+    )
+    return GemPipelineResponse(**result)
 
 
 @router.post("/reset")

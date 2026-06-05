@@ -9,7 +9,23 @@ This document maps the existing 10-phase Gemini Gems into the backend's actual A
    - Scout responses must start with `Confidence: 0.xx`.
    - The final execution/orchestrator call must return strict `SignalReview` JSON.
 
-2. `POST /ai/chat`
+2. `GemNativeReviewService.review_signal(payload)`
+   - Enabled with `AI_REVIEW_ENGINE=gem10_native`.
+   - Routes M8/live-trade evaluation through the Plan 3 phase set: 1, 2, 3, 4, 5, 6, 8, 9.
+   - Returns the same `SignalReview` contract as the legacy six-scout path.
+   - Never executes orders; deterministic risk gates and broker adapters remain authoritative.
+
+3. `POST /ai/gems/review`
+   - Backend-native Plan 3 input router for variable Gem use cases.
+   - `mode=live_trade_evaluation` -> phases 1-6, 8-9.
+   - `mode=strategy_review` -> phases 1-7.
+   - `mode=pionex_deployment` -> phases 7-8.
+   - `mode=backtest_area` -> phases 2-6, 10.
+   - `mode=learning_meta_circle` -> phases 9-10.
+   - `mode=auto` infers the closest mode from the supplied context keys.
+   - `return_prompt_only=true` returns generated prompts and sanitized backend context without calling the provider.
+
+4. `POST /ai/chat`
    - Uses Gemini as a configuration assistant for the AI behavior profile.
    - It must return JSON with `reply` and `profile_patch`.
    - It must never claim model training, direct execution, or risk-gate bypass.
@@ -25,10 +41,16 @@ This document maps the existing 10-phase Gemini Gems into the backend's actual A
 | Phase 4 Harmony Index Coordinator | `technical`, `correlation` | Useful for MTF and exposure alignment. |
 | Phase 5 Indicator Fusion Engine | `technical`, `execution` | Backend should review an existing signal, not generate live trades. |
 | Phase 6 Risk and Capital Kernel | `risk` | Strong fit. Must not override deterministic `RiskEngine`. |
-| Phase 7 Pine Script Core Developer | Offline/dev workflow | Not part of runtime Gemini signal review. Use for strategy creation only. |
-| Phase 8 Payload and QA Integrator | `execution` | Useful for webhook/schema readiness and final orchestration. |
-| Phase 9 Execution Watchdog | `execution` | Useful for operational risk and log triage. |
-| Phase 10 Evolution Optimizer | Academy/training layer | Useful for prompt evolution and strategy decay review, not direct signal approval. |
+| Phase 7 Pine Script Core Developer | `strategy_review`, `pionex_deployment` | Runtime-native for strategy/code review and Pionex handoff checks, not live order approval. |
+| Phase 8 Payload and QA Integrator | `live_trade_evaluation`, `pionex_deployment` | Useful for webhook/schema readiness and final orchestration. |
+| Phase 9 Execution Watchdog | `live_trade_evaluation`, `learning_meta_circle` | Useful for operational risk and log triage. |
+| Phase 10 Evolution Optimizer | `backtest_area`, `learning_meta_circle` | Useful for prompt evolution, strategy decay review, and outcome learning. |
+
+## Plan 3 Guardrail
+
+The Gems think; the backend supplies data and executes only explicitly allowed actions.
+
+All Gem context is assembled server-side and redacts secret-like fields before provider calls. Gem output can influence confidence, reason codes, review summaries, learning events, and human-review escalation, but it cannot place real-money orders or bypass deterministic gates.
 
 ## Recommended Gemini Gems For Manual Use
 

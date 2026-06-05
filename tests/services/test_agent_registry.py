@@ -20,6 +20,8 @@ async def test_agent_registry_defaults(registry):
     names = [i.name for i in identities]
     assert "technical" in names
     assert "sentiment" in names
+    assert "macro_sentinel" in names
+    assert "evolution_optimizer" in names
 
 @pytest.mark.asyncio
 async def test_agent_registry_log_career_event_and_badges(registry):

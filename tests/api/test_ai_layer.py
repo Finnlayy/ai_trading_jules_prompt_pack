@@ -75,3 +75,29 @@ async def test_ai_chat_uses_versioned_system_prompt(tmp_path, monkeypatch):
     generated_prompt = json.loads(data["generated_prompt"])
     assert len(generated_prompt["chart_context"]["recent_candles"]) == 10
     assert generated_prompt["chart_context"]["recent_candles"][0]["close"] == 10
+
+
+@pytest.mark.asyncio
+async def test_ai_gems_review_prompt_only_routes_pionex_and_redacts_secrets():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        response = await ac.post(
+            "/ai/gems/review",
+            json={
+                "mode": "pionex_deployment",
+                "symbol": "BTCUSDT",
+                "direction": "LONG",
+                "return_prompt_only": True,
+                "context": {
+                    "pionex_payload": {"signal_type": "uuid"},
+                    "api_key": "do-not-send",
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["used_llm"] is False
+    assert data["selected_phases"] == [7, 8]
+    assert data["selected_gems"] == ["pine_core", "payload_qa"]
+    assert data["backend_context"]["input"]["api_key"] == "[REDACTED]"
+    assert set(data["generated_prompts"].keys()) == {"pine_core", "payload_qa"}

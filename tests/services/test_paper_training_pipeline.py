@@ -9,6 +9,7 @@ from app.db.models import AgentReviewEvent, RiskDecisionEvent, SignalCandidate
 from app.schemas.ai_review import DecisionEnum as AIDecisionEnum, SignalReview
 from app.schemas.journal import DecisionEnum as RiskDecisionEnum
 from app.schemas.m8_payload import M8Payload
+from app.services.ai.gem_agents import GEM_AGENT_NAMES
 from app.services.lifecycle_recorder import LifecycleRecorder, candidate_id_for_signal
 from app.services.paper_training_pipeline import PaperTrainingPipeline
 
@@ -94,6 +95,31 @@ class FakePaperBroker:
         }
 
 
+class FakeGem10AIReviewLayer:
+    async def review_signal(self, payload: M8Payload) -> SignalReview:
+        return SignalReview(
+            schema_version="1.0",
+            signal_id=payload.signal_id,
+            decision=AIDecisionEnum.PROCEED_TO_SIMULATION,
+            confidence=0.81,
+            reason_codes=["GEM10_TEST"],
+            risk_flags=[],
+            requires_human_review=False,
+            audit_trace={
+                "provider": "mock",
+                "engine": "gem10_native",
+                "scouts": {
+                    name: {
+                        "decision": AIDecisionEnum.PROCEED_TO_SIMULATION.value,
+                        "confidence": 0.8,
+                        "report": f"{name} test approval",
+                    }
+                    for name in GEM_AGENT_NAMES
+                },
+            },
+        )
+
+
 @pytest.mark.asyncio
 async def test_paper_training_pipeline_records_full_approved_cycle(monkeypatch):
     async def fake_regime(_payload):
@@ -129,6 +155,32 @@ async def test_paper_training_pipeline_records_full_approved_cycle(monkeypatch):
     assert broker.calls[0]["strategy_id"] == "default"
     assert broker.calls[0]["opened_by_loop"] is True
     assert risk.trades_today == 1
+
+
+@pytest.mark.asyncio
+async def test_paper_training_pipeline_records_gem10_review_events(monkeypatch):
+    async def fake_regime(_payload):
+        return {"trade_allowed": True, "regime": "TEST", "reason": "ok"}
+
+    Session = _session_factory()
+    recorder = LifecycleRecorder(Session)
+    broker = FakePaperBroker()
+    risk = FakeRiskEngine(RiskDecisionEnum.PROCEED_TO_SIMULATION)
+    pipeline = PaperTrainingPipeline(
+        ai_review_layer=FakeGem10AIReviewLayer(),
+        risk_engine=risk,
+        paper_broker=broker,
+        recorder=recorder,
+    )
+    monkeypatch.setattr(pipeline, "_check_regime", fake_regime)
+
+    await pipeline.process_candidate(_payload("live-BTCUSDT-1m-default-1700000000030"))
+
+    with Session() as db:
+        reviews = db.query(AgentReviewEvent).all()
+
+    assert len(reviews) == len(GEM_AGENT_NAMES)
+    assert {row.scout_name for row in reviews} == set(GEM_AGENT_NAMES)
 
 
 @pytest.mark.asyncio

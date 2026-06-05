@@ -3,6 +3,7 @@ import os
 
 # Keep tests deterministic regardless of local .env content.
 os.environ["AI_PROVIDER"] = "moonshot"
+os.environ["AI_REVIEW_ENGINE"] = "legacy6"
 os.environ["BROKER_MODE"] = "simulation"
 os.environ["PIONEX_RELAY_ENABLED"] = "false"
 os.environ["PIONEX_DIRECT_ENABLED"] = "false"

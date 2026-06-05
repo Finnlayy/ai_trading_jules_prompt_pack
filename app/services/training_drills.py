@@ -7,6 +7,7 @@ from datetime import datetime
 from pathlib import Path
 DRILL_RESULTS_FILE = Path('data/drill_results.jsonl')
 from app.schemas.academy import SyntheticDrill, DrillResult, CareerEntry
+from app.services.ai.gem_agents import get_agent_definition
 from app.services.agent_registry import agent_registry
 
 
@@ -22,7 +23,8 @@ class TrainingDrillsService:
             "macro": "regime_identification"
         }
 
-        drill_type = drill_types.get(scout_name, "pattern_recognition")
+        definition = get_agent_definition(scout_name)
+        drill_type = drill_types.get(scout_name, definition.drill_type if definition else "pattern_recognition")
 
         scenario_data = {
             "symbol": "BTCUSDT",
