@@ -1,26 +1,23 @@
 from app.schemas.m8_payload import M8Payload
 from app.schemas.ai_review import SignalReview, DecisionEnum
+from app.services.ai.gem_agents import GEM_AGENT_NAMES
 from app.services.ai_layer_memory import ai_layer_memory_instance
 from app.services.confidence_registry import confidence_registry
 
 
 class MockAIReviewLayer:
     """
-    Mock AI Review Layer that simulates a 4-scout swarm.
+    Mock AI Review Layer that simulates the backend-native Gem10 swarm.
     In mock mode, scouts use deterministic heuristics instead of LLM calls.
     """
 
-    SCOUT_NAMES = ["technical", "sentiment", "risk", "macro", "execution", "correlation"]
+    SCOUT_NAMES = list(GEM_AGENT_NAMES)
 
     def review_signal(self, payload: M8Payload) -> SignalReview:
         # Simulate scouts with deterministic heuristics
         scout_reports = {}
         for name in self.SCOUT_NAMES:
-            method_name = f"_mock_{name}"
-            if hasattr(self, method_name):
-                report = getattr(self, method_name)(payload)
-            else:
-                report = "Confidence: 0.75\nmocked report"
+            report = self._mock_report_for_scout(name, payload)
             individual_decision = self._derive_scout_decision(name, payload)
             scout_reports[name] = {
                 "report": report,
@@ -116,19 +113,32 @@ class MockAIReviewLayer:
             },
         )
 
+    def _mock_report_for_scout(self, scout_name: str, payload: M8Payload) -> str:
+        if scout_name in {"market_dna", "structural_architect", "harmony_coordinator", "indicator_fusion", "pine_core"}:
+            return self._mock_technical(payload)
+        if scout_name == "macro_sentinel":
+            return self._mock_macro(payload)
+        if scout_name == "risk_kernel":
+            return self._mock_risk(payload)
+        if scout_name in {"payload_qa", "execution_watchdog"}:
+            return self._mock_execution(payload)
+        if scout_name == "evolution_optimizer":
+            return "Confidence: 0.70\nLearning feedback profile is neutral. No decay signal detected."
+        return "Confidence: 0.75\nmocked report"
+
     def _derive_scout_decision(self, scout_name: str, payload: M8Payload) -> str:
         """Derive individual scout decision from payload heuristics."""
-        if scout_name == "technical":
+        if scout_name in {"technical", "market_dna", "structural_architect", "harmony_coordinator", "indicator_fusion", "pine_core"}:
             return DecisionEnum.PROCEED_TO_SIMULATION.value if payload.confluence_score >= 70 else DecisionEnum.REJECT.value
-        if scout_name == "sentiment":
+        if scout_name in {"sentiment", "macro_sentinel"}:
             return DecisionEnum.PROCEED_TO_SIMULATION.value if not payload.macro_event_risk else DecisionEnum.REJECT.value
-        if scout_name == "risk":
+        if scout_name in {"risk", "risk_kernel"}:
             return DecisionEnum.PROCEED_TO_SIMULATION.value if payload.crisis_score <= 20 else DecisionEnum.REJECT.value
         if scout_name == "macro":
             return DecisionEnum.PROCEED_TO_SIMULATION.value if payload.market_regime in {"GREEN", "YELLOW"} else DecisionEnum.REJECT.value
-        if scout_name == "execution":
+        if scout_name in {"execution", "payload_qa", "execution_watchdog"}:
             return DecisionEnum.PROCEED_TO_SIMULATION.value if payload.spread < 50 else DecisionEnum.REJECT.value
-        if scout_name == "correlation":
+        if scout_name in {"correlation", "evolution_optimizer"}:
             return DecisionEnum.PROCEED_TO_SIMULATION.value
         return DecisionEnum.PROCEED_TO_SIMULATION.value
 
@@ -216,6 +226,11 @@ class MockAIReviewLayer:
             f"Macro regime: {regime}. Tailwind for {payload.direction}: {tailwind}. "
             f"No structural headwinds detected."
         )
+
+    def _mock_execution(self, payload: M8Payload) -> str:
+        conf = 0.8 if payload.spread < 50 else 0.45
+        quality = "acceptable" if payload.spread < 50 else "wide spread"
+        return f"Confidence: {conf:.2f}\nExecution quality: {quality}. Spread {payload.spread}bps."
 
     @staticmethod
     def _extract_confidence(report: str) -> float:

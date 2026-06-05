@@ -6,7 +6,7 @@ from pathlib import Path
 from datetime import datetime
 
 from app.schemas.academy import ScoutIdentity, CareerEntry, Badge, AgentLeaderboardEntry
-from app.services.ai.gem_agents import GEM_AGENT_DEFINITIONS
+from app.services.ai.gem_agents import DEFAULT_AGENT_DEFINITIONS
 
 DATA_DIR = Path("data")
 CAREER_LOG_FILE = DATA_DIR / "agent_careers.jsonl"
@@ -14,38 +14,58 @@ REGISTRY_FILE = DATA_DIR / "agent_registry.json"
 
 SCOUT_DEFAULTS = [
     {
-        "name": "technical",
+        "name": "macro_sentinel",
+        "archetype": "Stratege",
+        "personality_vector": {"analytical": 0.7, "cautious": 0.7, "momentum_driven": 0.3}
+    },
+    {
+        "name": "market_dna",
         "archetype": "Analyst",
         "personality_vector": {"analytical": 0.9, "cautious": 0.4, "momentum_driven": 0.8}
     },
     {
-        "name": "sentiment",
-        "archetype": "Diplomat",
-        "personality_vector": {"analytical": 0.3, "cautious": 0.5, "momentum_driven": 0.9}
+        "name": "structural_architect",
+        "archetype": "Architekt",
+        "personality_vector": {"analytical": 0.8, "cautious": 0.6, "momentum_driven": 0.2}
     },
     {
-        "name": "risk",
+        "name": "harmony_coordinator",
+        "archetype": "Diplomat",
+        "personality_vector": {"analytical": 0.5, "cautious": 0.5, "momentum_driven": 0.5}
+    },
+    {
+        "name": "indicator_fusion",
+        "archetype": "Analyst",
+        "personality_vector": {"analytical": 0.9, "cautious": 0.4, "momentum_driven": 0.8}
+    },
+    {
+        "name": "risk_kernel",
         "archetype": "Wächter",
         "personality_vector": {"analytical": 0.8, "cautious": 0.95, "momentum_driven": 0.1}
     },
     {
-        "name": "macro",
-        "archetype": "Stratege",
-        "personality_vector": {"analytical": 0.7, "cautious": 0.7, "momentum_driven": 0.5}
+        "name": "pine_core",
+        "archetype": "Entwickler",
+        "personality_vector": {"analytical": 0.9, "cautious": 0.6, "momentum_driven": 0.3}
     },
     {
-        "name": "execution",
-        "archetype": "Operateur",
+        "name": "payload_qa",
+        "archetype": "Prüfer",
+        "personality_vector": {"analytical": 0.9, "cautious": 0.9, "momentum_driven": 0.1}
+    },
+    {
+        "name": "execution_watchdog",
+        "archetype": "Operator",
         "personality_vector": {"analytical": 0.9, "cautious": 0.8, "momentum_driven": 0.2}
     },
     {
-        "name": "correlation",
-        "archetype": "Architekt",
-        "personality_vector": {"analytical": 0.85, "cautious": 0.85, "momentum_driven": 0.1}
+        "name": "evolution_optimizer",
+        "archetype": "Forscher",
+        "personality_vector": {"analytical": 0.8, "cautious": 0.4, "momentum_driven": 0.6}
     }
 ]
 
-for definition in GEM_AGENT_DEFINITIONS:
+for definition in DEFAULT_AGENT_DEFINITIONS:
     if not any(item["name"] == definition.name for item in SCOUT_DEFAULTS):
         SCOUT_DEFAULTS.append(
             {

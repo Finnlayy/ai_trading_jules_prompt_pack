@@ -41,7 +41,7 @@ def test_ai_review_proceed():
     assert review.audit_trace["provider"] == "mock"
     # 4-scout swarm
     scouts = review.audit_trace["scouts"]
-    assert set(scouts.keys()) == {"technical", "sentiment", "risk", "macro", "execution", "correlation"}
+    assert set(scouts.keys()) == {"macro_sentinel", "market_dna", "structural_architect", "harmony_coordinator", "indicator_fusion", "risk_kernel", "pine_core", "payload_qa", "execution_watchdog", "evolution_optimizer"}
     assert "symbol_context" in review.audit_trace
     assert "scout_weights" in review.audit_trace
     assert "weighted_scout_vote" in review.audit_trace

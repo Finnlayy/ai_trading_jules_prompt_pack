@@ -10,6 +10,7 @@ os.environ["PIONEX_DIRECT_ENABLED"] = "false"
 os.environ["PIONEX_DIRECT_LIVE_TRADING_ENABLED"] = "false"
 os.environ["AI_FAILURE_POLICY"] = "reject_live"
 os.environ["WEBHOOK_SECRET"] = ""
+os.environ["MIN_CONFLUENCE_SCORE"] = "70"
 
 
 import pytest

@@ -51,7 +51,7 @@ def _as_csv_list(value: str | None) -> list[str]:
 
 # API configuration
 AI_PROVIDER = os.getenv("AI_PROVIDER", os.getenv("LLM_PROVIDER", "moonshot")).strip().lower()
-AI_REVIEW_ENGINE = os.getenv("AI_REVIEW_ENGINE", "legacy6").strip().lower()
+AI_REVIEW_ENGINE = os.getenv("AI_REVIEW_ENGINE", "gem10_native").strip().lower()
 
 MOONSHOT_API_KEY = os.getenv("MOONSHOT_API_KEY", "")
 MOONSHOT_BASE_URL = os.getenv("MOONSHOT_BASE_URL", "https://api.moonshot.ai/v1")

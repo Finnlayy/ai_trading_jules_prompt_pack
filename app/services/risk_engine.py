@@ -10,6 +10,7 @@ from app.core.exceptions import RiskGateException
 from app.services.war_room_rules import ai_rule_violation, classify_order
 from app.services.portfolio_circuit_breaker import circuit_breaker_instance
 from app.services.correlation_risk import correlation_checker
+from app.services.confidence_registry import confidence_registry
 from typing import Optional, Dict, List
 
 class RiskEngine:
@@ -51,17 +52,32 @@ class RiskEngine:
             self._gate_max_trades()
             self._gate_portfolio_drawdown()
             self._gate_correlation_risk(payload)
+            weighted_scout_vote = None
+            confidence_context = None
             if ai_review:
                 self._gate_ai_conflict(payload, ai_review)
+                if ai_review.audit_trace:
+                    weighted_scout_vote = self._extract_weighted_scout_vote(ai_review)
+                    confidence_context = ai_review.audit_trace.get('symbol_context')
+                self._gate_paper_training_calibration(payload, weighted_scout_vote)
 
             return {
                 "decision": DecisionEnum.PROCEED_TO_SIMULATION,
-                "reject_reason": None
+                "reject_reason": None,
+                "weighted_scout_vote": weighted_scout_vote,
+                "confidence_context": confidence_context
             }
         except RiskGateException as e:
+            weighted_scout_vote = None
+            confidence_context = None
+            if ai_review and ai_review.audit_trace:
+                weighted_scout_vote = self._extract_weighted_scout_vote(ai_review)
+                confidence_context = ai_review.audit_trace.get('symbol_context')
             return {
                 "decision": DecisionEnum.REJECT,
-                "reject_reason": e.reason_code
+                "reject_reason": e.reason_code,
+                "weighted_scout_vote": weighted_scout_vote,
+                "confidence_context": confidence_context
             }
 
     def _gate_invalid_payload(self, payload: M8Payload):
@@ -152,6 +168,41 @@ class RiskEngine:
         result = correlation_checker.check_new_entry(payload.symbol, self.open_positions)
         if not result["allowed"]:
             raise RiskGateException(result["reason"], "CORRELATION_RISK_LIMIT")
+
+
+    def _gate_paper_training_calibration(self, payload: M8Payload, weighted_scout_vote: Optional[float]):
+        if weighted_scout_vote is not None and weighted_scout_vote < 0.5:
+            raise RiskGateException("Weak AI consensus", "WEAK_SCOUT_VOTE")
+
+        stats = confidence_registry.get_symbol_stats(payload.symbol)
+        direction_stats = stats.get_direction_stats(payload.direction)
+        if direction_stats.total >= 5 and direction_stats.win_rate < 0.3:
+            raise RiskGateException("Poor historical paper performance", "POOR_HISTORY")
+
+    @staticmethod
+    def _extract_weighted_scout_vote(ai_review: SignalReview) -> Optional[float]:
+        if not ai_review.audit_trace:
+            return None
+        raw_vote = ai_review.audit_trace.get("weighted_scout_vote")
+        if raw_vote is None:
+            return None
+        if isinstance(raw_vote, dict):
+            for key in ("weighted_confidence", "approval_ratio", "score"):
+                value = raw_vote.get(key)
+                if isinstance(value, (int, float)):
+                    return float(value)
+            decision_hint = str(raw_vote.get("decision_hint") or "").upper()
+            if decision_hint == AIDecisionEnum.PROCEED_TO_SIMULATION.value:
+                return 1.0
+            if decision_hint == AIDecisionEnum.REJECT.value:
+                return 0.0
+            return None
+        if isinstance(raw_vote, (int, float)):
+            return float(raw_vote)
+        try:
+            return float(raw_vote)
+        except (TypeError, ValueError):
+            return None
 
 
 # Global instance for FastAPI usage

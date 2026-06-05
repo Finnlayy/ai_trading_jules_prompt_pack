@@ -181,6 +181,15 @@ class KimiSwarmService:
             scout_reports = dict(zip(tasks.keys(), scout_results))
             advisor_reports = await self._run_external_advisors(payload, symbol_context)
 
+            total_weight = 0.0
+            weighted_sum = 0.0
+            for scout_name, report in scout_reports.items():
+                weight = confidence_registry.get_scout_weight(payload.symbol, scout_name)
+                conf = self._extract_confidence_from_report(report)
+                total_weight += weight
+                weighted_sum += conf * weight
+            weighted_scout_vote = weighted_sum / total_weight if total_weight > 0 else 0.5
+
             # 3. Orchestrator synthesizes weighted by per-scout accuracy
             review = await self._run_orchestrator(payload, scout_reports, advisor_reports)
             weighted_vote = self._weighted_scout_vote(payload, scout_reports)
