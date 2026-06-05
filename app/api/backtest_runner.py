@@ -236,7 +236,7 @@ async def smoke_test():
     """
     from app.schemas.m8_payload import M8Payload
     from datetime import datetime, timezone
-    from app.api.orchestrator import ai_review_instance
+    from app.services.ai_factory import ai_review_instance
     from app.services.ai_mock import MockAIReviewLayer
 
     broker = _get_broker()

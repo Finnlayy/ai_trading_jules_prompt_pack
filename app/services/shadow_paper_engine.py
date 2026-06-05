@@ -58,7 +58,18 @@ class ShadowPaperEngine:
     feedback for the AI confidence registry. It never places broker orders.
     """
 
-    SCOUT_NAMES = ["technical", "sentiment", "risk", "macro", "execution", "correlation"]
+    SCOUT_NAMES = [
+        "macro_sentinel",
+        "market_dna",
+        "structural_architect",
+        "harmony_coordinator",
+        "indicator_fusion",
+        "risk_kernel",
+        "pine_core",
+        "payload_qa",
+        "execution_watchdog",
+        "evolution_optimizer"
+    ]
 
     def __init__(self) -> None:
         self.last_replay: dict[str, Any] | None = None
