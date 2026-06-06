@@ -9,7 +9,7 @@
       "size": 0.0002,
       "unrealized_pnl": 0.0,
       "realized_pnl": 0.0,
-      "open_time": "2026-06-06T16:19:50.911504+00:00",
+      "open_time": "2026-06-06T17:06:01.746407+00:00",
       "strategy_id": null,
       "stop_price": 48000.0,
       "target_price": 54000.0
@@ -23,7 +23,7 @@
       "size": 0.0002,
       "unrealized_pnl": 0.0,
       "realized_pnl": 0.0,
-      "open_time": "2026-06-06T16:19:50.935992+00:00",
+      "open_time": "2026-06-06T17:06:01.772790+00:00",
       "strategy_id": null,
       "stop_price": 48000.0,
       "target_price": 54000.0
@@ -37,7 +37,7 @@
       "size": 0.0002,
       "unrealized_pnl": 0.0,
       "realized_pnl": 0.0,
-      "open_time": "2026-06-06T16:19:50.953795+00:00",
+      "open_time": "2026-06-06T17:06:01.791295+00:00",
       "strategy_id": null,
       "stop_price": 48000.0,
       "target_price": 54000.0
@@ -51,7 +51,7 @@
       "size": 0.0002,
       "unrealized_pnl": 0.0,
       "realized_pnl": 0.0,
-      "open_time": "2026-06-06T16:19:51.120825+00:00",
+      "open_time": "2026-06-06T17:06:01.948027+00:00",
       "strategy_id": null,
       "stop_price": 48000.0,
       "target_price": 54000.0
@@ -65,7 +65,7 @@
       "size": 0.0002,
       "unrealized_pnl": 0.0,
       "realized_pnl": 0.0,
-      "open_time": "2026-06-06T16:19:51.130805+00:00",
+      "open_time": "2026-06-06T17:06:01.957309+00:00",
       "strategy_id": null,
       "stop_price": 48000.0,
       "target_price": 54000.0
@@ -98,7 +98,7 @@
             "Do not request live execution directly.",
             "Prefer human review when confidence is low or preferences conflict."
           ],
-          "updated_at": "2026-06-06T16:19:50.894487+00:00"
+          "updated_at": "2026-06-06T17:06:01.720719+00:00"
         },
         "behavior_prompt": "User AI behavior profile for signal review only:\n- trading_style: balanced\n- risk_tolerance: moderate\n- preferred_symbols: none\n- blocked_symbols: none\n- max_risk_pct: unset\n- min_confluence_preference: unset\n- notes: none\n- guardrails: Do not bypass deterministic risk gates.; Do not request live execution directly.; Prefer human review when confidence is low or preferences conflict.\nThese preferences may influence AI review confidence, reason codes, and human-review flags, but they must never override deterministic risk gates or directly authorize execution.",
         "scouts": {
@@ -109,18 +109,18 @@
           "execution": "mocked scout response",
           "correlation": "mocked scout response"
         },
-        "symbol_context": "Symbol: BTCUSD | Direction: LONG\nTotal signals reviewed: 0",
+        "symbol_context": "Symbol: BTCUSD | Direction: LONG\nTotal signals reviewed: 4\n  Technical scout: 0% accuracy (0/4), exp: 4\n  Sentiment scout: 0% accuracy (0/4), exp: 4\n  Risk scout: 0% accuracy (0/4), exp: 4\n  Macro scout: 0% accuracy (0/4), exp: 4\n  Execution scout: 0% accuracy (0/4), exp: 4\n  Correlation scout: 0% accuracy (0/4), exp: 4\nHistorical avg confluence: 85.5, avg crisis: 16.2",
         "external_advisors": {
           "auto_enabled": false,
           "advisors": []
         },
         "scout_weights": {
-          "technical": 0.5,
-          "sentiment": 0.5,
-          "risk": 0.5,
-          "macro": 0.5,
-          "execution": 0.5,
-          "correlation": 0.5
+          "technical": 0.1,
+          "sentiment": 0.1,
+          "risk": 0.1,
+          "macro": 0.1,
+          "execution": 0.1,
+          "correlation": 0.1
         },
         "final_summary": {
           "decision": "PROCEED_TO_SIMULATION",
@@ -136,7 +136,7 @@
           "reason": "Mocked for tests"
         }
       },
-      "timestamp": "2026-06-06T16:19:50.905398+00:00"
+      "timestamp": "2026-06-06T17:06:01.728154+00:00"
     },
     {
       "trade_id": "sim-sig-auth",
@@ -164,7 +164,7 @@
             "Do not request live execution directly.",
             "Prefer human review when confidence is low or preferences conflict."
           ],
-          "updated_at": "2026-06-06T16:19:50.894487+00:00"
+          "updated_at": "2026-06-06T17:06:01.720719+00:00"
         },
         "behavior_prompt": "User AI behavior profile for signal review only:\n- trading_style: balanced\n- risk_tolerance: moderate\n- preferred_symbols: none\n- blocked_symbols: none\n- max_risk_pct: unset\n- min_confluence_preference: unset\n- notes: none\n- guardrails: Do not bypass deterministic risk gates.; Do not request live execution directly.; Prefer human review when confidence is low or preferences conflict.\nThese preferences may influence AI review confidence, reason codes, and human-review flags, but they must never override deterministic risk gates or directly authorize execution.",
         "scouts": {
@@ -175,18 +175,18 @@
           "execution": "mocked scout response",
           "correlation": "mocked scout response"
         },
-        "symbol_context": "Symbol: BTCUSD | Direction: LONG\nTotal signals reviewed: 1\n  Technical scout: 0% accuracy (0/1), exp: 1\n  Sentiment scout: 0% accuracy (0/1), exp: 1\n  Risk scout: 0% accuracy (0/1), exp: 1\n  Macro scout: 0% accuracy (0/1), exp: 1\n  Execution scout: 0% accuracy (0/1), exp: 1\n  Correlation scout: 0% accuracy (0/1), exp: 1\nHistorical avg confluence: 85.5, avg crisis: 10.0",
+        "symbol_context": "Symbol: BTCUSD | Direction: LONG\nTotal signals reviewed: 5\n  Technical scout: 0% accuracy (0/5), exp: 5\n  Sentiment scout: 0% accuracy (0/5), exp: 5\n  Risk scout: 0% accuracy (0/5), exp: 5\n  Macro scout: 0% accuracy (0/5), exp: 5\n  Execution scout: 0% accuracy (0/5), exp: 5\n  Correlation scout: 0% accuracy (0/5), exp: 5\nHistorical avg confluence: 85.5, avg crisis: 15.0",
         "external_advisors": {
           "auto_enabled": false,
           "advisors": []
         },
         "scout_weights": {
-          "technical": 0.5,
-          "sentiment": 0.5,
-          "risk": 0.5,
-          "macro": 0.5,
-          "execution": 0.5,
-          "correlation": 0.5
+          "technical": 0.1,
+          "sentiment": 0.1,
+          "risk": 0.1,
+          "macro": 0.1,
+          "execution": 0.1,
+          "correlation": 0.1
         },
         "final_summary": {
           "decision": "PROCEED_TO_SIMULATION",
@@ -202,7 +202,7 @@
           "reason": "Mocked for tests"
         }
       },
-      "timestamp": "2026-06-06T16:19:50.933526+00:00"
+      "timestamp": "2026-06-06T17:06:01.770394+00:00"
     },
     {
       "trade_id": "sim-sig-pipe-1",
@@ -230,7 +230,7 @@
             "Do not request live execution directly.",
             "Prefer human review when confidence is low or preferences conflict."
           ],
-          "updated_at": "2026-06-06T16:19:50.894487+00:00"
+          "updated_at": "2026-06-06T17:06:01.720719+00:00"
         },
         "behavior_prompt": "User AI behavior profile for signal review only:\n- trading_style: balanced\n- risk_tolerance: moderate\n- preferred_symbols: none\n- blocked_symbols: none\n- max_risk_pct: unset\n- min_confluence_preference: unset\n- notes: none\n- guardrails: Do not bypass deterministic risk gates.; Do not request live execution directly.; Prefer human review when confidence is low or preferences conflict.\nThese preferences may influence AI review confidence, reason codes, and human-review flags, but they must never override deterministic risk gates or directly authorize execution.",
         "scouts": {
@@ -241,7 +241,7 @@
           "execution": "mocked scout response",
           "correlation": "mocked scout response"
         },
-        "symbol_context": "Symbol: BTCUSD | Direction: LONG\nTotal signals reviewed: 2\n  Technical scout: 0% accuracy (0/2), exp: 2\n  Sentiment scout: 0% accuracy (0/2), exp: 2\n  Risk scout: 0% accuracy (0/2), exp: 2\n  Macro scout: 0% accuracy (0/2), exp: 2\n  Execution scout: 0% accuracy (0/2), exp: 2\n  Correlation scout: 0% accuracy (0/2), exp: 2\nHistorical avg confluence: 85.5, avg crisis: 10.0",
+        "symbol_context": "Symbol: BTCUSD | Direction: LONG\nTotal signals reviewed: 6\n  Technical scout: 0% accuracy (0/6), exp: 6\n  Sentiment scout: 0% accuracy (0/6), exp: 6\n  Risk scout: 0% accuracy (0/6), exp: 6\n  Macro scout: 0% accuracy (0/6), exp: 6\n  Execution scout: 0% accuracy (0/6), exp: 6\n  Correlation scout: 0% accuracy (0/6), exp: 6\nHistorical avg confluence: 85.5, avg crisis: 14.2",
         "external_advisors": {
           "auto_enabled": false,
           "advisors": []
@@ -268,7 +268,7 @@
           "reason": "Mocked for tests"
         }
       },
-      "timestamp": "2026-06-06T16:19:50.952466+00:00"
+      "timestamp": "2026-06-06T17:06:01.789531+00:00"
     },
     {
       "trade_id": "sim-sig-pipe-2",
@@ -296,7 +296,7 @@
             "Do not request live execution directly.",
             "Prefer human review when confidence is low or preferences conflict."
           ],
-          "updated_at": "2026-06-06T16:19:50.894487+00:00"
+          "updated_at": "2026-06-06T17:06:01.720719+00:00"
         },
         "behavior_prompt": "User AI behavior profile for signal review only:\n- trading_style: balanced\n- risk_tolerance: moderate\n- preferred_symbols: none\n- blocked_symbols: none\n- max_risk_pct: unset\n- min_confluence_preference: unset\n- notes: none\n- guardrails: Do not bypass deterministic risk gates.; Do not request live execution directly.; Prefer human review when confidence is low or preferences conflict.\nThese preferences may influence AI review confidence, reason codes, and human-review flags, but they must never override deterministic risk gates or directly authorize execution.",
         "scouts": {
@@ -307,7 +307,7 @@
           "execution": "mocked scout response",
           "correlation": "mocked scout response"
         },
-        "symbol_context": "Symbol: BTCUSD | Direction: LONG\nTotal signals reviewed: 3\n  Technical scout: 0% accuracy (0/3), exp: 3\n  Sentiment scout: 0% accuracy (0/3), exp: 3\n  Risk scout: 0% accuracy (0/3), exp: 3\n  Macro scout: 0% accuracy (0/3), exp: 3\n  Execution scout: 0% accuracy (0/3), exp: 3\n  Correlation scout: 0% accuracy (0/3), exp: 3\nHistorical avg confluence: 85.5, avg crisis: 10.0",
+        "symbol_context": "Symbol: BTCUSD | Direction: LONG\nTotal signals reviewed: 7\n  Technical scout: 0% accuracy (0/7), exp: 7\n  Sentiment scout: 0% accuracy (0/7), exp: 7\n  Risk scout: 0% accuracy (0/7), exp: 7\n  Macro scout: 0% accuracy (0/7), exp: 7\n  Execution scout: 0% accuracy (0/7), exp: 7\n  Correlation scout: 0% accuracy (0/7), exp: 7\nHistorical avg confluence: 85.5, avg crisis: 13.6",
         "external_advisors": {
           "auto_enabled": false,
           "advisors": []
@@ -336,7 +336,7 @@
           "reason": "Mocked for tests"
         }
       },
-      "timestamp": "2026-06-06T16:19:50.968064+00:00"
+      "timestamp": "2026-06-06T17:06:01.804509+00:00"
     },
     {
       "trade_id": "sim-sig-live-block",
@@ -349,7 +349,7 @@
       "strategy_id": null,
       "decision": "REJECT",
       "ai_trace": null,
-      "timestamp": "2026-06-06T16:19:51.107102+00:00"
+      "timestamp": "2026-06-06T17:06:01.936034+00:00"
     },
     {
       "trade_id": "sim-sig-live-allow",
@@ -362,7 +362,7 @@
       "strategy_id": null,
       "decision": "PROCEED_TO_SIMULATION",
       "ai_trace": null,
-      "timestamp": "2026-06-06T16:19:51.118818+00:00"
+      "timestamp": "2026-06-06T17:06:01.946201+00:00"
     },
     {
       "trade_id": "sim-sig-sync-ai",
@@ -375,8 +375,8 @@
       "strategy_id": null,
       "decision": "PROCEED_TO_SIMULATION",
       "ai_trace": null,
-      "timestamp": "2026-06-06T16:19:51.128963+00:00"
+      "timestamp": "2026-06-06T17:06:01.955955+00:00"
     }
   ],
-  "updated_at": "2026-06-06T16:19:51.130907+00:00"
+  "updated_at": "2026-06-06T17:06:01.957424+00:00"
 }
