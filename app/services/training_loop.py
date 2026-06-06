@@ -17,7 +17,7 @@ from app.services.academy_curriculum import academy_curriculum
 from app.services.agent_registry import agent_registry
 from app.services.prompt_evolution import prompt_evolution
 from app.services.ab_testing import ab_testing
-from app.services.ai.gem_agents import LEGACY_SCOUT_NAMES
+from app.services.academy_policy import ACADEMY_POLICY_SCOUT_NAMES, academy_policy_service
 
 class TrainingLoopService:
     def __init__(self):
@@ -112,15 +112,23 @@ class TrainingLoopService:
 
     async def _run_cycle(self):
         self.last_run_time = datetime.now().astimezone().isoformat()
-        scouts = list(LEGACY_SCOUT_NAMES)
+        policy_decisions = academy_policy_service.plan_cycle(
+            training_status=self._policy_training_status(),
+            count=len(ACADEMY_POLICY_SCOUT_NAMES),
+        )
+        await academy_policy_service.log_decisions(policy_decisions)
 
         # Track agreements for diversity monitor
         decisions = []
         cycle_results = []
 
-        for scout in scouts:
+        for policy_decision in policy_decisions:
+            policy_action = policy_decision.action
+            scout = policy_action.scout_name
             # 1. Generate Drill
-            drill = training_drills.generate_random_drill(scout, difficulty=random.randint(1, 3))
+            drill = training_drills.generate_random_drill(scout, difficulty=policy_action.difficulty)
+            if policy_action.drill_profile != "default":
+                drill = drill.model_copy(update={"drill_type": policy_action.drill_profile})
 
             # 2. Simulate AI decision (for MVP, we use simple random/weighted logic instead of full LLM call)
             # In a real impl, we would call `ai_kimi.py` or similar
@@ -159,7 +167,11 @@ class TrainingLoopService:
             await self._check_auto_evolution(scout)
 
             # Save for UI log
-            self.recent_drills.insert(0, result.model_dump())
+            drill_log = result.model_dump()
+            drill_log["policy_decision_id"] = policy_decision.decision_id
+            drill_log["policy_source"] = policy_decision.source
+            drill_log["policy_action"] = policy_action.model_dump()
+            self.recent_drills.insert(0, drill_log)
             if len(self.recent_drills) > 50:
                 self.recent_drills.pop()
 
@@ -169,6 +181,14 @@ class TrainingLoopService:
         agent_registry.save_registry()
         academy_curriculum.save_progress()
         self.cycles_completed += 1
+
+    def _policy_training_status(self) -> Dict[str, Any]:
+        return {
+            "is_night_time": self._is_night_time(),
+            "cycles_completed": self.cycles_completed,
+            "errors_last_5min": self.errors_last_5min,
+            "diversity": self.diversity_stats.model_dump(),
+        }
 
     async def _check_auto_evolution(self, scout_name: str):
         # Trigger evolution if the scout has a bad streak (simulated using registry data)
@@ -233,7 +253,8 @@ class TrainingLoopService:
             "last_error": self.last_error,
             "errors_last_5min": self.errors_last_5min,
             "recent_drills": self.recent_drills,
-            "diversity": self.diversity_stats.model_dump()
+            "diversity": self.diversity_stats.model_dump(),
+            "policy": academy_policy_service.get_status().model_dump()
         }
 
 training_loop = TrainingLoopService()

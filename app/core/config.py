@@ -384,6 +384,20 @@ TRAINING_LOOP_NIGHT_START = os.getenv("TRAINING_LOOP_NIGHT_START", "22:00").stri
 TRAINING_LOOP_NIGHT_END = os.getenv("TRAINING_LOOP_NIGHT_END", "06:00").strip()
 TRAINING_LOOP_DRILLS_PER_HOUR = _as_float(os.getenv("TRAINING_LOOP_DRILLS_PER_HOUR"), 12.0)
 
+# Academy PPO meta-policy controls. Training/export run in a separate Python 3.11 RL venv.
+ACADEMY_POLICY_MODE = os.getenv("ACADEMY_POLICY_MODE", "shadow").strip().lower()  # shadow|heuristic|ppo
+if ACADEMY_POLICY_MODE not in {"shadow", "heuristic", "ppo"}:
+    ACADEMY_POLICY_MODE = "shadow"
+ACADEMY_POLICY_BACKEND = os.getenv("ACADEMY_POLICY_BACKEND", "heuristic").strip().lower()  # heuristic|torch|onnx
+if ACADEMY_POLICY_BACKEND not in {"heuristic", "torch", "onnx"}:
+    ACADEMY_POLICY_BACKEND = "heuristic"
+ACADEMY_POLICY_MODEL_DIR = os.getenv(
+    "ACADEMY_POLICY_MODEL_DIR",
+    "data/academy_policy/models/active",
+).strip()
+ACADEMY_POLICY_CYCLE_DECISIONS = _as_int(os.getenv("ACADEMY_POLICY_CYCLE_DECISIONS"), 16)
+ACADEMY_POLICY_MIN_EVAL_LIFT = _as_float(os.getenv("ACADEMY_POLICY_MIN_EVAL_LIFT"), 0.05)
+
 # Price Poller / Position Monitor configuration
 PRICE_POLLER_INTERVAL_SECONDS = _as_float(os.getenv("PRICE_POLLER_INTERVAL_SECONDS"), 10.0)
 POSITION_MAX_HOLD_MINUTES = _as_float(os.getenv("POSITION_MAX_HOLD_MINUTES"), 240.0)

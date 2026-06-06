@@ -263,7 +263,6 @@ async def process_signal(payload: M8Payload):
 
     # Dispatch learning feedback for rejected trades (simulated outcome)
     if decision_result["decision"] == DecisionEnum.REJECT and payload.intent == "ENTRY":
-        import asyncio
         asyncio.create_task(_dispatch_learning_feedback(payload, ai_review))
         # Also queue for delayed shadow evaluation when future bars are available
         from app.services.shadow_queue import shadow_queue

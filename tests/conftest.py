@@ -11,6 +11,9 @@ os.environ["PIONEX_DIRECT_LIVE_TRADING_ENABLED"] = "false"
 os.environ["AI_FAILURE_POLICY"] = "reject_live"
 os.environ["WEBHOOK_SECRET"] = ""
 os.environ["MIN_CONFLUENCE_SCORE"] = "70"
+os.environ["ACADEMY_POLICY_MODE"] = "shadow"
+os.environ["ACADEMY_POLICY_BACKEND"] = "heuristic"
+os.environ["ACADEMY_POLICY_CYCLE_DECISIONS"] = "16"
 
 
 import pytest

@@ -40,6 +40,8 @@ class BrokerFactory:
         "ctrader_direct",
         "ctrader_fix",
         "kraken",
+        "kraken_paper",
+        "krakenpaper",
     }
 
     @classmethod
@@ -99,6 +101,10 @@ class BrokerFactory:
             from app.services.kraken_broker import KrakenBroker, KrakenConfig
             return KrakenBroker(config=KrakenConfig(), journal_path=journal_path)
 
+        if mode in {"kraken_paper", "krakenpaper"}:
+            from app.services.kraken_paper_broker import KrakenPaperBroker, KrakenPaperConfig
+            return KrakenPaperBroker(config=KrakenPaperConfig())
+
         # Fallback
         return SimulationBroker()
 
@@ -126,5 +132,7 @@ class BrokerFactory:
             "ctrader_direct": "cTrader Direct",
             "ctrader_fix": "cTrader FIX",
             "kraken": "Kraken",
+            "kraken_paper": "Kraken Paper",
+            "krakenpaper": "Kraken Paper",
         }
         return mapping.get(mode.strip().lower(), mode)

@@ -47,6 +47,9 @@ async def _execute_payloads(payloads: List):
     executed_payloads = []
     for payload in payloads:
         result = await process_signal(payload)
+        entry = {"price": payload.entry_price, "time": payload.timestamp}
+        exit_price = payload.target_price if payload.direction == "LONG" else payload.stop_price
+        exit_coord = {"price": exit_price, "time": payload.timestamp}
         results.append({
             "signal_id": payload.signal_id,
             "direction": payload.direction,
@@ -56,6 +59,8 @@ async def _execute_payloads(payloads: List):
             "reject_reason": result.get("reject_reason"),
             "ai_trace": result.get("ai_trace"),
             "asset_class": result.get("asset_class"),
+            "entry": entry,
+            "exit": exit_coord,
         })
         if result["final_decision"] == "EXECUTED_SIM":
             executed_payloads.append((payload, result))
@@ -124,27 +129,14 @@ async def run_backtest(req: BacktestRunRequest):
     5. Return performance summary + all journal entries
     """
     try:
-        print(f"[BACKTEST] Starting: {symbol} {timeframe} | bars={bars}")
-        _setup_backtest_environment(strategy_id)
-        payloads, generation_summary = _generate_backtest_payloads(
-            symbol, timeframe, bars, min_confluence, max_signals
         print(f"[BACKTEST] Starting: {req.symbol} {req.timeframe} | bars={req.bars}")
-
-        # Reset risk engine state for clean backtest
-        risk_engine_instance.trades_today = 0
-        risk_engine_instance.last_trade_bar = -1
-        risk_engine_instance.current_bar = 0
-
-        # Generate payloads from historical data
-        if req.strategy_id:
-            from app.services.strategy_engine import strategy_registry
-            strategy_registry.set_active_strategy(req.strategy_id)
-
-        payloads = signal_generator_instance.generate_payloads(
-            symbol=req.symbol,
-            timeframe=req.timeframe,
-            bars=req.bars,
-            min_confluence=req.min_confluence,
+        _setup_backtest_environment(req.strategy_id)
+        payloads, generation_summary = _generate_backtest_payloads(
+            req.symbol,
+            req.timeframe,
+            req.bars,
+            req.min_confluence,
+            req.max_signals,
         )
 
         if not payloads:
@@ -159,40 +151,6 @@ async def run_backtest(req: BacktestRunRequest):
 
         results, executed_payloads = await _execute_payloads(payloads)
         _record_historical_outcomes(executed_payloads)
-        if req.max_signals:
-            payloads = payloads[:req.max_signals]
-
-        # Run each payload through the full pipeline
-        results = []
-        executed_payloads = []
-        for payload in payloads:
-            result = await process_signal(payload)
-            # Build entry/exit coordinates for chart rendering
-            entry = {"price": payload.entry_price, "time": payload.timestamp}
-            exit_price = payload.target_price if payload.direction == "LONG" else payload.stop_price
-            exit_coord = {"price": exit_price, "time": payload.timestamp}
-            results.append({
-                "signal_id": payload.signal_id,
-                "direction": payload.direction,
-                "entry_price": payload.entry_price,
-                "confluence_score": payload.confluence_score,
-                "final_decision": result["final_decision"],
-                "reject_reason": result.get("reject_reason"),
-                "ai_trace": result.get("ai_trace"),
-                "asset_class": result.get("asset_class"),
-                "entry": entry,
-                "exit": exit_coord,
-            })
-            if result["final_decision"] == "EXECUTED_SIM":
-                executed_payloads.append((payload, result))
-
-        # Record outcomes for executed trades using historical bar simulation
-        raw_bars = getattr(signal_generator_instance, "last_raw_bars", [])
-        bar_index = {getattr(bar, 'ts', 0): idx for idx, bar in enumerate(raw_bars)}
-
-        if executed_payloads and raw_bars:
-            from app.services.shadow_paper_engine import ShadowPaperEngine
-            engine = ShadowPaperEngine()
 
         executed = sum(1 for r in results if r["final_decision"] == "EXECUTED_SIM")
         rejected = sum(1 for r in results if r["final_decision"] == "REJECTED")

@@ -189,8 +189,9 @@ def test_loop_health_monitor_status_degraded():
     assert monitor._status == "degraded"
 
 
+@patch("app.services.telegram_notifier.TelegramNotifier._is_configured", return_value=True)
 @patch("app.services.telegram_notifier.TelegramNotifier.send_reconcile_alert")
-def test_loop_health_monitor_alerts(mock_send_reconcile_alert):
+def test_loop_health_monitor_alerts(mock_send_reconcile_alert, mock_is_configured):
     monitor = LoopHealthMonitor()
 
     # 1. Update to healthy (should not send alert)
@@ -202,34 +203,20 @@ def test_loop_health_monitor_alerts(mock_send_reconcile_alert):
         monitor.stats.record_error("Error")
 
     monitor.update_status(is_running=True)
-    # The actual implementation fails if NOTIFICATIONS_ENABLED is False or bot token missing
-    # But because we mock the method itself, it still doesn't get called if it bails earlier due to config check
+    assert mock_send_reconcile_alert.call_count == 1
 
-    # Let's mock _is_configured too so it bypasses config check
-    with patch("app.services.telegram_notifier.TelegramNotifier._is_configured", return_value=True):
-        # We need to reset the alert status so it actually tries to send again
-        monitor._last_alert_status = None
-        monitor.update_status(is_running=True)
-        assert mock_send_reconcile_alert.call_count == 1
+    # 3. Update to degraded again (should NOT send alert because status hasn't changed)
+    monitor.update_status(is_running=True)
+    assert mock_send_reconcile_alert.call_count == 1
 
-        # 3. Update to degraded again (should NOT send alert because status hasn't changed)
-        monitor.update_status(is_running=True)
-        assert mock_send_reconcile_alert.call_count == 1
+    # 4. Update to halted (should send alert once)
+    monitor.update_status(is_running=False)
+    assert mock_send_reconcile_alert.call_count == 2
 
-        # 4. Update to halted (should send alert once)
-        monitor.update_status(is_running=False)
-        assert mock_send_reconcile_alert.call_count == 2
-
-        # 5. Update to healthy again (should NOT send alert since 'healthy' is not in alert list)
-        monitor.stats.reset_error_window()
-        monitor.update_status(is_running=True)
-        assert mock_send_reconcile_alert.call_count == 2
-
-    # It should have sent an alert
-    mock_notifier.assert_called_once()
-    mock_instance.send_reconcile_alert.assert_called_once()
-    alert_text = mock_instance.send_reconcile_alert.call_args[0][0]
-    assert "HALTED" in alert_text
+    # 5. Update to healthy again (should NOT send alert since 'healthy' is not in alert list)
+    monitor.stats.reset_error_window()
+    monitor.update_status(is_running=True)
+    assert mock_send_reconcile_alert.call_count == 2
 
 @patch('app.services.telegram_notifier.TelegramNotifier')
 def test_loop_health_monitor_update_status_degraded(mock_notifier):

@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 from app.services.agent_registry import agent_registry
 from typing import List, Dict, Any
+import json
 
 router = APIRouter(prefix="/academy", tags=["Academy"])
 
@@ -75,7 +76,9 @@ from app.services.training_drills import training_drills
 from app.services.prompt_evolution import prompt_evolution
 from app.services.ab_testing import ab_testing
 from app.services.academy_curriculum import academy_curriculum
-from app.schemas.academy import SyntheticDrill
+from app.schemas.academy import AcademyPolicyPreviewRequest, SyntheticDrill
+from app.services.academy_policy import academy_policy_service
+from app.services.academy_policy.logging import ACTION_LOG_FILE
 
 @router.get("/drills/available")
 def get_available_drills(scout_name: str, count: int = 5):
@@ -103,6 +106,35 @@ from app.services.training_loop import training_loop
 @router.get("/status")
 def get_academy_status():
     return training_loop.get_status()
+
+
+@router.get("/policy/status")
+def get_academy_policy_status():
+    return academy_policy_service.get_status().model_dump()
+
+
+@router.post("/policy/preview")
+def preview_academy_policy(req: AcademyPolicyPreviewRequest | None = None):
+    return academy_policy_service.preview(req or AcademyPolicyPreviewRequest())
+
+
+@router.get("/policy/actions/recent")
+def get_recent_policy_actions(limit: int = Query(default=50, ge=1, le=500)):
+    if not ACTION_LOG_FILE.exists():
+        return {"actions": [], "count": 0}
+
+    actions = []
+    try:
+        with ACTION_LOG_FILE.open("r", encoding="utf-8") as handle:
+            lines = [line for line in handle if line.strip()]
+        for line in reversed(lines):
+            actions.append(json.loads(line))
+            if len(actions) >= limit:
+                break
+    except (OSError, json.JSONDecodeError) as exc:
+        raise HTTPException(status_code=500, detail=f"Could not read academy policy actions: {exc}")
+
+    return {"actions": actions, "count": len(actions)}
 
 @router.post("/train/start")
 async def start_training():

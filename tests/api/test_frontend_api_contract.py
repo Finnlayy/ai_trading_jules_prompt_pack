@@ -38,6 +38,12 @@ def _route_templates() -> set[str]:
 
 
 def _template_matches(route_template: str, concrete_path: str) -> bool:
+    if "${" in concrete_path:
+        concrete_esc = re.escape(concrete_path)
+        concrete_pattern = "^" + re.sub(r"\\\$\\\{[^}]+\\\}", r"/?[^/]*", concrete_esc) + "$"
+        route_filled = re.sub(r"\{[^}]+\}", "param", route_template)
+        return re.match(concrete_pattern, route_filled) is not None
+
     escaped = re.escape(route_template)
     pattern = re.sub(r"\\\{[^}]+\\\}", r"[^/]+", escaped)
     concrete = re.sub(r"\$\{[^}]+\}", "placeholder", concrete_path)

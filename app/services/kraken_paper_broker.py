@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 
 from app.db import Base, SessionLocal, engine
 from app.db.models import PaperBalance, PaperPosition, PaperTrade
+from app.schemas.journal import DecisionEnum, DirectionEnum, FinalDecisionEnum, TradeJournalEntry
 from app.services.broker_interface import BaseBroker
 from app.services.kraken_broker import KrakenBroker
 
@@ -172,6 +173,95 @@ class KrakenPaperBroker(BaseBroker):
         Paper trading uses place_paper_order() instead.
         """
         raise NotImplementedError("Use place_paper_order() for paper trading")
+
+    def execute_trade(self, payload, decision, reject_reason=None, ai_decision=None):
+        """Execute an M8 payload as a Kraken paper trade."""
+        now = datetime.now(timezone.utc)
+        if payload.direction == "LONG":
+            risk = payload.entry_price - payload.stop_price
+            reward = payload.target_price - payload.entry_price
+        else:
+            risk = payload.stop_price - payload.entry_price
+            reward = payload.entry_price - payload.target_price
+        rr_ratio = reward / risk if risk > 0 else 0.0
+
+        try:
+            journal_ai_decision = DecisionEnum(getattr(ai_decision, "value", ai_decision))
+        except Exception:
+            journal_ai_decision = DecisionEnum.PROCEED_TO_SIMULATION
+
+        entry = TradeJournalEntry(
+            trade_id=f"kraken-paper-{payload.signal_id}",
+            timestamp=now.isoformat(),
+            symbol=payload.symbol,
+            timeframe=payload.timeframe,
+            direction=DirectionEnum(payload.direction),
+            entry_price=payload.entry_price,
+            stop_price=payload.stop_price,
+            target_price=payload.target_price,
+            risk_reward=rr_ratio,
+            m8_score=payload.confluence_score,
+            ai_decision=journal_ai_decision,
+            final_decision=FinalDecisionEnum.SKIPPED,
+            simulated_fill={},
+            result={"status": "PENDING"},
+        )
+
+        if reject_reason or decision != DecisionEnum.PROCEED_TO_SIMULATION:
+            entry.final_decision = FinalDecisionEnum.REJECTED
+            entry.result = {
+                "status": "REJECTED",
+                "reject_reason": reject_reason or "RISK_ENGINE_REJECTED",
+                "mode": "paper",
+            }
+            return entry
+
+        volume = payload.execution_quantity
+        if volume is None:
+            reference_price = payload.entry_price if payload.entry_price > 0 else 1.0
+            order_usd = min(max(self.config.min_order_usd, 10.0), self.config.max_order_usd)
+            volume = round(order_usd / reference_price, 8)
+
+        if payload.intent == "CLOSE":
+            result = self.close_paper_position(
+                symbol=payload.symbol,
+                volume=volume,
+                order_type="market",
+                close_reason=f"signal:{payload.signal_id}",
+            )
+        else:
+            result = self.place_paper_order(
+                symbol=payload.symbol,
+                direction=payload.direction,
+                volume=volume,
+                order_type="market",
+                stop_loss=payload.stop_price,
+                take_profit=payload.target_price,
+                signal_id=payload.signal_id,
+                strategy_id=payload.strategy_id,
+                timeframe=payload.timeframe,
+                risk_decision=str(decision.value if hasattr(decision, "value") else decision),
+                risk_reason=reject_reason,
+                opened_by_loop=True,
+            )
+
+        entry.result = result
+        if result.get("status") == "ok":
+            entry.trade_id = result.get("trade_id", entry.trade_id)
+            entry.final_decision = FinalDecisionEnum.EXECUTED_SIM
+            fill_price = float(result.get("fill_price", payload.entry_price))
+            entry.simulated_fill = {
+                "fill_price": fill_price,
+                "fee": float(result.get("fee", 0.0)),
+                "slippage": abs(fill_price - payload.entry_price),
+                "size_base": float(volume),
+                "mode": "PAPER",
+            }
+        else:
+            entry.final_decision = FinalDecisionEnum.REJECTED
+            entry.simulated_fill = {}
+
+        return entry
 
     def get_positions(self) -> dict[str, Any]:
         """Return all open paper positions."""
