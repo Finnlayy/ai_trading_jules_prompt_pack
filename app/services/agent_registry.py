@@ -6,6 +6,7 @@ from pathlib import Path
 from datetime import datetime
 
 from app.schemas.academy import ScoutIdentity, CareerEntry, Badge, AgentLeaderboardEntry
+from app.services.ai.gem_agents import DEFAULT_AGENT_DEFINITIONS
 
 DATA_DIR = Path("data")
 CAREER_LOG_FILE = DATA_DIR / "agent_careers.jsonl"
@@ -13,36 +14,66 @@ REGISTRY_FILE = DATA_DIR / "agent_registry.json"
 
 SCOUT_DEFAULTS = [
     {
-        "name": "technical",
+        "name": "macro_sentinel",
+        "archetype": "Stratege",
+        "personality_vector": {"analytical": 0.7, "cautious": 0.7, "momentum_driven": 0.3}
+    },
+    {
+        "name": "market_dna",
         "archetype": "Analyst",
         "personality_vector": {"analytical": 0.9, "cautious": 0.4, "momentum_driven": 0.8}
     },
     {
-        "name": "sentiment",
-        "archetype": "Diplomat",
-        "personality_vector": {"analytical": 0.3, "cautious": 0.5, "momentum_driven": 0.9}
+        "name": "structural_architect",
+        "archetype": "Architekt",
+        "personality_vector": {"analytical": 0.8, "cautious": 0.6, "momentum_driven": 0.2}
     },
     {
-        "name": "risk",
+        "name": "harmony_coordinator",
+        "archetype": "Diplomat",
+        "personality_vector": {"analytical": 0.5, "cautious": 0.5, "momentum_driven": 0.5}
+    },
+    {
+        "name": "indicator_fusion",
+        "archetype": "Analyst",
+        "personality_vector": {"analytical": 0.9, "cautious": 0.4, "momentum_driven": 0.8}
+    },
+    {
+        "name": "risk_kernel",
         "archetype": "Wächter",
         "personality_vector": {"analytical": 0.8, "cautious": 0.95, "momentum_driven": 0.1}
     },
     {
-        "name": "macro",
-        "archetype": "Stratege",
-        "personality_vector": {"analytical": 0.7, "cautious": 0.7, "momentum_driven": 0.5}
+        "name": "pine_core",
+        "archetype": "Entwickler",
+        "personality_vector": {"analytical": 0.9, "cautious": 0.6, "momentum_driven": 0.3}
     },
     {
-        "name": "execution",
-        "archetype": "Operateur",
+        "name": "payload_qa",
+        "archetype": "Prüfer",
+        "personality_vector": {"analytical": 0.9, "cautious": 0.9, "momentum_driven": 0.1}
+    },
+    {
+        "name": "execution_watchdog",
+        "archetype": "Operator",
         "personality_vector": {"analytical": 0.9, "cautious": 0.8, "momentum_driven": 0.2}
     },
     {
-        "name": "correlation",
-        "archetype": "Architekt",
-        "personality_vector": {"analytical": 0.85, "cautious": 0.85, "momentum_driven": 0.1}
+        "name": "evolution_optimizer",
+        "archetype": "Forscher",
+        "personality_vector": {"analytical": 0.8, "cautious": 0.4, "momentum_driven": 0.6}
     }
 ]
+
+for definition in DEFAULT_AGENT_DEFINITIONS:
+    if not any(item["name"] == definition.name for item in SCOUT_DEFAULTS):
+        SCOUT_DEFAULTS.append(
+            {
+                "name": definition.name,
+                "archetype": definition.archetype,
+                "personality_vector": definition.personality_vector,
+            }
+        )
 
 class AgentRegistryService:
     def __init__(self):
@@ -90,7 +121,41 @@ class AgentRegistryService:
     def get_all_identities(self) -> List[ScoutIdentity]:
         return list(self._identities.values())
 
-    async def log_career_event(self, entry: CareerEntry):
+    def _next_deployed_name(self) -> str:
+        index = len(self._identities) + 1
+        while f"ui-agent-{index}" in self._identities:
+            index += 1
+        return f"ui-agent-{index}"
+
+    def deploy_identity(
+        self,
+        name: str | None = None,
+        archetype: str = "Analyst",
+        personality_vector: Dict[str, float] | None = None,
+        specialization_symbols: List[str] | None = None,
+    ) -> ScoutIdentity:
+        agent_name = (name or "").strip() or self._next_deployed_name()
+        if agent_name in self._identities:
+            raise ValueError(f"Agent {agent_name} already exists")
+
+        identity = ScoutIdentity(
+            name=agent_name,
+            archetype=archetype,
+            born_from="ui_deploy",
+            specialization_symbols=specialization_symbols or [],
+            personality_vector=personality_vector or {},
+        )
+        self._identities[identity.name] = identity
+        self.save_registry()
+        return identity
+
+    async def log_career_event(
+        self,
+        entry: CareerEntry,
+        *,
+        save_registry: bool = True,
+        write_log: bool = True,
+    ):
         # Update identity stats if applicable
         ident = self._identities.get(entry.scout_name)
         if ident:
@@ -106,7 +171,12 @@ class AgentRegistryService:
                 ident.accuracy = ident.correct_calls / ident.total_calls if ident.total_calls > 0 else 0.0
 
                 # Check for new badges
-                await self._check_badges(ident, entry)
+                await self._check_badges(
+                    ident,
+                    entry,
+                    save_registry=save_registry,
+                    write_log=write_log,
+                )
 
             elif entry.event_type == "badge_earned":
                 badge_data = entry.details.get("badge", {})
@@ -114,8 +184,11 @@ class AgentRegistryService:
                     badge = Badge(**badge_data)
                     ident.badges.append(badge)
 
-            # Save the updated stats synchronously for now (MVP)
-            self.save_registry()
+            if save_registry:
+                self.save_registry()
+
+        if not write_log:
+            return
 
         def _write_log():
             with open(CAREER_LOG_FILE, "a", encoding="utf-8") as f:
@@ -124,7 +197,14 @@ class AgentRegistryService:
         # Offload file write to thread
         await asyncio.to_thread(_write_log)
 
-    async def _check_badges(self, ident: ScoutIdentity, entry: CareerEntry):
+    async def _check_badges(
+        self,
+        ident: ScoutIdentity,
+        entry: CareerEntry,
+        *,
+        save_registry: bool = True,
+        write_log: bool = True,
+    ):
         # Evaluate badges based on current stats
         existing_badge_names = {b.name for b in ident.badges}
         new_badges = []
@@ -147,7 +227,11 @@ class AgentRegistryService:
                 event_type="badge_earned",
                 details={"badge": badge.model_dump()}
             )
-            await self.log_career_event(badge_entry)
+            await self.log_career_event(
+                badge_entry,
+                save_registry=save_registry,
+                write_log=write_log,
+            )
 
     def get_career_log(self, scout_name: str) -> List[CareerEntry]:
         entries = []
@@ -163,6 +247,30 @@ class AgentRegistryService:
                             entries.append(CareerEntry(**data))
         except Exception as e:
             print(f"Error reading career log: {e}")
+        return entries
+
+    def get_recent_career_events(
+        self,
+        *,
+        limit: int = 50,
+        event_type: str | None = None,
+    ) -> List[CareerEntry]:
+        entries: List[CareerEntry] = []
+        if not CAREER_LOG_FILE.exists():
+            return entries
+
+        try:
+            with open(CAREER_LOG_FILE, "r", encoding="utf-8") as f:
+                lines = [line for line in f if line.strip()]
+            for line in reversed(lines):
+                data = json.loads(line)
+                if event_type and data.get("event_type") != event_type:
+                    continue
+                entries.append(CareerEntry(**data))
+                if len(entries) >= limit:
+                    break
+        except Exception as e:
+            print(f"Error reading recent career events: {e}")
         return entries
 
 agent_registry = AgentRegistryService()

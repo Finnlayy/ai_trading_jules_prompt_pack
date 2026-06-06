@@ -87,3 +87,28 @@ class PatternStatsResponse(BaseModel):
     pattern_counts: dict[str, int]
     last_scan: datetime | None
     total_scans: int
+
+
+# ---------------------------------------------------------------------------
+# Strategy Health Dashboard schemas
+# ---------------------------------------------------------------------------
+
+class StrategyHealthItem(BaseModel):
+    strategy_id: str
+    name: str
+    description: str = ""
+    is_active: bool = False
+    last_switch: datetime | None = None
+    total_signals: int = 0
+    win_rate: float = Field(default=0.0, ge=0.0, le=1.0)
+    profit_factor: float = Field(default=0.0, ge=0.0)
+    avg_pnl_pct: float = Field(default=0.0)
+    max_drawdown_pct: float = Field(default=0.0)
+    last_signal_age_seconds: float | None = None
+    health_score: float = Field(default=0.0, ge=0.0, le=100.0)
+    signal_count_24h: int = 0
+
+
+class StrategyHealthResponse(BaseModel):
+    generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    strategies: list[StrategyHealthItem]

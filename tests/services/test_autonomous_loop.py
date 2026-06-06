@@ -4,17 +4,55 @@ from __future__ import annotations
 
 import pytest
 
+import app.services.autonomous_loop as loop_module
+from app.schemas.m8_payload import M8Payload
 from app.services.autonomous_loop import AutonomousTradingLoop, StrategyRotationLog
+from app.services.last_processed_bar_store import LastProcessedBarStore
 from app.services.watchlist_manager import WatchlistItem, WatchlistManager
 from app.services.loop_health_monitor import LoopHealthMonitor
+
+
+def create_payload(signal_id: str = "live-BTCUSDT-1m-test-123") -> M8Payload:
+    return M8Payload(
+        signal_id=signal_id,
+        symbol="BTCUSDT",
+        timeframe="1m",
+        direction="LONG",
+        timestamp="2026-05-20T10:00:00Z",
+        entry_price=100.0,
+        stop_price=98.0,
+        target_price=104.0,
+        confluence_score=80.0,
+        crisis_score=5.0,
+        mc_dispersion=1.0,
+        spread=2.0,
+        strategy_id="test_strategy",
+    )
+
+
+class FakeLatestCandidateGenerator:
+    def __init__(self, latest_ts: int, payload: M8Payload | None):
+        self.latest_ts = latest_ts
+        self.payload = payload
+        self.calls: list[dict] = []
+        self.last_generation_summary = {}
+
+    def generate_latest_candidate(self, **kwargs):
+        self.calls.append(kwargs)
+        self.last_generation_summary = {
+            "mode": "latest_candidate",
+            "last_closed_bar_ts": self.latest_ts,
+            "candidate_generated": self.payload is not None,
+        }
+        return self.payload
 
 
 # ---------------------------------------------------------------------------
 # Watchlist Manager tests
 # ---------------------------------------------------------------------------
 
-def test_watchlist_add_and_get():
-    mgr = WatchlistManager(persist_path="data/test_watchlist.json")
+def test_watchlist_add_and_get(tmp_path):
+    mgr = WatchlistManager(persist_path=str(tmp_path / "test_watchlist.json"))
     mgr.reset()
     item = WatchlistItem(symbol="BTCUSDT", timeframes=["1m", "5m"])
     mgr.add(item)
@@ -22,16 +60,16 @@ def test_watchlist_add_and_get():
     assert mgr.get("BTCUSDT").symbol == "BTCUSDT"
 
 
-def test_watchlist_remove():
-    mgr = WatchlistManager(persist_path="data/test_watchlist.json")
+def test_watchlist_remove(tmp_path):
+    mgr = WatchlistManager(persist_path=str(tmp_path / "test_watchlist.json"))
     mgr.reset()
     mgr.add(WatchlistItem(symbol="ETHUSDT"))
     mgr.remove("ETHUSDT")
     assert mgr.get("ETHUSDT") is None
 
 
-def test_watchlist_update():
-    mgr = WatchlistManager(persist_path="data/test_watchlist.json")
+def test_watchlist_update(tmp_path):
+    mgr = WatchlistManager(persist_path=str(tmp_path / "test_watchlist.json"))
     mgr.reset()
     mgr.add(WatchlistItem(symbol="SOLUSDT", active=True))
     updated = mgr.update("SOLUSDT", active=False)
@@ -39,8 +77,8 @@ def test_watchlist_update():
     assert updated.active is False
 
 
-def test_watchlist_get_active():
-    mgr = WatchlistManager(persist_path="data/test_watchlist.json")
+def test_watchlist_get_active(tmp_path):
+    mgr = WatchlistManager(persist_path=str(tmp_path / "test_watchlist.json"))
     mgr.reset()
     mgr.add(WatchlistItem(symbol="BTCUSDT", active=True))
     mgr.add(WatchlistItem(symbol="ETHUSDT", active=False))
@@ -49,12 +87,13 @@ def test_watchlist_get_active():
     assert active[0].symbol == "BTCUSDT"
 
 
-def test_watchlist_persistence():
-    mgr = WatchlistManager(persist_path="data/test_watchlist_persist.json")
+def test_watchlist_persistence(tmp_path):
+    persist_path = tmp_path / "test_watchlist_persist.json"
+    mgr = WatchlistManager(persist_path=str(persist_path))
     mgr.reset()
     mgr.add(WatchlistItem(symbol="XRPUSDT"))
     # Simulate new instance reading same file
-    mgr2 = WatchlistManager(persist_path="data/test_watchlist_persist.json")
+    mgr2 = WatchlistManager(persist_path=str(persist_path))
     assert mgr2.get("XRPUSDT") is not None
 
 
@@ -120,6 +159,8 @@ def test_loop_get_status_structure():
     assert "loop_stats" in status
     assert "health" in status
     assert "current_strategy_id" in status
+    assert "last_generation_summary" in status
+    assert "last_processed_bars" in status
 
 
 def test_loop_calculate_sleep_interval():
@@ -156,6 +197,57 @@ def test_loop_rotation_log():
     assert logs[0]["symbol"] == "BTCUSDT"
 
 
+@pytest.mark.asyncio
+async def test_loop_marks_latest_closed_bar_even_without_candidate(tmp_path, monkeypatch):
+    monkeypatch.setattr(loop_module, "AUTONOMOUS_LOOP_STRATEGY_ROTATION_ENABLED", False)
+    watchlist = WatchlistManager(persist_path=str(tmp_path / "watchlist.json"))
+    watchlist.reset()
+    watchlist.add(WatchlistItem(symbol="BTCUSDT", timeframes=["1m"], min_confluence=80.0))
+
+    store = LastProcessedBarStore(str(tmp_path / "last_processed.json"))
+    generator = FakeLatestCandidateGenerator(latest_ts=123, payload=None)
+    loop = AutonomousTradingLoop()
+    loop.is_running = True
+    loop._watchlist = watchlist
+    loop._processed_bars = store
+    loop._generator = generator
+
+    await loop._run_single_cycle()
+
+    assert generator.calls[0]["last_processed_ts"] is None
+    assert store.get("BTCUSDT", "1m") == 123
+
+
+@pytest.mark.asyncio
+async def test_loop_executes_single_latest_candidate_and_updates_store(tmp_path, monkeypatch):
+    monkeypatch.setattr(loop_module, "AUTONOMOUS_LOOP_STRATEGY_ROTATION_ENABLED", False)
+    watchlist = WatchlistManager(persist_path=str(tmp_path / "watchlist.json"))
+    watchlist.reset()
+    watchlist.add(WatchlistItem(symbol="BTCUSDT", timeframes=["1m"]))
+
+    store = LastProcessedBarStore(str(tmp_path / "last_processed.json"))
+    store.mark_processed("BTCUSDT", "1m", 100)
+    payload = create_payload()
+    generator = FakeLatestCandidateGenerator(latest_ts=160, payload=payload)
+    executed: list[M8Payload] = []
+
+    async def fake_execute(payloads: list[M8Payload]) -> None:
+        executed.extend(payloads)
+
+    loop = AutonomousTradingLoop()
+    loop.is_running = True
+    loop._watchlist = watchlist
+    loop._processed_bars = store
+    loop._generator = generator
+    loop._execute_payloads = fake_execute
+
+    await loop._run_single_cycle()
+
+    assert generator.calls[0]["last_processed_ts"] == 100
+    assert executed == [payload]
+    assert store.get("BTCUSDT", "1m") == 160
+
+
 def test_loop_error_handling_counters():
     loop = AutonomousTradingLoop()
     # Simulate errors
@@ -177,6 +269,33 @@ def test_loop_should_not_halt_immediately():
     for _ in range(5):
         loop._record_error()
     assert loop._should_halt_on_errors() is False
+
+
+@pytest.mark.asyncio
+async def test_loop_execute_payloads_routes_to_paper_training_pipeline(monkeypatch):
+    from app.services import paper_training_pipeline as pipeline_module
+
+    payload = create_payload()
+    calls: list[M8Payload] = []
+
+    class FakePaperTrainingPipeline:
+        async def process_candidate(self, candidate_payload: M8Payload):
+            calls.append(candidate_payload)
+            return {"final_decision": "PAPER_EXECUTED"}
+
+    monkeypatch.setattr(
+        pipeline_module,
+        "paper_training_pipeline",
+        FakePaperTrainingPipeline(),
+    )
+
+    loop = AutonomousTradingLoop()
+    loop.is_running = True
+
+    await loop._execute_payloads([payload])
+
+    assert calls == [payload]
+    assert loop._health.stats.trades_executed == 1
 
 
 # ---------------------------------------------------------------------------

@@ -38,6 +38,8 @@ class BrokerFactory:
         "glint",
         "ctrader",
         "ctrader_direct",
+        "ctrader_fix",
+        "kraken",
     }
 
     @classmethod
@@ -69,6 +71,34 @@ class BrokerFactory:
             from app.services.ctrader_broker import CTraderBroker
             return CTraderBroker(journal_path=journal_path)
 
+        if mode == "ctrader_fix":
+            from app.services.ctrader_fix_broker import CTraderFixBroker, CTraderFixConfig
+            from app.core.config import (
+                CTRADER_FIX_ENABLED,
+                CTRADER_FIX_HOST,
+                CTRADER_FIX_LIVE_TRADING_ENABLED,
+                CTRADER_FIX_PORT,
+                CTRADER_FIX_SENDER_COMP_ID,
+                CTRADER_FIX_TARGET_COMP_ID,
+                CTRADER_FIX_PASSWORD,
+                CTRADER_FIX_SENDER_SUB_ID,
+            )
+            config = CTraderFixConfig(
+                enabled=CTRADER_FIX_ENABLED,
+                live_trading_enabled=CTRADER_FIX_LIVE_TRADING_ENABLED,
+                host=CTRADER_FIX_HOST,
+                port=CTRADER_FIX_PORT,
+                sender_comp_id=CTRADER_FIX_SENDER_COMP_ID,
+                target_comp_id=CTRADER_FIX_TARGET_COMP_ID,
+                password=CTRADER_FIX_PASSWORD,
+                sender_sub_id=CTRADER_FIX_SENDER_SUB_ID,
+            )
+            return CTraderFixBroker(config=config, journal_path=journal_path)
+
+        if mode == "kraken":
+            from app.services.kraken_broker import KrakenBroker, KrakenConfig
+            return KrakenBroker(config=KrakenConfig(), journal_path=journal_path)
+
         # Fallback
         return SimulationBroker()
 
@@ -94,5 +124,7 @@ class BrokerFactory:
             "glint": "GLINT (Hyperliquid)",
             "ctrader": "cTrader Direct",
             "ctrader_direct": "cTrader Direct",
+            "ctrader_fix": "cTrader FIX",
+            "kraken": "Kraken",
         }
         return mapping.get(mode.strip().lower(), mode)

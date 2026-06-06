@@ -24,6 +24,13 @@ from app.api.live_trading import router as live_trading_router
 from app.api.db_insight import router as db_insight_router
 from app.api.academy import router as academy_router
 from app.api.ctrader import router as ctrader_router
+from app.api.ctrader_fix import router as ctrader_fix_router
+from app.api.kraken import router as kraken_router
+from app.api.kraken_paper import router as kraken_paper_router
+from app.api.lifecycle import router as lifecycle_router
+from app.api.webhook_signal import router as webhook_signal_router
+from app.services.webhook_consumer import webhook_consumer_instance
+from app.services.position_monitor import paper_position_monitor_instance
 
 app = FastAPI(
     title="Agent-Reflex Hybrid Trader API",
@@ -52,6 +59,11 @@ app.include_router(live_trading_router, prefix="/live", tags=["live_trading"])
 app.include_router(db_insight_router, prefix="/db", tags=["db-insight"])
 app.include_router(academy_router, tags=["academy"])
 app.include_router(ctrader_router, prefix="/ctrader", tags=["ctrader"])
+app.include_router(ctrader_fix_router, prefix="/ctrader-fix", tags=["ctrader-fix"])
+app.include_router(kraken_router, tags=["kraken"])
+app.include_router(kraken_paper_router, tags=["kraken-paper"])
+app.include_router(lifecycle_router, prefix="/lifecycle", tags=["lifecycle"])
+app.include_router(webhook_signal_router, tags=["webhook"])
 
 @app.get("/", include_in_schema=False)
 def frontend():
@@ -127,8 +139,22 @@ async def _autonomous_loop_auto_start():
             pass
 
 
+async def _training_loop_auto_start():
+    """Optionally auto-start the academy training loop after startup."""
+    from app.core.config import TRAINING_LOOP_AUTO_START
+    from app.services.training_loop import training_loop
+
+    await asyncio.sleep(5)
+    if TRAINING_LOOP_AUTO_START:
+        try:
+            await training_loop.start()
+        except Exception:
+            pass
+
+
 _news_poll_task = None
 _autostart_task = None
+_training_autostart_task = None
 _price_poller_task = None
 _shadow_queue_task = None
 
@@ -149,26 +175,35 @@ async def _shadow_queue_loop():
 
 @app.on_event("startup")
 def startup_event():
-    global _heartbeat_task, _news_poll_task, _autostart_task, _price_poller_task, _shadow_queue_task
+    global _heartbeat_task, _news_poll_task, _autostart_task, _training_autostart_task, _price_poller_task, _shadow_queue_task
     # Create DB tables
     from app.db import Base, engine
     Base.metadata.create_all(bind=engine)
     _heartbeat_task = asyncio.create_task(_heartbeat_loop())
     _news_poll_task = asyncio.create_task(_news_poll_loop())
     _autostart_task = asyncio.create_task(_autonomous_loop_auto_start())
+    _training_autostart_task = asyncio.create_task(_training_loop_auto_start())
     # Start price poller for live position monitoring
     from app.services.price_poller import price_poller
     price_poller.start()
     # Start shadow queue processor for rejected-trade feedback
     _shadow_queue_task = asyncio.create_task(_shadow_queue_loop())
+    # Start webhook consumer for autonomous signal → paper order execution
+    webhook_consumer_instance.start()
+    # Start position monitor for auto SL/TP
+    paper_position_monitor_instance.start()
 
 
 @app.on_event("shutdown")
 def shutdown_event():
-    global _heartbeat_task, _news_poll_task, _autostart_task, _price_poller_task, _shadow_queue_task
+    global _heartbeat_task, _news_poll_task, _autostart_task, _training_autostart_task, _price_poller_task, _shadow_queue_task
     from app.services.autonomous_loop import autonomous_loop_instance
     from app.services.price_poller import price_poller
+    from app.services.training_loop import training_loop
     autonomous_loop_instance.stop()
+    training_loop.stop_now()
+    webhook_consumer_instance.stop()
+    paper_position_monitor_instance.stop()
     price_poller.stop()
     if _heartbeat_task:
         _heartbeat_task.cancel()
@@ -176,5 +211,7 @@ def shutdown_event():
         _news_poll_task.cancel()
     if _autostart_task:
         _autostart_task.cancel()
+    if _training_autostart_task:
+        _training_autostart_task.cancel()
     if _shadow_queue_task:
         _shadow_queue_task.cancel()

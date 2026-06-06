@@ -145,6 +145,10 @@ class PositionLedger:
 
         with path.open("r", encoding="utf-8") as handle:
             for raw_line in handle:
+                # ⚡ Bolt Optimization: Fast string match to skip JSON parsing for irrelevant lines
+                if "ledger_delta" not in raw_line:
+                    continue
+
                 line = raw_line.strip()
                 if not line:
                     continue
