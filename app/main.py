@@ -1,5 +1,8 @@
 import asyncio
+import logging
 from datetime import datetime, timezone
+
+logger = logging.getLogger(__name__)
 from pathlib import Path
 
 from fastapi import FastAPI, Depends
@@ -96,7 +99,7 @@ async def _heartbeat_loop():
                     circuit,
                 )
         except Exception:
-            pass
+            logger.exception("Error in heartbeat loop")
         await asyncio.sleep(3600)  # every hour
 
 
