@@ -8,3 +8,4 @@ pytest-asyncio
 python-dotenv
 requests
 ctrader-open-api
+krakenex

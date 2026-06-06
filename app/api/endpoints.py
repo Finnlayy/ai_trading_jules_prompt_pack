@@ -6,20 +6,21 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import ValidationError
 from app.schemas.m8_payload import M8Payload
 from app.api.orchestrator import process_signal
-from app.core.config import WEBHOOK_SECRET
+import app.core.config as config
 
 router = APIRouter()
 
 
 def _verify_webhook_signature(body: bytes, signature: str | None) -> bool:
     """Verify HMAC-SHA256 signature of the raw request body."""
-    if not WEBHOOK_SECRET:
+    webhook_secret = config.WEBHOOK_SECRET
+    if not webhook_secret:
         # If no secret is configured, skip verification (backward compatible)
         return True
     if not signature:
         return False
     expected = hmac.new(
-        WEBHOOK_SECRET.encode("utf-8"),
+        webhook_secret.encode("utf-8"),
         body,
         hashlib.sha256,
     ).hexdigest()
