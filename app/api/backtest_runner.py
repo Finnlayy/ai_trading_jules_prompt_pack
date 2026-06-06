@@ -9,6 +9,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException
+from datetime import datetime
 from typing import List, Optional
 from pydantic import BaseModel
 
@@ -21,6 +22,84 @@ from app.core.config import AI_FAILURE_POLICY, AI_PROVIDER, BROKER_MODE
 router = APIRouter()
 
 
+def _setup_backtest_environment(strategy_id: Optional[str]) -> None:
+    risk_engine_instance.trades_today = 0
+    risk_engine_instance.last_trade_bar = -1
+    risk_engine_instance.current_bar = 0
+    if strategy_id:
+        from app.services.strategy_engine import strategy_registry
+        strategy_registry.set_active_strategy(strategy_id)
+
+def _generate_backtest_payloads(symbol: str, timeframe: str, bars: int, min_confluence: Optional[float], max_signals: Optional[int]):
+    payloads = signal_generator_instance.generate_payloads(
+        symbol=symbol,
+        timeframe=timeframe,
+        bars=bars,
+        min_confluence=min_confluence,
+    )
+    generation_summary = getattr(signal_generator_instance, "last_generation_summary", {})
+    if payloads and max_signals:
+        payloads = payloads[:max_signals]
+    return payloads, generation_summary
+
+async def _execute_payloads(payloads: List):
+    results = []
+    executed_payloads = []
+    for payload in payloads:
+        result = await process_signal(payload)
+        results.append({
+            "signal_id": payload.signal_id,
+            "direction": payload.direction,
+            "entry_price": payload.entry_price,
+            "confluence_score": payload.confluence_score,
+            "final_decision": result["final_decision"],
+            "reject_reason": result.get("reject_reason"),
+            "ai_trace": result.get("ai_trace"),
+            "asset_class": result.get("asset_class"),
+        })
+        if result["final_decision"] == "EXECUTED_SIM":
+            executed_payloads.append((payload, result))
+    return results, executed_payloads
+
+def _record_historical_outcomes(executed_payloads: List):
+    raw_bars = getattr(signal_generator_instance, "last_raw_bars", [])
+    if not executed_payloads or not raw_bars:
+        return
+    from app.services.shadow_paper_engine import ShadowPaperEngine
+    engine = ShadowPaperEngine()
+    for payload, result in executed_payloads:
+        signal_dt = datetime.fromisoformat(payload.timestamp.replace('Z', '+00:00'))
+        signal_ts = int(signal_dt.timestamp() * 1000)
+        entry_idx = min(range(len(raw_bars)), key=lambda i: abs(raw_bars[i].ts - signal_ts)) if raw_bars else None
+        if entry_idx is not None and entry_idx < len(raw_bars) - 1:
+            try:
+                outcome = engine.simulate_trade(payload, raw_bars, entry_idx, max_holding_bars=50)
+                win = outcome.win
+                pnl_pct = outcome.pnl_pct
+                rr = abs(outcome.r_multiple)
+                confidence_registry.record_trade_outcome(
+                    symbol=payload.symbol,
+                    direction=payload.direction,
+                    pnl_pct=pnl_pct,
+                    rr=rr,
+                    win=win,
+                )
+                ai_trace = result.get("ai_trace") or {}
+                scout_decisions = ai_trace.get("scout_decisions", {})
+                if not scout_decisions:
+                    scout_decisions = ai_trace.get("scouts", {})
+                for scout_name, scout_report in scout_decisions.items():
+                    scout_approved = isinstance(scout_report, dict) and scout_report.get("decision") == "PROCEED_TO_SIMULATION"
+                    if not scout_approved and isinstance(scout_report, str):
+                        scout_approved = "PROCEED" in scout_report.upper() or "APPROVE" in scout_report.upper()
+                    was_correct = (scout_approved and win) or (not scout_approved and not win)
+                    confidence_registry.mark_scout_outcome(
+                        symbol=payload.symbol,
+                        scout_names=[scout_name],
+                        was_correct=was_correct,
+                    )
+            except Exception:
+                pass
 class BacktestRunRequest(BaseModel):
     symbol: str = "HYPEUSDT"
     timeframe: str = "1m"
@@ -45,6 +124,10 @@ async def run_backtest(req: BacktestRunRequest):
     5. Return performance summary + all journal entries
     """
     try:
+        print(f"[BACKTEST] Starting: {symbol} {timeframe} | bars={bars}")
+        _setup_backtest_environment(strategy_id)
+        payloads, generation_summary = _generate_backtest_payloads(
+            symbol, timeframe, bars, min_confluence, max_signals
         print(f"[BACKTEST] Starting: {req.symbol} {req.timeframe} | bars={req.bars}")
 
         # Reset risk engine state for clean backtest
@@ -63,7 +146,6 @@ async def run_backtest(req: BacktestRunRequest):
             bars=req.bars,
             min_confluence=req.min_confluence,
         )
-        generation_summary = getattr(signal_generator_instance, "last_generation_summary", {})
 
         if not payloads:
             return {
@@ -75,6 +157,8 @@ async def run_backtest(req: BacktestRunRequest):
                 "message": "No signals generated — confluence threshold not met",
             }
 
+        results, executed_payloads = await _execute_payloads(payloads)
+        _record_historical_outcomes(executed_payloads)
         if req.max_signals:
             payloads = payloads[:req.max_signals]
 
@@ -110,46 +194,8 @@ async def run_backtest(req: BacktestRunRequest):
             from app.services.shadow_paper_engine import ShadowPaperEngine
             engine = ShadowPaperEngine()
 
-        for payload, result in executed_payloads:
-            signal_dt = datetime.fromisoformat(payload.timestamp.replace('Z', '+00:00'))
-            signal_ts = int(signal_dt.timestamp() * 1000)
-            entry_idx = min(range(len(raw_bars)), key=lambda i: abs(raw_bars[i].ts - signal_ts)) if raw_bars else None
-            if entry_idx is not None and entry_idx < len(raw_bars) - 1:
-                try:
-                    outcome = engine.simulate_trade(payload, raw_bars, entry_idx, max_holding_bars=50)
-                    win = outcome.win
-                    pnl_pct = outcome.pnl_pct
-                    rr = abs(outcome.r_multiple)
-                    # Record trade outcome
-                    confidence_registry.record_trade_outcome(
-                        symbol=payload.symbol,
-                        direction=payload.direction,
-                        pnl_pct=pnl_pct,
-                        rr=rr,
-                        win=win,
-                    )
-                    # Record scout outcome
-                    ai_trace = result.get("ai_trace") or {}
-                    scout_decisions = ai_trace.get("scout_decisions", {})
-                    if not scout_decisions:
-                        scout_decisions = ai_trace.get("scouts", {})
-                    for scout_name, scout_report in scout_decisions.items():
-                        scout_approved = isinstance(scout_report, dict) and scout_report.get("decision") == "PROCEED_TO_SIMULATION"
-                        if not scout_approved and isinstance(scout_report, str):
-                            scout_approved = "PROCEED" in scout_report.upper() or "APPROVE" in scout_report.upper()
-                        was_correct = (scout_approved and win) or (not scout_approved and not win)
-                        confidence_registry.mark_scout_outcome(
-                            symbol=payload.symbol,
-                            scout_names=[scout_name],
-                            was_correct=was_correct,
-                        )
-                except Exception:
-                    pass
-
-        # Summarize
         executed = sum(1 for r in results if r["final_decision"] == "EXECUTED_SIM")
         rejected = sum(1 for r in results if r["final_decision"] == "REJECTED")
-
         longs = sum(1 for r in results if r["direction"] == "LONG")
         shorts = sum(1 for r in results if r["direction"] == "SHORT")
 
@@ -166,7 +212,6 @@ async def run_backtest(req: BacktestRunRequest):
             "generation_summary": generation_summary,
             "results": results,
         }
-
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 

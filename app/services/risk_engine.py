@@ -15,11 +15,10 @@ from typing import Optional, Dict, List
 
 class RiskEngine:
     def __init__(self):
-        # state for simulation tests
         self.trades_today = 0
         self.last_trade_bar = -1
         self.current_bar = 0
-        self.open_positions: List[dict] = []  # for correlation risk checks
+        self.open_positions: List[dict] = []
 
     def evaluate(self, payload: M8Payload, ai_review: Optional[SignalReview] = None) -> Dict:
         """
