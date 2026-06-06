@@ -249,11 +249,14 @@ async def process_signal(payload: M8Payload):
     )
     
     # 5. Journaling
-    journal_logger_instance.log(journal_entry)
+    # ⚡ Bolt Optimization: Offload synchronous I/O to worker thread pool
+    # Impact: Prevents blocking the async event loop, reducing execution latency significantly under load.
+    await asyncio.to_thread(journal_logger_instance.log, journal_entry)
 
     # 6. Record fill if trade executed
     # We only record an entry fill for ENTRY intents. (For CLOSE intents, this should be handled separately).
-    _record_trade_fill(payload, decision_result, journal_entry)
+    # ⚡ Bolt Optimization: Offload synchronous DB commit to worker thread
+    await asyncio.to_thread(_record_trade_fill, payload, decision_result, journal_entry)
 
     # Update Risk Engine state if trade executed
     _update_risk_engine_post_trade(decision_result)
@@ -368,10 +371,13 @@ async def process_manual_signal(payload: M8Payload):
     )
 
     # 5. Journaling
-    journal_logger_instance.log(journal_entry)
+    # ⚡ Bolt Optimization: Offload synchronous I/O to worker thread pool
+    # Impact: Prevents blocking the async event loop, reducing execution latency significantly under load.
+    await asyncio.to_thread(journal_logger_instance.log, journal_entry)
 
     # 6. Record fill if trade executed
-    _record_trade_fill(payload, decision_result, journal_entry)
+    # ⚡ Bolt Optimization: Offload synchronous DB commit to worker thread
+    await asyncio.to_thread(_record_trade_fill, payload, decision_result, journal_entry)
 
     # Update Risk Engine state if trade executed
     _update_risk_engine_post_trade(decision_result)
