@@ -41,7 +41,9 @@ app.include_router(backtest_router, prefix="/backtest", tags=["backtest"])
 app.include_router(ai_layer_router, prefix="/ai", tags=["ai-layer"])
 app.include_router(market_router, prefix="/market", tags=["market-data"])
 app.include_router(recommend_router, prefix="/market", tags=["market-data"])
-app.include_router(confidence_router, prefix="/confidence", tags=["confidence-registry"])
+app.include_router(
+    confidence_router, prefix="/confidence", tags=["confidence-registry"]
+)
 app.include_router(circuit_breaker_router, prefix="/circuit", tags=["circuit-breaker"])
 app.include_router(reconciliation_router, prefix="/reconcile", tags=["reconciliation"])
 app.include_router(news_router, prefix="/news", tags=["news"])
@@ -56,13 +58,16 @@ app.include_router(db_insight_router, prefix="/db", tags=["db-insight"])
 app.include_router(academy_router, tags=["academy"])
 app.include_router(ctrader_router, prefix="/ctrader", tags=["ctrader"])
 
+
 @app.get("/", include_in_schema=False)
 def frontend():
     return FileResponse(ROOT_DIR / "frontend.html")
 
+
 @app.get("/favicon.ico", include_in_schema=False)
 def favicon():
     return Response(status_code=204)
+
 
 @app.get("/health")
 def health_check():
@@ -89,7 +94,9 @@ async def _heartbeat_loop():
         try:
             notifier = getattr(broker_instance, "notifier", None)
             if notifier and getattr(notifier, "send_heartbeat", None):
-                uptime = (datetime.now(timezone.utc) - _startup_time).total_seconds() // 60
+                uptime = (
+                    datetime.now(timezone.utc) - _startup_time
+                ).total_seconds() // 60
                 circuit = circuit_breaker_instance.check_trade_allowed()
                 notifier.send_heartbeat(
                     int(uptime),
@@ -139,6 +146,7 @@ _shadow_queue_task = None
 async def _shadow_queue_loop():
     """Periodically process pending shadow-queue entries for rejected-trade learning."""
     from app.services.shadow_queue import shadow_queue
+
     while True:
         try:
             await asyncio.sleep(300)  # every 5 minutes
@@ -155,12 +163,14 @@ def startup_event():
     global _heartbeat_task, _news_poll_task, _autostart_task, _price_poller_task, _shadow_queue_task
     # Create DB tables
     from app.db import Base, engine
+
     Base.metadata.create_all(bind=engine)
     _heartbeat_task = asyncio.create_task(_heartbeat_loop())
     _news_poll_task = asyncio.create_task(_news_poll_loop())
     _autostart_task = asyncio.create_task(_autonomous_loop_auto_start())
     # Start price poller for live position monitoring
     from app.services.price_poller import price_poller
+
     price_poller.start()
     # Start shadow queue processor for rejected-trade feedback
     _shadow_queue_task = asyncio.create_task(_shadow_queue_loop())
@@ -171,6 +181,7 @@ def shutdown_event():
     global _heartbeat_task, _news_poll_task, _autostart_task, _price_poller_task, _shadow_queue_task
     from app.services.autonomous_loop import autonomous_loop_instance
     from app.services.price_poller import price_poller
+
     autonomous_loop_instance.stop()
     price_poller.stop()
     if _heartbeat_task:
