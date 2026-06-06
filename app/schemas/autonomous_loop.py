@@ -40,6 +40,8 @@ class LoopStatusResponse(BaseModel):
     loop_stats: dict[str, Any]
     health: HealthSnapshotSchema
     current_strategy_id: str
+    last_generation_summary: dict[str, Any] = Field(default_factory=dict)
+    last_processed_bars: dict[str, dict[str, Any]] = Field(default_factory=dict)
 
 
 class StrategyRotationLogSchema(BaseModel):

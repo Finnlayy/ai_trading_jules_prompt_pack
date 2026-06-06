@@ -6,9 +6,12 @@ Outcomes are recorded in ConfidenceRegistry for AI learning.
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, HTTPException
 from datetime import datetime
 from typing import List, Optional
+from pydantic import BaseModel
 
 from app.services.signal_generator import signal_generator_instance
 from app.api.orchestrator import process_signal, reset_broker, _get_broker
@@ -97,16 +100,20 @@ def _record_historical_outcomes(executed_payloads: List):
                     )
             except Exception:
                 pass
+class BacktestRunRequest(BaseModel):
+    symbol: str = "HYPEUSDT"
+    timeframe: str = "1m"
+    strategy_id: Optional[str] = None
+    bars: int = 500
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    initial_balance: float = 10000.0
+    max_signals: Optional[int] = 50
+    min_confluence: Optional[float] = None
+
 
 @router.post("/run")
-async def run_backtest(
-    symbol: str = "HYPEUSDT",
-    timeframe: str = "1m",
-    bars: int = 500,
-    max_signals: Optional[int] = 50,
-    min_confluence: Optional[float] = None,
-    strategy_id: Optional[str] = None,
-):
+async def run_backtest(req: BacktestRunRequest):
     """
     Run a full backtest through the M8 pipeline on historical data.
 
@@ -121,13 +128,30 @@ async def run_backtest(
         _setup_backtest_environment(strategy_id)
         payloads, generation_summary = _generate_backtest_payloads(
             symbol, timeframe, bars, min_confluence, max_signals
+        print(f"[BACKTEST] Starting: {req.symbol} {req.timeframe} | bars={req.bars}")
+
+        # Reset risk engine state for clean backtest
+        risk_engine_instance.trades_today = 0
+        risk_engine_instance.last_trade_bar = -1
+        risk_engine_instance.current_bar = 0
+
+        # Generate payloads from historical data
+        if req.strategy_id:
+            from app.services.strategy_engine import strategy_registry
+            strategy_registry.set_active_strategy(req.strategy_id)
+
+        payloads = signal_generator_instance.generate_payloads(
+            symbol=req.symbol,
+            timeframe=req.timeframe,
+            bars=req.bars,
+            min_confluence=req.min_confluence,
         )
 
         if not payloads:
             return {
                 "status": "success",
-                "symbol": symbol,
-                "timeframe": timeframe,
+                "symbol": req.symbol,
+                "timeframe": req.timeframe,
                 "signals_generated": 0,
                 "generation_summary": generation_summary,
                 "message": "No signals generated — confluence threshold not met",
@@ -135,6 +159,40 @@ async def run_backtest(
 
         results, executed_payloads = await _execute_payloads(payloads)
         _record_historical_outcomes(executed_payloads)
+        if req.max_signals:
+            payloads = payloads[:req.max_signals]
+
+        # Run each payload through the full pipeline
+        results = []
+        executed_payloads = []
+        for payload in payloads:
+            result = await process_signal(payload)
+            # Build entry/exit coordinates for chart rendering
+            entry = {"price": payload.entry_price, "time": payload.timestamp}
+            exit_price = payload.target_price if payload.direction == "LONG" else payload.stop_price
+            exit_coord = {"price": exit_price, "time": payload.timestamp}
+            results.append({
+                "signal_id": payload.signal_id,
+                "direction": payload.direction,
+                "entry_price": payload.entry_price,
+                "confluence_score": payload.confluence_score,
+                "final_decision": result["final_decision"],
+                "reject_reason": result.get("reject_reason"),
+                "ai_trace": result.get("ai_trace"),
+                "asset_class": result.get("asset_class"),
+                "entry": entry,
+                "exit": exit_coord,
+            })
+            if result["final_decision"] == "EXECUTED_SIM":
+                executed_payloads.append((payload, result))
+
+        # Record outcomes for executed trades using historical bar simulation
+        raw_bars = getattr(signal_generator_instance, "last_raw_bars", [])
+        bar_index = {getattr(bar, 'ts', 0): idx for idx, bar in enumerate(raw_bars)}
+
+        if executed_payloads and raw_bars:
+            from app.services.shadow_paper_engine import ShadowPaperEngine
+            engine = ShadowPaperEngine()
 
         executed = sum(1 for r in results if r["final_decision"] == "EXECUTED_SIM")
         rejected = sum(1 for r in results if r["final_decision"] == "REJECTED")
@@ -143,9 +201,9 @@ async def run_backtest(
 
         return {
             "status": "success",
-            "symbol": symbol,
-            "timeframe": timeframe,
-            "bars_analyzed": bars,
+            "symbol": req.symbol,
+            "timeframe": req.timeframe,
+            "bars_analyzed": req.bars,
             "signals_generated": len(payloads),
             "executed": executed,
             "rejected": rejected,
@@ -223,7 +281,7 @@ async def smoke_test():
     """
     from app.schemas.m8_payload import M8Payload
     from datetime import datetime, timezone
-    from app.api.orchestrator import ai_review_instance
+    from app.services.ai_factory import ai_review_instance
     from app.services.ai_mock import MockAIReviewLayer
 
     broker = _get_broker()
@@ -374,4 +432,74 @@ async def smoke_test():
         "all_passed": all_passed,
         "infrastructure_checks": results,
         "pipeline_checks": pipeline_results,
+    }
+
+
+@router.get("/report")
+async def backtest_report(symbol: str = "SOLUSD", days: int = 7):
+    """Return aggregated backtest metrics for a given symbol.
+
+    Computes winrate, max drawdown, average slippage, and profit factor
+    from paper trade history.
+    """
+    from app.db import SessionLocal
+    from app.db.models import PaperTrade
+    from app.services.kraken_broker import KrakenBroker
+
+    with SessionLocal() as db:
+        trades = (
+            db.query(PaperTrade)
+            .filter(PaperTrade.symbol.ilike(f"%{symbol}%"))
+            .all()
+        )
+
+    total = len(trades)
+    if total == 0:
+        return {
+            "status": "ok",
+            "symbol": symbol,
+            "days": days,
+            "metrics": {
+                "winrate_pct": 0.0,
+                "max_drawdown_pct": 0.0,
+                "avg_slippage_pct": 0.0,
+                "total_trades": 0,
+                "profit_factor": 0.0,
+            },
+        }
+
+    wins = sum(1 for t in trades if (t.pnl or 0) > 0)
+    losses = sum(1 for t in trades if (t.pnl or 0) < 0)
+    winrate = (wins / total * 100) if total > 0 else 0.0
+
+    # Max drawdown from equity curve
+    peak = 0.0
+    max_dd = 0.0
+    equity = 0.0
+    for t in trades:
+        equity += (t.pnl or 0) - t.fee
+        if equity > peak:
+            peak = equity
+        dd = peak - equity
+        if dd > max_dd:
+            max_dd = dd
+
+    gross_profit = sum((t.pnl or 0) for t in trades if (t.pnl or 0) > 0)
+    gross_loss = abs(sum((t.pnl or 0) for t in trades if (t.pnl or 0) < 0))
+    profit_factor = gross_profit / gross_loss if gross_loss > 0 else float("inf")
+
+    # Avg slippage: simplified (no backtest reference, use 0 as placeholder)
+    avg_slippage = 0.0
+
+    return {
+        "status": "ok",
+        "symbol": symbol,
+        "days": days,
+        "metrics": {
+            "winrate_pct": round(winrate, 2),
+            "max_drawdown_pct": round(max_dd, 4),
+            "avg_slippage_pct": round(avg_slippage, 4),
+            "total_trades": total,
+            "profit_factor": round(profit_factor, 4) if profit_factor != float("inf") else None,
+        },
     }

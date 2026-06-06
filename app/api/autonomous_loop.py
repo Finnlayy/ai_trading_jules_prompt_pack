@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, HTTPException
 
 from app.schemas.autonomous_loop import (
@@ -41,6 +43,8 @@ async def get_loop_status():
             timestamp=health.get("timestamp"),
         ),
         current_strategy_id=status["current_strategy_id"],
+        last_generation_summary=status.get("last_generation_summary", {}),
+        last_processed_bars=status.get("last_processed_bars", {}),
     )
 
 
@@ -133,6 +137,7 @@ async def get_loop_stats():
         errors_last_5min=stats.errors_last_5min,
         error_history=stats.error_history,
         avg_cycle_time_ms=autonomous_loop_instance._health.get_avg_cycle_time_ms(),
+        generated_at=datetime.now(timezone.utc),
     )
 
 

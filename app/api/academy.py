@@ -1,19 +1,51 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, Query
+from pydantic import BaseModel, Field
 from app.services.agent_registry import agent_registry
 from typing import List, Dict, Any
 
 router = APIRouter(prefix="/academy", tags=["Academy"])
+
+
+class AgentDeployRequest(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=64, pattern=r"^[A-Za-z0-9_-]+$")
+    archetype: str = Field(default="Analyst", min_length=1, max_length=64)
+    personality_vector: Dict[str, float] = Field(default_factory=dict)
+    specialization_symbols: List[str] = Field(default_factory=list)
 
 @router.get("/agents/registry")
 def get_agents_registry():
     agents = agent_registry.get_all_identities()
     return {"agents": [a.model_dump() for a in agents]}
 
+
+@router.post("/agents/deploy")
+def deploy_agent(req: AgentDeployRequest | None = None):
+    req = req or AgentDeployRequest()
+    try:
+        agent = agent_registry.deploy_identity(
+            name=req.name,
+            archetype=req.archetype,
+            personality_vector=req.personality_vector,
+            specialization_symbols=req.specialization_symbols,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+
+    return {"status": "created", "agent": agent.model_dump()}
+
 @router.get("/agents/{scout_id}/career")
 def get_agent_career(scout_id: str):
     # Using scout_id as scout_name for now since that's what's tracked mostly
     entries = agent_registry.get_career_log(scout_id)
     return {"career": [e.model_dump() for e in entries]}
+
+@router.get("/agents/careers/recent")
+def get_recent_agent_careers(
+    limit: int = Query(default=50, ge=1, le=500),
+    event_type: str | None = Query(default=None),
+):
+    entries = agent_registry.get_recent_career_events(limit=limit, event_type=event_type)
+    return {"career": [e.model_dump() for e in entries], "count": len(entries)}
 
 @router.get("/agents/leaderboard")
 def get_leaderboard():
@@ -74,8 +106,8 @@ def get_academy_status():
 
 @router.post("/train/start")
 async def start_training():
-    await training_loop.start()
-    return {"status": "started"}
+    result = await training_loop.start()
+    return {"status": "started" if result.get("started") else "not_started", **result}
 
 @router.post("/train/stop")
 async def stop_training():

@@ -8,6 +8,7 @@ from typing import Any, Optional
 from app.schemas.ai_review import DecisionEnum as AIDecisionEnum, SignalReview
 from app.schemas.journal import DecisionEnum
 from app.schemas.m8_payload import M8Payload
+from app.services.ai.gem_agents import DEFAULT_AGENT_NAMES
 from app.services.confidence_registry import confidence_registry
 from app.services.risk_engine import RiskEngine
 from app.services.signal_generator import OHLCV, signal_generator_instance
@@ -58,7 +59,7 @@ class ShadowPaperEngine:
     feedback for the AI confidence registry. It never places broker orders.
     """
 
-    SCOUT_NAMES = ["technical", "sentiment", "risk", "macro", "execution", "correlation"]
+    SCOUT_NAMES = list(DEFAULT_AGENT_NAMES)
 
     def __init__(self) -> None:
         self.last_replay: dict[str, Any] | None = None
@@ -260,9 +261,10 @@ class ShadowPaperEngine:
             was_correct = not outcome.win
 
         if was_correct is not None:
+            scout_names = list((ai_review.audit_trace or {}).get("scouts", {}).keys()) or self.SCOUT_NAMES
             confidence_registry.mark_scout_outcome(
                 symbol=payload.symbol,
-                scout_names=self.SCOUT_NAMES,
+                scout_names=scout_names,
                 was_correct=was_correct,
             )
 

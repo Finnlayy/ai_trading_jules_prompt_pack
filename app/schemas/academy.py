@@ -32,6 +32,8 @@ class ScoutIdentity(BaseModel):
     correct_calls: int = 0
     accuracy: float = 0.0
     current_streak: int = 0
+    confidence_level: float = Field(default=0.5, ge=0.0, le=1.0)
+    experience_level: str = Field(default="Novice")
 
 class AgentLeaderboardEntry(BaseModel):
     scout_name: str
