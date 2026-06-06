@@ -1,0 +1,8 @@
+🎯 **What:**
+Added API key authentication to the `/health` endpoint to prevent unauthorized access.
+
+⚠️ **Risk:**
+Health endpoints can expose internal system information or be leveraged for reconnaissance. Unauthenticated access allows any actor to probe the system.
+
+🛡️ **Solution:**
+Implemented dependency injection with a generic API key validator in `app/api/auth.py`. Modified `app/main.py`'s health check endpoint to require this API key via the `X-API-Key` header.

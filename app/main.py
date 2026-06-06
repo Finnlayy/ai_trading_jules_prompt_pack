@@ -2,7 +2,7 @@ import asyncio
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.responses import FileResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from app.api.ai_layer import router as ai_layer_router
@@ -61,8 +61,10 @@ def frontend():
 def favicon():
     return Response(status_code=204)
 
+from app.api.auth import get_api_key
+
 @app.get("/health")
-def health_check():
+def health_check(api_key: str | None = Depends(get_api_key)):
     return {"status": "ok"}
 
 

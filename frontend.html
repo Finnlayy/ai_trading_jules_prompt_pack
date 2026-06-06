@@ -1845,9 +1845,21 @@
             }
 
             async function request(path, options = {}) {
+                // Read API_KEY from localStorage or query params if present
+                const apiKey = localStorage.getItem('API_KEY') || new URLSearchParams(window.location.search).get('api_key') || "";
+                if (apiKey && !localStorage.getItem('API_KEY')) {
+                    localStorage.setItem('API_KEY', apiKey);
+                }
+
+                const headers = {
+                    "Content-Type": "application/json",
+                    ...(apiKey ? {"X-API-Key": apiKey} : {}),
+                    ...(options.headers || {})
+                };
+
                 const response = await fetch(path, {
-                    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
-                    ...options
+                    ...options,
+                    headers: headers
                 });
                 let data;
                 const text = await response.text();
