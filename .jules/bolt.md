@@ -31,3 +31,7 @@
 ## 2024-06-27 - Optimizing Python Generator overhead in array calculations
 **Learning:** Functions like `sum()`, `max()`, `min()` with generator expressions (e.g., `max(x.h for x in rows)`) and list slicing for finding min/max (e.g., `min(lows[left:right + 1])`) are highly inefficient inside hot loop paths in Python.
 **Action:** Unroll loops directly maintaining state inline instead of using generator expressions inside hot loops. Use explicit inline loops to check for min/max conditions and break early where possible. This improves speed significantly and avoids generator overhead.
+
+## 2024-06-28 - Fast API Sync I/O blocking Async endpoints
+**Learning:** Calling synchronous networking or disk functions (like file writing or SQLite commits) directly inside `async def` route handlers in FastAPI blocks the asyncio event loop and starves all other concurrent requests, creating massive performance degradation under load.
+**Action:** When a sync method is required within a FastAPI route, wrap the call with `await asyncio.to_thread(sync_function, args...)` to offload to a worker thread pool, keeping the main loop unblocked.
