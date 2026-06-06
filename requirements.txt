@@ -4,6 +4,7 @@ pydantic
 pytest
 httpx
 numpy
+pandas
 openai
 pytest-asyncio
 python-dotenv
