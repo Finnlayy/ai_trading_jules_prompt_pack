@@ -28,6 +28,19 @@ class BybitCredentials:
     api_secret: str
     testnet: bool = True
 
+@dataclass
+class BybitOrderRequest:
+    symbol: str
+    side: str
+    order_type: str = "Market"
+    qty: str = "0"
+    price: Optional[str] = None
+    stop_loss: Optional[str] = None
+    take_profit: Optional[str] = None
+    category: str = "linear"
+    time_in_force: str = "GTC"
+
+
 
 class BybitAPIClient:
     """
@@ -83,33 +96,22 @@ class BybitAPIClient:
 
     # ─── ORDER ENDPOINTS ──────────────────────────────────────────────────────
 
-    def place_order(
-        self,
-        symbol: str,
-        side: str,  # Buy / Sell
-        order_type: str = "Market",
-        qty: str = "0",
-        price: Optional[str] = None,
-        stop_loss: Optional[str] = None,
-        take_profit: Optional[str] = None,
-        category: str = "linear",
-        time_in_force: str = "GTC",
-    ) -> Dict[str, Any]:
+    def place_order(self, request: BybitOrderRequest) -> Dict[str, Any]:
         """Place a single order on Bybit Testnet."""
         params: Dict[str, Any] = {
-            "category": category,
-            "symbol": symbol,
-            "side": side,
-            "orderType": order_type,
-            "qty": qty,
-            "timeInForce": time_in_force,
+            "category": request.category,
+            "symbol": request.symbol,
+            "side": request.side,
+            "orderType": request.order_type,
+            "qty": request.qty,
+            "timeInForce": request.time_in_force,
         }
-        if price:
-            params["price"] = price
-        if stop_loss:
-            params["stopLoss"] = stop_loss
-        if take_profit:
-            params["takeProfit"] = take_profit
+        if request.price:
+            params["price"] = request.price
+        if request.stop_loss:
+            params["stopLoss"] = request.stop_loss
+        if request.take_profit:
+            params["takeProfit"] = request.take_profit
 
         return self._request("POST", "/v5/order/create", params)
 

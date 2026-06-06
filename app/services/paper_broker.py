@@ -13,7 +13,7 @@ from typing import Dict, List, Optional, Any
 from app.schemas.m8_payload import M8Payload
 from app.schemas.journal import TradeJournalEntry, DirectionEnum, DecisionEnum, FinalDecisionEnum
 from app.schemas.ai_review import DecisionEnum as AIDecisionEnum
-from app.services.bybit_api import BybitAPIClient, BybitCredentials, BybitAPIError
+from app.services.bybit_api import BybitAPIClient, BybitCredentials, BybitAPIError, BybitOrderRequest
 
 
 @dataclass
@@ -116,7 +116,7 @@ class PaperBroker:
             if self._connected and self.client:
                 # Place REAL order on Bybit Testnet
                 try:
-                    order_response = self.client.place_order(
+                    order_request = BybitOrderRequest(
                         symbol=payload.symbol,
                         side=bybit_side,
                         order_type="Market",
@@ -125,6 +125,7 @@ class PaperBroker:
                         take_profit=str(payload.target_price),
                         category=self.config.category,
                     )
+                    order_response = self.client.place_order(order_request)
                     simulated_fill = {
                         "fill_price": payload.entry_price,
                         "fee": 0.0,
