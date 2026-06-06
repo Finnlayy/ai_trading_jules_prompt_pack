@@ -38,10 +38,10 @@
       "cautious": 0.4,
       "momentum_driven": 0.8
     },
-    "total_calls": 364,
-    "correct_calls": 311,
-    "accuracy": 0.8543956043956044,
-    "current_streak": 0
+    "total_calls": 377,
+    "correct_calls": 322,
+    "accuracy": 0.8541114058355438,
+    "current_streak": 1
   },
   {
     "scout_id": "8589bbb2-ddcc-410e-8bb9-45717a852987",
@@ -82,10 +82,10 @@
       "cautious": 0.5,
       "momentum_driven": 0.9
     },
-    "total_calls": 358,
-    "correct_calls": 312,
-    "accuracy": 0.8715083798882681,
-    "current_streak": 19
+    "total_calls": 371,
+    "correct_calls": 325,
+    "accuracy": 0.876010781671159,
+    "current_streak": 32
   },
   {
     "scout_id": "0d4342f0-4031-4334-9b90-0013bf190452",
@@ -126,10 +126,10 @@
       "cautious": 0.95,
       "momentum_driven": 0.1
     },
-    "total_calls": 358,
-    "correct_calls": 298,
-    "accuracy": 0.8324022346368715,
-    "current_streak": 10
+    "total_calls": 371,
+    "correct_calls": 309,
+    "accuracy": 0.8328840970350404,
+    "current_streak": 6
   },
   {
     "scout_id": "34059d23-47bf-4280-ba75-dea7348866eb",
@@ -170,10 +170,10 @@
       "cautious": 0.7,
       "momentum_driven": 0.5
     },
-    "total_calls": 358,
-    "correct_calls": 304,
-    "accuracy": 0.8491620111731844,
-    "current_streak": 1
+    "total_calls": 371,
+    "correct_calls": 313,
+    "accuracy": 0.8436657681940701,
+    "current_streak": 7
   },
   {
     "scout_id": "cc5331fa-28cd-479e-acfc-da0c9c3cc521",
@@ -214,10 +214,10 @@
       "cautious": 0.8,
       "momentum_driven": 0.2
     },
-    "total_calls": 354,
-    "correct_calls": 294,
-    "accuracy": 0.8305084745762712,
-    "current_streak": 1
+    "total_calls": 367,
+    "correct_calls": 304,
+    "accuracy": 0.8283378746594006,
+    "current_streak": 3
   },
   {
     "scout_id": "c5d87a22-e700-4f06-a2a8-5b3a4190327d",
@@ -258,9 +258,9 @@
       "cautious": 0.85,
       "momentum_driven": 0.1
     },
-    "total_calls": 354,
-    "correct_calls": 310,
-    "accuracy": 0.8757062146892656,
-    "current_streak": 20
+    "total_calls": 367,
+    "correct_calls": 321,
+    "accuracy": 0.8746594005449592,
+    "current_streak": 10
   }
 ]
