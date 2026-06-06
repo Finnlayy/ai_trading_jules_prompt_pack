@@ -3,24 +3,24 @@
     {
       "symbol": "BTCUSDT",
       "timeframes": [
-        "1h"
+        "15min"
       ],
       "active": true,
       "strategy_id": null,
       "min_confluence": null,
       "max_position_size_usdt": null,
-      "added_at": "2026-05-31T14:20:03.823877+00:00"
+      "added_at": "2026-06-06T00:49:12.143751+00:00"
     },
     {
       "symbol": "ETHUSDT",
       "timeframes": [
-        "1h"
+        "15min"
       ],
       "active": true,
       "strategy_id": null,
       "min_confluence": null,
       "max_position_size_usdt": null,
-      "added_at": "2026-05-31T14:20:08.574130+00:00"
+      "added_at": "2026-06-06T00:49:17.628027+00:00"
     },
     {
       "symbol": "SOLUSDT",
@@ -36,47 +36,58 @@
     {
       "symbol": "DOGEUSDT",
       "timeframes": [
-        "1h"
+        "15min"
       ],
       "active": true,
       "strategy_id": null,
       "min_confluence": null,
       "max_position_size_usdt": null,
-      "added_at": "2026-05-31T14:20:16.173983+00:00"
+      "added_at": "2026-06-06T00:49:22.016320+00:00"
     },
     {
       "symbol": "ZECUSDT",
       "timeframes": [
-        "1h"
+        "15min"
       ],
       "active": true,
       "strategy_id": null,
       "min_confluence": null,
       "max_position_size_usdt": null,
-      "added_at": "2026-05-31T14:20:20.157529+00:00"
+      "added_at": "2026-06-06T00:49:56.738858+00:00"
     },
     {
       "symbol": "AUUSDT",
       "timeframes": [
-        "1h"
+        "15min"
       ],
       "active": true,
       "strategy_id": null,
       "min_confluence": null,
       "max_position_size_usdt": null,
-      "added_at": "2026-05-31T14:20:27.539375+00:00"
+      "added_at": "2026-06-06T00:49:28.092735+00:00"
     },
     {
       "symbol": "AGUSDT",
       "timeframes": [
-        "1h"
+        "15min"
       ],
       "active": true,
       "strategy_id": null,
       "min_confluence": null,
       "max_position_size_usdt": null,
-      "added_at": "2026-05-31T14:20:30.952068+00:00"
+      "added_at": "2026-06-06T00:49:39.932454+00:00"
+    },
+    {
+      "symbol": "HYPEUSDT",
+      "timeframes": [
+        "1min"
+      ],
+      "active": true,
+      "strategy_id": null,
+      "min_confluence": null,
+      "max_position_size_usdt": null,
+      "added_at": "2026-06-06T00:50:09.879632+00:00"
     }
   ],
-  "updated_at": "2026-05-31T14:20:30.952328+00:00"
+  "updated_at": "2026-06-06T00:50:09.880066+00:00"
 }
