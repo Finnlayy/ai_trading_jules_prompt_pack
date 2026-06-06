@@ -3,6 +3,7 @@ uvicorn
 pydantic
 pytest
 httpx
+numpy
 openai
 pytest-asyncio
 python-dotenv

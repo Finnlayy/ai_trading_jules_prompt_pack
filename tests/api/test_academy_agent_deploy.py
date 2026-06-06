@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 from app.api.academy import router
 from app.schemas.academy import CareerEntry
 from app.services.agent_registry import agent_registry
+from app.services.training_loop import training_loop
 
 
 def test_deploy_agent_endpoint_creates_local_agent(monkeypatch):
@@ -84,3 +85,16 @@ def test_recent_agent_careers_endpoint(monkeypatch):
     assert data["count"] == 1
     assert data["career"][0]["scout_name"] == "technical"
     assert data["career"][0]["details"]["outcome_source"] == "live_paper"
+
+
+def test_academy_status_endpoint_returns_live_training_loop_state():
+    app = FastAPI()
+    app.include_router(router)
+    client = TestClient(app)
+
+    expected = training_loop.get_status()
+
+    response = client.get("/academy/status")
+
+    assert response.status_code == 200
+    assert response.json() == expected
