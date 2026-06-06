@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -24,6 +25,8 @@ from app.api.live_trading import router as live_trading_router
 from app.api.db_insight import router as db_insight_router
 from app.api.academy import router as academy_router
 from app.api.ctrader import router as ctrader_router
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Agent-Reflex Hybrid Trader API",
@@ -94,7 +97,7 @@ async def _heartbeat_loop():
                     circuit,
                 )
         except Exception:
-            pass
+            logger.exception("Error in heartbeat loop")
         await asyncio.sleep(3600)  # every hour
 
 
