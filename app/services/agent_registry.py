@@ -186,6 +186,11 @@ class AgentRegistryService:
 
             if save_registry:
                 self.save_registry()
+                try:
+                    from app.services.wiki_service import update_second_brain
+                    update_second_brain()
+                except Exception:
+                    pass
 
         if not write_log:
             return

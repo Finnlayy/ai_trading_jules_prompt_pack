@@ -1,0 +1,109 @@
+import os
+import json
+from pathlib import Path
+from datetime import datetime, timezone
+from sqlalchemy import func
+from app.db import SessionLocal
+from app.db.models import Trade, PaperTrade, PaperPosition, PaperOutcome
+from app.services.agent_registry import agent_registry
+
+WIKI_DIR = Path("wiki")
+SECOND_BRAIN_FILE = WIKI_DIR / "second_brain.md"
+
+def update_second_brain():
+    """Compiles statistics and learning registry from DB & registry into wiki/second_brain.md."""
+    WIKI_DIR.mkdir(exist_ok=True)
+    db = SessionLocal()
+    try:
+        # 1. Gather trade statistics
+        total_trades = db.query(func.count(Trade.id)).scalar() or 0
+        pnl_sum = db.query(func.sum(Trade.pnl)).scalar() or 0.0
+        winning_trades = db.query(func.count(Trade.id)).filter(Trade.pnl > 0).scalar() or 0
+        losing_trades = db.query(func.count(Trade.id)).filter(Trade.pnl <= 0).scalar() or 0
+        winrate = (winning_trades / total_trades) * 100 if total_trades > 0 else 0.0
+
+        # 2. Gather paper trading stats
+        total_paper_trades = db.query(func.count(PaperTrade.id)).scalar() or 0
+        paper_pnl_sum = db.query(func.sum(PaperTrade.pnl)).scalar() or 0.0
+        paper_winning = db.query(func.count(PaperTrade.id)).filter(PaperTrade.pnl > 0).scalar() or 0
+        paper_winrate = (paper_winning / total_paper_trades) * 100 if total_paper_trades > 0 else 0.0
+
+        # 3. Open positions
+        open_paper_positions = db.query(PaperPosition).filter(PaperPosition.status == "open").all()
+
+        # 4. Scout identities and leaderboard
+        agents = agent_registry.get_all_identities()
+        agent_rows = []
+        for agent in agents:
+            badges_str = ", ".join(f"{b.icon} {b.name}" for b in agent.badges) if agent.badges else "None"
+            agent_rows.append(
+                f"| `{agent.name}` | {agent.archetype} | {agent.total_calls} | {agent.correct_calls} | {agent.accuracy:.2%} | {agent.current_streak} | {badges_str} |"
+            )
+
+        # 5. Compile Markdown content
+        now_str = datetime.now(timezone.utc).isoformat()
+        md = f"""# Project Wiki & Second Brain (Swarm Memory)
+
+*Last Updated: {now_str}*
+
+This file serves as the unified project memory for all 17 Scouts and Gems, recording historical outcomes, accuracy ratings, and real-time portfolio metrics to prevent memory loss and optimize alignment.
+
+---
+
+## 📊 Live Portfolio Statistics
+
+### 1. Simulated/Paper Trading Summary
+- **Total Simulated Trades**: {total_paper_trades}
+- **Net Simulated P&L**: ${paper_pnl_sum:.4f} USD
+- **Win Rate**: {paper_winrate:.2f}%
+
+### 2. Live Trading Summary
+- **Total Live Trades**: {total_trades}
+- **Net Live P&L**: ${pnl_sum:.4f} USD
+- **Win Rate**: {winrate:.2f}%
+
+---
+
+## 💼 Open Paper Positions
+| Symbol | Direction | Volume | Avg Entry | Stop Loss | Take Profit | Unrealized P&L |
+| --- | --- | --- | --- | --- | --- | --- |
+"""
+        if not open_paper_positions:
+            md += "| None | - | - | - | - | - | - |\n"
+        for pos in open_paper_positions:
+            md += f"| `{pos.symbol}` | {pos.direction} | {pos.volume:.4f} | {pos.avg_entry_price:.4f} | {pos.stop_loss or 0.0:.4f} | {pos.take_profit or 0.0:.4f} | ${pos.unrealized_pnl or 0.0:.4f} |\n"
+
+        md += f"""
+---
+
+## 🤖 Academy Swarm Leaderboard
+| Agent Name | Archetype | Total Calls | Correct | Accuracy | Streak | Badges |
+| --- | --- | --- | --- | --- | --- | --- |
+"""
+        if not agent_rows:
+            md += "| None | - | - | - | - | - | - |\n"
+        else:
+            md += "\n".join(agent_rows) + "\n"
+
+        md += """
+---
+
+## 🧠 Memory & Swarm Directives (For Agents & Gems)
+When processing trade signals, strategy updates, or configuration inputs:
+1. **Consult this Second Brain**: Check the current agent accuracy and open positions list.
+2. **Flag Decay**: If any agent accuracy drops below 60% after 20+ calls, prioritize executing training drills for that specific agent.
+3. **Prevent Congestion**: Avoid opening new positions in symbols that correlate heavily with currently open positions.
+4. **Log Learning Outcomes**: Evolution Optimizer (Phase 10) must write all learning outcomes to the database so they are compiled here.
+"""
+
+        # Write to wiki/second_brain.md
+        with open(SECOND_BRAIN_FILE, "w", encoding="utf-8") as f:
+            f.write(md)
+
+        # Print success
+        print("Second brain (wiki/second_brain.md) successfully updated!")
+
+    except Exception as exc:
+        print(f"Error updating second brain: {exc}")
+    finally:
+        db.close()

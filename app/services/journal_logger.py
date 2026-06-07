@@ -93,6 +93,13 @@ class JournalLogger:
         except Exception:
             pass
 
+        # Also update the Second Brain
+        try:
+            from app.services.wiki_service import update_second_brain
+            update_second_brain()
+        except Exception:
+            pass
+
     def get_entries(self, limit: int = 1000) -> List[Dict[str, Any]]:
         """
         Read last N entries from the journal (and rotated files if needed).
