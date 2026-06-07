@@ -79,12 +79,18 @@ class PerformanceCalculator:
 
         returns = [p / 1000.0 for p in pnls]  # Normalize for Sharpe
 
+        # ⚡ Bolt Optimization: Calculate sum of winners, losers, and holding times once
+        # instead of recalculating them multiple times in the return statement.
+        sum_w = sum(winners)
+        sum_l = sum(losers)
+        sum_h = sum(holding_times)
+
         return PerformanceMetrics(
             total_trades=total,
             winning_trades=len(winners),
             losing_trades=len(losers),
             winrate_pct=round(_safe_div(len(winners), total) * 100, 2),
-            profit_factor=round(_safe_div(sum(winners), abs(sum(losers))), 3),
+            profit_factor=round(_safe_div(sum_w, abs(sum_l)), 3),
             expectancy=round(_safe_div(total_pnl, total), 4),
             sharpe_ratio=round(self._sharpe(returns, risk_free_rate), 3),
             sortino_ratio=round(self._sortino(returns), 3),
@@ -93,11 +99,11 @@ class PerformanceCalculator:
             max_drawdown_end_idx=dd_end,
             total_pnl=round(total_pnl, 4),
             avg_trade_pnl=round(_safe_div(total_pnl, total), 4),
-            avg_winner=round(_safe_div(sum(winners), len(winners)), 4),
-            avg_loser=round(_safe_div(sum(losers), len(losers)), 4),
+            avg_winner=round(_safe_div(sum_w, len(winners)), 4),
+            avg_loser=round(_safe_div(sum_l, len(losers)), 4),
             largest_winner=round(max(winners, default=0.0), 4),
             largest_loser=round(min(losers, default=0.0), 4),
-            avg_holding_time_minutes=round(_safe_div(sum(holding_times), len(holding_times)), 2),
+            avg_holding_time_minutes=round(_safe_div(sum_h, len(holding_times)), 2),
             calculated_at=datetime.now(timezone.utc).isoformat(),
         )
 

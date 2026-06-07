@@ -321,12 +321,36 @@ class ShadowPaperEngine:
 
     @staticmethod
     def _summary(results: list[dict[str, Any]]) -> dict[str, Any]:
-        paper_executed = sum(1 for row in results if row.get("paper_decision") == PAPER_EXECUTED)
-        paper_rejected = sum(1 for row in results if row.get("paper_decision") == PAPER_REJECTED)
-        live_rejected = sum(1 for row in results if row.get("live_decision") == DecisionEnum.REJECT.value)
-        wins = sum(1 for row in results if (row.get("outcome") or {}).get("win") is True)
-        losses = sum(1 for row in results if (row.get("outcome") or {}).get("win") is False)
-        total_r = sum(float((row.get("outcome") or {}).get("r_multiple") or 0.0) for row in results)
+        # ⚡ Bolt Optimization: Calculate all summary metrics in a single O(N) unrolled loop
+        # instead of 6 separate O(N) generator expressions.
+        paper_executed = 0
+        paper_rejected = 0
+        live_rejected = 0
+        wins = 0
+        losses = 0
+        total_r = 0.0
+
+        for row in results:
+            pd = row.get("paper_decision")
+            if pd == PAPER_EXECUTED:
+                paper_executed += 1
+            elif pd == PAPER_REJECTED:
+                paper_rejected += 1
+
+            if row.get("live_decision") == DecisionEnum.REJECT.value:
+                live_rejected += 1
+
+            outcome = row.get("outcome") or {}
+            win = outcome.get("win")
+            if win is True:
+                wins += 1
+            elif win is False:
+                losses += 1
+
+            rmult = outcome.get("r_multiple")
+            if rmult:
+                total_r += float(rmult)
+
         return {
             "paper_executed": paper_executed,
             "paper_rejected": paper_rejected,
