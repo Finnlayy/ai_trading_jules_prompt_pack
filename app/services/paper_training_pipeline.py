@@ -10,6 +10,7 @@ from typing import Any
 from app.schemas.ai_review import SignalReview
 from app.schemas.journal import DecisionEnum
 from app.schemas.m8_payload import M8Payload
+from app.core.config import BROKER_MODE, PAPER_TRADING_RELAX_RISK
 from app.services.ai_factory import ai_review_instance
 from app.services.kraken_paper_broker import KrakenPaperBroker
 from app.services.lifecycle_recorder import (
@@ -57,7 +58,9 @@ class PaperTrainingPipeline:
         )
 
         decision_result = self.risk_engine.evaluate(payload, ai_review)
-        if payload.intent != "CLOSE" and not regime_result.get("trade_allowed", True):
+        is_paper_mode = BROKER_MODE in {"simulation", "sim", "paper", "kraken_paper", "krakenpaper"}
+        should_relax = is_paper_mode and PAPER_TRADING_RELAX_RISK
+        if payload.intent != "CLOSE" and not regime_result.get("trade_allowed", True) and not should_relax:
             decision_result = {
                 "decision": DecisionEnum.REJECT,
                 "reject_reason": f"REGIME_HALT: {regime_result.get('reason', 'Market regime unsuitable')}",
@@ -125,6 +128,7 @@ class PaperTrainingPipeline:
             direction=payload.direction,
             volume=self._volume_from_payload(payload),
             order_type="market",
+            price=payload.entry_price,
             stop_loss=payload.stop_price,
             take_profit=payload.target_price,
             candidate_id=candidate_id,

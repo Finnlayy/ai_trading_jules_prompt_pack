@@ -172,11 +172,11 @@ class RiskEngine:
             raise RiskGateException("Maximum trades per day reached", "MAX_TRADES_REACHED")
 
     def _gate_ai_conflict(self, payload: M8Payload, ai_review: SignalReview):
+        if self._should_relax():
+            return
         war_room_ai_reason = ai_rule_violation(ai_review)
         if war_room_ai_reason:
             raise RiskGateException("AI review violated War Room rules", war_room_ai_reason)
-        if self._should_relax():
-            return
         if ai_review.decision == AIDecisionEnum.REJECT:
             raise RiskGateException("AI review rejected the signal", "AI_REJECT")
         if ai_review.requires_human_review:

@@ -87,16 +87,22 @@ class KrakenPaperBroker(BaseBroker):
             db.commit()
         return bal
 
-    def _get_live_price(self, pair: str) -> tuple[float, float]:
+    def _get_live_price(self, pair: str, fallback_price: Optional[float] = None) -> tuple[float, float]:
         """Return (bid, ask) for a Kraken pair using public API."""
-        normalized = self._kraken.normalize_pair(pair)
-        result = self._kraken.get_ticker(normalized)
-        # Kraken returns keyed by actual pair name
-        key = list(result.keys())[0]
-        ticker = result[key]
-        bid = float(ticker["b"][0])
-        ask = float(ticker["a"][0])
-        return bid, ask
+        try:
+            normalized = self._kraken.normalize_pair(pair)
+            result = self._kraken.get_ticker(normalized)
+            # Kraken returns keyed by actual pair name
+            key = list(result.keys())[0]
+            ticker = result[key]
+            bid = float(ticker["b"][0])
+            ask = float(ticker["a"][0])
+            return bid, ask
+        except Exception as exc:
+            if fallback_price is not None and fallback_price > 0:
+                logger.info("Failed to get live price for %s, using fallback %s: %s", pair, fallback_price, exc)
+                return fallback_price, fallback_price
+            raise
 
     def _calculate_fee(self, notional: float) -> float:
         """Calculate taker fee for a given notional value."""
@@ -235,6 +241,7 @@ class KrakenPaperBroker(BaseBroker):
                 direction=payload.direction,
                 volume=volume,
                 order_type="market",
+                price=payload.entry_price,
                 stop_loss=payload.stop_price,
                 take_profit=payload.target_price,
                 signal_id=payload.signal_id,
@@ -275,7 +282,7 @@ class KrakenPaperBroker(BaseBroker):
             result = []
             for pos in positions:
                 try:
-                    bid, ask = self._get_live_price(pos.symbol)
+                    bid, ask = self._get_live_price(pos.symbol, fallback_price=pos.avg_entry_price)
                     current = ask if pos.direction == "LONG" else bid
                     if pos.direction == "LONG":
                         pos.unrealized_pnl = round(
@@ -321,7 +328,7 @@ class KrakenPaperBroker(BaseBroker):
             total_unrealized = 0.0
             for pos in open_positions:
                 try:
-                    bid, ask = self._get_live_price(pos.symbol)
+                    bid, ask = self._get_live_price(pos.symbol, fallback_price=pos.avg_entry_price)
                     current = ask if pos.direction == "LONG" else bid
                     if pos.direction == "LONG":
                         total_unrealized += (current - pos.avg_entry_price) * pos.volume
@@ -392,9 +399,8 @@ class KrakenPaperBroker(BaseBroker):
         dir_norm = "LONG" if direction.upper() in {"BUY", "LONG"} else "SHORT"
         pair = self._kraken.normalize_pair(symbol)
 
-        # Get live price
         try:
-            bid, ask = self._get_live_price(pair)
+            bid, ask = self._get_live_price(pair, fallback_price=price)
         except Exception as exc:
             return {"status": "error", "error": f"Could not fetch live price: {exc}"}
 
@@ -665,7 +671,7 @@ class KrakenPaperBroker(BaseBroker):
 
             # Get live price
             try:
-                bid, ask = self._get_live_price(pair)
+                bid, ask = self._get_live_price(pair, fallback_price=position.avg_entry_price)
             except Exception as exc:
                 return {"status": "error", "error": f"Could not fetch live price: {exc}"}
 
