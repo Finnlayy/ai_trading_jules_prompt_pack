@@ -63,6 +63,165 @@ def _local_profile_patch(message: str) -> dict[str, Any]:
     return patch
 
 
+def _local_recommended_action(message: str) -> dict[str, Any] | None:
+    lower = message.lower()
+
+    # 1. toggle_emergency (check first to avoid collision with stop_training)
+    if "emergency" in lower:
+        active = True
+        if any(word in lower for word in ("disable", "off", "false", "lift", "stop emergency")):
+            active = False
+        return {
+            "action": "toggle_emergency",
+            "params": {"active": active}
+        }
+
+    # 2. run_backtest
+    if "backtest" in lower:
+        symbol = "HYPEUSDT"  # Default
+        for token in message.split():
+            clean_token = token.strip(".,!?\"'()").upper()
+            if "USDT" in clean_token:
+                symbol = clean_token
+                break
+
+        bars = 500
+        for token in lower.replace("bars", "").split():
+            if token.isdigit():
+                val = int(token)
+                if 10 <= val <= 10000:
+                    bars = val
+                    break
+
+        return {
+            "action": "run_backtest",
+            "params": {
+                "symbol": symbol,
+                "bars": bars,
+            }
+        }
+
+    # 3. trigger_drill
+    if "drill" in lower and any(word in lower for word in ("trigger", "start", "run")):
+        scout_name = None
+        for scout in ("technical", "sentiment", "risk", "macro", "execution", "correlation"):
+            if scout in lower:
+                scout_name = scout
+                break
+        params = {}
+        if scout_name:
+            params["scout_name"] = scout_name
+        return {
+            "action": "trigger_drill",
+            "params": params
+        }
+
+    # 4. start_training
+    if "start" in lower and ("training" in lower or "loop" in lower):
+        return {
+            "action": "start_training",
+            "params": {}
+        }
+
+    # 5. stop_training
+    if any(word in lower for word in ("stop", "pause", "halt")) and ("training" in lower or "loop" in lower):
+        return {
+            "action": "stop_training",
+            "params": {}
+        }
+
+    # 6. reset_memory
+    if "reset memory" in lower or "clear memory" in lower or "reset chat" in lower:
+        return {
+            "action": "reset_memory",
+            "params": {}
+        }
+
+    return None
+
+
+async def _execute_action(action: str, params: dict[str, Any]) -> str:
+    """Execute the recommended action on the user's behalf and return feedback."""
+    if action == "run_backtest":
+        try:
+            from app.api.backtest_runner import run_backtest, BacktestRunRequest
+            req = BacktestRunRequest(
+                symbol=params.get("symbol", "HYPEUSDT"),
+                bars=params.get("bars", 500),
+                max_signals=params.get("max_signals", 50),
+                min_confluence=params.get("min_confluence")
+            )
+            res = await run_backtest(req)
+            if res.get("signals_generated", 0) == 0:
+                return f"[Action Executed: run_backtest] Completed. No signals generated for {req.symbol}."
+            return (
+                f"[Action Executed: run_backtest] Completed for {req.symbol}. "
+                f"Generated: {res.get('signals_generated')}, Executed SIM: {res.get('executed')}, Rejected: {res.get('rejected')}."
+            )
+        except Exception as exc:
+            return f"[Action Failed: run_backtest] Error: {exc}"
+
+    elif action == "trigger_drill":
+        try:
+            from app.services.training_loop import training_loop
+            await training_loop.trigger_manual_cycle()
+            return "[Action Executed: trigger_drill] Drill cycle triggered successfully."
+        except Exception as exc:
+            return f"[Action Failed: trigger_drill] Error: {exc}"
+
+    elif action == "start_training":
+        try:
+            from app.services.training_loop import training_loop
+            res = await training_loop.start()
+            if res.get("started"):
+                return "[Action Executed: start_training] Academy training loop started."
+            return f"[Action Executed: start_training] Loop not started: {res.get('reason')}."
+        except Exception as exc:
+            return f"[Action Failed: start_training] Error: {exc}"
+
+    elif action == "stop_training":
+        try:
+            from app.services.training_loop import training_loop
+            await training_loop.stop()
+            return "[Action Executed: stop_training] Academy training loop stopped."
+        except Exception as exc:
+            return f"[Action Failed: stop_training] Error: {exc}"
+
+    elif action == "reset_memory":
+        try:
+            ai_layer_memory_instance.reset()
+            return "[Action Executed: reset_memory] AI layer memory and behavior profile reset."
+        except Exception as exc:
+            return f"[Action Failed: reset_memory] Error: {exc}"
+
+    elif action == "toggle_emergency":
+        try:
+            active = params.get("active", True)
+            import app.api.live_trading as live_trading
+            from app.services.autonomous_loop import autonomous_loop_instance
+            from app.services.dashboard_sse import dashboard_sse_manager
+            from datetime import datetime, timezone, timedelta
+
+            if active:
+                halted_until = datetime.now(timezone.utc) + timedelta(minutes=1440)
+                live_trading._emergency_halt_until = halted_until
+                autonomous_loop_instance.pause()
+                dashboard_sse_manager.broadcast_alert(
+                    "🚨 EMERGENCY STOP: Activated via AI Chat", level="critical"
+                )
+                return "[Action Executed: toggle_emergency] Emergency halt activated (24h)."
+            else:
+                live_trading._emergency_halt_until = None
+                dashboard_sse_manager.broadcast_alert(
+                    "🚨 EMERGENCY STOP: Deactivated via AI Chat", level="info"
+                )
+                return "[Action Executed: toggle_emergency] Emergency halt deactivated."
+        except Exception as exc:
+            return f"[Action Failed: toggle_emergency] Error: {exc}"
+
+    return f"[Action Ignored] Unknown or unauthorized action: {action}"
+
+
 def _resolve_active_prompt(prompt_name: str, default: str) -> str:
     prompt_path = AI_PROMPTS_DIR / prompt_name / "v_active.md"
     if not prompt_path.exists():
@@ -161,6 +320,7 @@ async def chat_with_ai_layer(request: AIChatRequest):
     used_llm = False
     reply = ""
     patch: dict[str, Any] = {}
+    recommended_action: dict[str, Any] | None = None
 
     try:
         if AI_PROVIDER not in {"mock", "offline", "none"}:
@@ -174,6 +334,11 @@ async def chat_with_ai_layer(request: AIChatRequest):
             reply = str(parsed.get("reply") or "").strip()
             raw_patch = parsed.get("profile_patch", {})
             patch = raw_patch if isinstance(raw_patch, dict) else {}
+            
+            raw_action = parsed.get("recommended_action")
+            if isinstance(raw_action, dict) and "action" in raw_action:
+                recommended_action = raw_action
+
             used_llm = True
     except Exception as exc:
         logger.info("AI layer chat fell back to local parser: %s", exc)
@@ -185,6 +350,16 @@ async def chat_with_ai_layer(request: AIChatRequest):
             "It will influence review confidence, reason codes, and human-review escalation, "
             "while deterministic risk gates remain the final authority."
         )
+
+    if not recommended_action:
+        recommended_action = _local_recommended_action(request.message)
+
+    if recommended_action:
+        action_name = recommended_action.get("action")
+        action_params = recommended_action.get("params") or {}
+        feedback = await _execute_action(action_name, action_params)
+        if feedback:
+            reply = f"{reply}\n\n{feedback}"
 
     if request.apply_to_profile and patch:
         profile = ai_layer_memory_instance.update_profile(patch)
@@ -198,6 +373,7 @@ async def chat_with_ai_layer(request: AIChatRequest):
         profile=profile,
         memory=ai_layer_memory_instance.get_memory(),
         raw_profile_patch=patch,
+        recommended_action=recommended_action,
         generated_prompt=user_prompt,
         system_prompt=system,
     )
