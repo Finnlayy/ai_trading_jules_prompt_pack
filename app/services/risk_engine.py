@@ -4,7 +4,7 @@ from app.schemas.journal import DecisionEnum, FinalDecisionEnum
 from app.core.config import (
     MIN_RR_RATIO, MAX_SPREAD, MIN_CONFLUENCE_SCORE, MAX_CRISIS_SCORE,
     MAX_MC_DISPERSION, COOLDOWN_BARS, MAX_TRADES_PER_DAY,
-    NEWS_IMPACT_ENABLED,
+    NEWS_IMPACT_ENABLED, BROKER_MODE, PAPER_TRADING_RELAX_RISK,
 )
 from app.core.exceptions import RiskGateException
 from app.services.war_room_rules import ai_rule_violation, classify_order
@@ -20,6 +20,14 @@ class RiskEngine:
         self.current_bar = 0
         self.open_positions: List[dict] = []
 
+    def _is_paper_mode(self) -> bool:
+        import app.core.config as config
+        return config.BROKER_MODE in {"simulation", "sim", "paper", "kraken_paper", "krakenpaper"}
+
+    def _should_relax(self) -> bool:
+        import app.core.config as config
+        return self._is_paper_mode() and config.PAPER_TRADING_RELAX_RISK
+
     def evaluate(self, payload: M8Payload, ai_review: Optional[SignalReview] = None) -> Dict:
         """
         Evaluates the payload and AI review against deterministic risk gates.
@@ -29,10 +37,11 @@ class RiskEngine:
         # Load news-based adjustments
         adjustments = self._get_news_adjustments(payload.symbol)
         if adjustments.human_review_required:
-            return {
-                "decision": DecisionEnum.HUMAN_REVIEW,
-                "reject_reason": "NEWS_IMPACT_MANDATES_HUMAN_REVIEW",
-            }
+            if not self._should_relax():
+                return {
+                    "decision": DecisionEnum.HUMAN_REVIEW,
+                    "reject_reason": "NEWS_IMPACT_MANDATES_HUMAN_REVIEW",
+                }
 
         try:
             self._gate_invalid_payload(payload)
@@ -104,21 +113,32 @@ class RiskEngine:
             return RiskAdjustments()
 
     def _gate_m8_score(self, payload: M8Payload, adjustments=None):
-        effective = MIN_CONFLUENCE_SCORE + (adjustments.confluence_offset if adjustments else 0.0)
+        if self._should_relax():
+            effective = 0.0
+        else:
+            effective = MIN_CONFLUENCE_SCORE + (adjustments.confluence_offset if adjustments else 0.0)
         if payload.confluence_score < effective:
             raise RiskGateException(f"Confluence score below minimum ({effective})", "LOW_CONFLUENCE")
 
     def _gate_crisis_score(self, payload: M8Payload, adjustments=None):
-        effective = MAX_CRISIS_SCORE + (adjustments.crisis_offset if adjustments else 0.0)
+        if self._should_relax():
+            effective = 100.0
+        else:
+            effective = MAX_CRISIS_SCORE + (adjustments.crisis_offset if adjustments else 0.0)
         if payload.crisis_score > effective:
             raise RiskGateException(f"Crisis score too high ({effective})", "HIGH_CRISIS")
 
     def _gate_dispersion(self, payload: M8Payload):
+        if self._should_relax():
+            return
         if payload.mc_dispersion > MAX_MC_DISPERSION:
             raise RiskGateException("MC dispersion too high", "HIGH_DISPERSION")
 
     def _gate_spread(self, payload: M8Payload, adjustments=None):
-        effective = MAX_SPREAD * (adjustments.spread_multiplier if adjustments else 1.0)
+        if self._should_relax():
+            effective = 1000.0
+        else:
+            effective = MAX_SPREAD * (adjustments.spread_multiplier if adjustments else 1.0)
         if payload.spread > effective:
             raise RiskGateException(f"Spread exceeds maximum limit ({effective})", "WIDE_SPREAD")
 
@@ -134,15 +154,20 @@ class RiskEngine:
             raise RiskGateException("Invalid risk (stop loss above entry for LONG or below entry for SHORT)", "INVALID_RISK")
 
         rr = reward / risk
-        if rr < MIN_RR_RATIO:
+        effective_rr = 0.01 if self._should_relax() else MIN_RR_RATIO
+        if rr < effective_rr:
             raise RiskGateException("Reward/Risk ratio too low", "LOW_RR")
 
     def _gate_cooldown(self, adjustments=None):
+        if self._should_relax():
+            return
         effective = COOLDOWN_BARS + (adjustments.cooldown_bars_offset if adjustments else 0)
         if self.last_trade_bar != -1 and (self.current_bar - self.last_trade_bar) < effective:
             raise RiskGateException("Entry cooldown is active", "COOLDOWN_ACTIVE")
 
     def _gate_max_trades(self):
+        if self._should_relax():
+            return
         if self.trades_today >= MAX_TRADES_PER_DAY:
             raise RiskGateException("Maximum trades per day reached", "MAX_TRADES_REACHED")
 
@@ -150,12 +175,16 @@ class RiskEngine:
         war_room_ai_reason = ai_rule_violation(ai_review)
         if war_room_ai_reason:
             raise RiskGateException("AI review violated War Room rules", war_room_ai_reason)
+        if self._should_relax():
+            return
         if ai_review.decision == AIDecisionEnum.REJECT:
             raise RiskGateException("AI review rejected the signal", "AI_REJECT")
         if ai_review.requires_human_review:
              raise RiskGateException("AI requires human review", "AI_HUMAN_REVIEW_REQUIRED")
 
     def _gate_portfolio_drawdown(self):
+        if self._should_relax():
+            return
         cb = circuit_breaker_instance.check_trade_allowed()
         if not cb["trade_allowed"]:
             raise RiskGateException(
@@ -164,12 +193,16 @@ class RiskEngine:
             )
 
     def _gate_correlation_risk(self, payload: M8Payload):
+        if self._should_relax():
+            return
         result = correlation_checker.check_new_entry(payload.symbol, self.open_positions)
         if not result["allowed"]:
             raise RiskGateException(result["reason"], "CORRELATION_RISK_LIMIT")
 
 
     def _gate_paper_training_calibration(self, payload: M8Payload, weighted_scout_vote: Optional[float]):
+        if self._should_relax():
+            return
         if weighted_scout_vote is not None and weighted_scout_vote < 0.5:
             raise RiskGateException("Weak AI consensus", "WEAK_SCOUT_VOTE")
 

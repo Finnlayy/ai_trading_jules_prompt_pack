@@ -423,3 +423,5 @@ MAX_DAILY_DRAWDOWN = _as_float(os.getenv("MAX_DAILY_DRAWDOWN"), 5.0)
 MAX_TRADES_PER_DAY = _as_int(os.getenv("MAX_TRADES_PER_DAY"), 5)
 COOLDOWN_BARS = _as_int(os.getenv("COOLDOWN_BARS"), 3)
 REGIME_ALLOW_RW1_SIGNALS = _as_bool(os.getenv("REGIME_ALLOW_RW1_SIGNALS"), False)
+PAPER_TRADING_RELAX_RISK = _as_bool(os.getenv("PAPER_TRADING_RELAX_RISK"), True)
+

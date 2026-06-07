@@ -5,6 +5,7 @@ import os
 os.environ["AI_PROVIDER"] = "moonshot"
 os.environ["AI_REVIEW_ENGINE"] = "legacy6"
 os.environ["BROKER_MODE"] = "simulation"
+os.environ["PAPER_TRADING_RELAX_RISK"] = "false"
 os.environ["PIONEX_RELAY_ENABLED"] = "false"
 os.environ["PIONEX_DIRECT_ENABLED"] = "false"
 os.environ["PIONEX_DIRECT_LIVE_TRADING_ENABLED"] = "false"

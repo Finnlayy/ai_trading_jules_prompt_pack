@@ -11,7 +11,7 @@ from app.services.regime_engine import regime_engine_instance
 from app.services.signal_generator import BybitDataFeed
 from app.schemas.journal import DecisionEnum, FinalDecisionEnum
 from app.schemas.ai_review import SignalReview
-from app.core.config import AI_FAILURE_POLICY, BROKER_MODE
+from app.core.config import AI_FAILURE_POLICY, BROKER_MODE, PAPER_TRADING_RELAX_RISK
 
 
 def _build_broker():
@@ -225,7 +225,9 @@ async def process_signal(payload: M8Payload):
         decision_result = risk_engine_instance.evaluate(payload, ai_review)
 
     # Override if regime blocks trading (only for ENTRY, not CLOSE)
-    if payload.intent != "CLOSE" and not regime_result.get("trade_allowed", True):
+    is_paper_mode = BROKER_MODE in {"simulation", "sim", "paper", "kraken_paper", "krakenpaper"}
+    should_relax = is_paper_mode and PAPER_TRADING_RELAX_RISK
+    if payload.intent != "CLOSE" and not regime_result.get("trade_allowed", True) and not should_relax:
         decision_result = {
             "decision": DecisionEnum.REJECT,
             "reject_reason": f"REGIME_HALT: {regime_result.get('reason', 'Market regime unsuitable')}",
@@ -346,7 +348,9 @@ async def process_manual_signal(payload: M8Payload):
     decision_result = risk_engine_instance.evaluate(payload, ai_review)
 
     # Override if regime blocks trading (only for ENTRY, not CLOSE)
-    if payload.intent != "CLOSE" and not regime_result.get("trade_allowed", True):
+    is_paper_mode = BROKER_MODE in {"simulation", "sim", "paper", "kraken_paper", "krakenpaper"}
+    should_relax = is_paper_mode and PAPER_TRADING_RELAX_RISK
+    if payload.intent != "CLOSE" and not regime_result.get("trade_allowed", True) and not should_relax:
         decision_result = {
             "decision": DecisionEnum.REJECT,
             "reject_reason": f"REGIME_HALT: {regime_result.get('reason', 'Market regime unsuitable')}",
