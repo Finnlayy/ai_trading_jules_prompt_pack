@@ -1818,7 +1818,11 @@
                 agents: true,
                 training: true,
                 strategies: true,
-                ctrader: true
+                ctrader: true,
+                secondBrain: true,
+                modelHub: true,
+                shadowQueue: true,
+                riskControl: true
             }
         };
 
@@ -2433,34 +2437,66 @@
                         </div>
 
                         <nav>
-                            <div className="nav-category">Trading</div>
-                            {["Overview", "Control", "Orders", "Live Paper", "Kraken Paper", "Manual"].map(item => (
+                            <div className="nav-category">Command Center</div>
+                            {["Overview", "Control", "Orders", "Manual", "Charts", "Wallets"].map(item => (
                                 <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)} data-label={item}>
-                                    <span className="nav-icon">{item === "Overview" ? "🏠" : item === "Control" ? "🎮" : item === "Orders" ? "📋" : item === "Live Paper" ? "📈" : item === "Kraken Paper" ? "🦑" : "✋"}</span>
+                                    <span className="nav-icon">{item === "Overview" ? "🏠" : item === "Control" ? "🎮" : item === "Orders" ? "📋" : item === "Manual" ? "✋" : item === "Charts" ? "📊" : "👛"}</span>
                                     <span className="nav-label">{item}</span>
                                     <span className="nav-dot">{tab === item ? "●" : ""}</span>
                                 </button>
                             ))}
-                            <div className="nav-category">Analyse</div>
-                            {["Wallets", "Charts", "Backtest", "Confidence", "Strategies", "cTrader", "AI Layer"].map(item => (
+                            <div className="nav-category">Wiki & 2ndBrain</div>
+                            {["Wiki & 2ndBrain"].map(item => (
                                 <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)} data-label={item}>
-                                    <span className="nav-icon">{item === "Wallets" ? "👛" : item === "Charts" ? "📊" : item === "Backtest" ? "🧪" : item === "Confidence" ? "🎯" : item === "Strategies" ? "🎚️" : item === "cTrader" ? "📉" : "🤖"}</span>
+                                    <span className="nav-icon">🧠</span>
+                                    <span className="nav-label">{item}</span>
+                                    <span className="nav-dot">{tab === item ? "●" : ""}</span>
+                                </button>
+                            ))}
+                            <div className="nav-category">Akademie & Gymnasium</div>
+                            {["Agents", "Training", "Learning", "Confidence"].map(item => (
+                                <button type="button" key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)} data-label={item}>
+                                    <span className="nav-icon">{item === "Agents" ? "👤" : item === "Training" ? "🎓" : item === "Learning" ? "📝" : "🎯"}</span>
+                                    <span className="nav-label">{item}</span>
+                                    <span className="nav-dot">{tab === item ? "●" : ""}</span>
+                                </button>
+                            ))}
+                            <div className="nav-category">Risk & Paper Trading</div>
+                            {["Risk & Paper", "Live Paper", "Kraken Paper", "cTrader"].map(item => (
+                                <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)} data-label={item}>
+                                    <span className="nav-icon">{item === "Risk & Paper" ? "🛡️" : item === "Live Paper" ? "📈" : item === "Kraken Paper" ? "🦑" : "📉"}</span>
+                                    <span className="nav-label">{item}</span>
+                                    <span className="nav-dot">{tab === item ? "●" : ""}</span>
+                                </button>
+                            ))}
+                            <div className="nav-category">Model Hub (ONNX)</div>
+                            {["Model Hub"].map(item => (
+                                <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)} data-label={item}>
+                                    <span className="nav-icon">🤖</span>
+                                    <span className="nav-label">{item}</span>
+                                    <span className="nav-dot">{tab === item ? "●" : ""}</span>
+                                </button>
+                            ))}
+                            <div className="nav-category">Shadow Queue</div>
+                            {["Shadow Queue"].map(item => (
+                                <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)} data-label={item}>
+                                    <span className="nav-icon">⏳</span>
+                                    <span className="nav-label">{item}</span>
+                                    <span className="nav-dot">{tab === item ? "●" : ""}</span>
+                                </button>
+                            ))}
+                            <div className="nav-category">Strategy Library</div>
+                            {["Strategies", "Backtest"].map(item => (
+                                <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)} data-label={item}>
+                                    <span className="nav-icon">{item === "Strategies" ? "🎚️" : "🧪"}</span>
                                     <span className="nav-label">{item}</span>
                                     <span className="nav-dot">{tab === item ? "●" : ""}</span>
                                 </button>
                             ))}
                             <div className="nav-category">System</div>
-                            {["News", "Logs"].map(item => (
+                            {["AI Layer", "News", "Logs"].map(item => (
                                 <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)} data-label={item}>
-                                    <span className="nav-icon">{item === "News" ? "📰" : "📜"}</span>
-                                    <span className="nav-label">{item}</span>
-                                    <span className="nav-dot">{tab === item ? "●" : ""}</span>
-                                </button>
-                            ))}
-                            <div className="nav-category">Academy</div>
-                            {["Agents", "Training", "Learning"].map(item => (
-                                <button type="button" key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)} data-label={item}>
-                                    <span className="nav-icon">{item === "Agents" ? "👤" : "🎓"}</span>
+                                    <span className="nav-icon">{item === "AI Layer" ? "🤖" : item === "News" ? "📰" : "📜"}</span>
                                     <span className="nav-label">{item}</span>
                                     <span className="nav-dot">{tab === item ? "●" : ""}</span>
                                 </button>
@@ -2559,7 +2595,7 @@
                         </section>
 
                         {layoutConfig.panels.strategies && (<section className={tab === "Strategies" ? "" : "hidden"}>
-                            <StrategyHealthPanel strategies={strategyHealth} loading={loading.strategies} onRefresh={fetchStrategyHealth} switchStrategy={switchStrategy} />
+                            <StrategyHealthPanel strategies={strategyHealth} loading={loading.strategies} onRefresh={fetchStrategyHealth} switchStrategy={switchStrategy} request={request} addLog={addLog} />
                         </section>)}
 
                         {layoutConfig.panels.ctrader && (<section className={tab === "cTrader" ? "" : "hidden"}>
@@ -2571,7 +2607,7 @@
                         </section>
 
                         <section className={tab === "Backtest" ? "" : "hidden"}>
-                            <Backtest backtest={backtest} setBacktest={setBacktest} runBacktest={runBacktest} orders={filteredOrders} availableStrategies={availableStrategies} activeStrategy={activeStrategy} />
+                            <Backtest backtest={backtest} setBacktest={setBacktest} runBacktest={runBacktest} orders={filteredOrders} availableStrategies={availableStrategies} activeStrategy={activeStrategy} request={request} addLog={addLog} />
                         </section>
 
                         {layoutConfig.panels.news && (<section className={tab === "News" ? "" : "hidden"}>
@@ -2605,6 +2641,22 @@
 
                         <section className={tab === "Kraken Paper" ? "" : "hidden"}>
                             <KrakenPaperPanel request={request} addLog={addLog} />
+                        </section>
+
+                        <section className={tab === "Wiki & 2ndBrain" ? "" : "hidden"}>
+                            <SecondBrainPanel request={request} addLog={addLog} />
+                        </section>
+
+                        <section className={tab === "Risk & Paper" ? "" : "hidden"}>
+                            <RiskControlPanel request={request} addLog={addLog} />
+                        </section>
+
+                        <section className={tab === "Model Hub" ? "" : "hidden"}>
+                            <ModelHubPanel request={request} addLog={addLog} />
+                        </section>
+
+                        <section className={tab === "Shadow Queue" ? "" : "hidden"}>
+                            <ShadowQueuePanel request={request} addLog={addLog} />
                         </section>
                     </div>
 
@@ -3693,7 +3745,7 @@
             );
         }
 
-        function Backtest({ backtest, setBacktest, runBacktest, orders, availableStrategies = [], activeStrategy = "" }) {
+        function Backtest({ backtest, setBacktest, runBacktest, orders, availableStrategies = [], activeStrategy = "", request, addLog }) {
             const update = (key, value) => setBacktest(current => ({ ...current, [key]: value }));
             const [showModal, setShowModal] = React.useState(false);
             const [backtestResult, setBacktestResult] = React.useState(null);
@@ -3777,6 +3829,9 @@
                             </div>
                         </div>
                     )}
+                    <div className="span-12">
+                        <PolicyAnalyticsPanel request={request} addLog={addLog} />
+                    </div>
                 </div>
             );
         }
@@ -4540,7 +4595,53 @@
             );
         }
 
-        function StrategyHealthPanel({ strategies, loading, onRefresh, switchStrategy }) {
+        function StrategyHealthPanel({ strategies, loading, onRefresh, switchStrategy, request, addLog }) {
+            const [selectedId, setSelectedId] = React.useState("");
+            const [libraryDetails, setLibraryDetails] = React.useState({});
+            const [smokeParams, setSmokeParams] = React.useState({ symbol: "HYPEUSDT", timeframe: "1h", bars: 300, min_confluence: 70 });
+            const [smokeResult, setSmokeResult] = React.useState(null);
+            const [smokeLoading, setSmokeLoading] = React.useState(false);
+
+            const fetchLibraryDetails = async () => {
+                try {
+                    const res = await request("/strategies/library");
+                    if (res && res.strategies) {
+                        const dict = {};
+                        res.strategies.forEach(s => {
+                            dict[s.strategy_id] = s;
+                        });
+                        setLibraryDetails(dict);
+                        if (res.strategies.length && !selectedId) {
+                            setSelectedId(res.strategies[0].strategy_id);
+                        }
+                    }
+                } catch (e) {}
+            };
+
+            React.useEffect(() => {
+                fetchLibraryDetails();
+            }, [strategies]);
+
+            const runSmokeTest = async () => {
+                if (!selectedId) return;
+                setSmokeLoading(true);
+                setSmokeResult(null);
+                try {
+                    const res = await request(`/strategies/${selectedId}/backtest-smoke`, {
+                        method: "POST",
+                        body: JSON.stringify(smokeParams)
+                    });
+                    setSmokeResult(res);
+                    addLog("info", `Ran diagnostic smoke backtest for ${selectedId}`);
+                } catch (e) {
+                    addLog("error", `Failed to run smoke test for ${selectedId}`, { error: e.message });
+                } finally {
+                    setSmokeLoading(false);
+                }
+            };
+
+            const selectedDetails = libraryDetails[selectedId] || {};
+
             function formatAge(seconds) {
                 if (seconds === null || seconds === undefined) return "—";
                 if (seconds < 60) return `${Math.round(seconds)}s ago`;
@@ -4578,80 +4679,138 @@
                 <div className="grid">
                     <div className="panel span-12">
                         <div className="panel-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <span>Strategy Health <span className="pill">{strategies.length} strategies</span></span>
-                            <button onClick={onRefresh} disabled={loading}>{loading ? "Loading…" : "Refresh"}</button>
+                            <span>Strategy Library & Code Manager <span className="pill">{strategies.length} active</span></span>
+                            <button onClick={onRefresh} disabled={loading}>{loading ? "Loading…" : "🔄 Refresh Health"}</button>
                         </div>
-                        <div className="kpi-caption">Per-strategy performance, win rate, drawdown, and signal recency. Aggregated from ConfidenceRegistry + Journal.</div>
+                        <div className="kpi-caption">Centralized Pine Script v6 and Python strategies linked to source files.</div>
                     </div>
 
-                    {strategies.length === 0 && (
-                        <div className="panel span-12">
-                            <div style={{ textAlign: "center", color: "var(--muted)", padding: 32 }}>
-                                No strategy health data available yet.
-                            </div>
+                    <div className="panel span-5">
+                        <div className="panel-title" style={{ marginBottom: 12 }}>Strategy Repository</div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                            {strategies.map(strat => {
+                                const details = libraryDetails[strat.strategy_id] || {};
+                                const tags = details.tags || [];
+                                return (
+                                    <div
+                                        key={strat.strategy_id}
+                                        className={`panel ${strat.strategy_id === selectedId ? "active-strategy-card" : ""}`}
+                                        style={{ margin: 0, padding: 14, cursor: "pointer", border: strat.strategy_id === selectedId ? "2px solid var(--emerald)" : "1.5px solid var(--line)" }}
+                                        onClick={() => { setSelectedId(strat.strategy_id); setSmokeResult(null); }}
+                                    >
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                                            <strong style={{ fontSize: 14, color: "var(--ink)" }}>{strat.name || strat.strategy_id}</strong>
+                                            <div style={{ display: "flex", gap: 6 }}>
+                                                {strat.is_active && <span className="pill ok" style={{ fontSize: 10 }}>ACTIVE</span>}
+                                                <button
+                                                    className="small"
+                                                    onClick={(e) => { e.stopPropagation(); switchStrategy(strat.strategy_id); }}
+                                                    disabled={strat.is_active}
+                                                    style={{ padding: "2px 8px", minHeight: 24, fontSize: 11 }}
+                                                >
+                                                    {strat.is_active ? "Active" : "Switch"}
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 10 }}>
+                                            {tags.map(t => <span key={t} className="pill info" style={{ fontSize: 9, padding: "2px 6px" }}>{t}</span>)}
+                                        </div>
+                                        <div style={{ fontSize: 12, display: "flex", justifyContent: "space-between", color: "var(--muted)" }}>
+                                            <span>Win Rate: <b>{Math.round((strat.win_rate || 0) * 100)}%</b></span>
+                                            <span>Drawdown: <b style={{ color: "var(--rose)" }}>{(strat.max_drawdown_pct || 0).toFixed(1)}%</b></span>
+                                            <span>Signals: <b>{strat.total_signals || 0}</b></span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
-                    )}
+                    </div>
 
-                    {strategies.map(strat => (
-                        <div className={`panel span-6 ${strat.is_active ? "active-strategy-card" : ""}`} key={strat.strategy_id} style={{ position: "relative" }}>
-                            {strat.is_active && (
-                                <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: "var(--emerald)", borderRadius: "18px 18px 0 0" }} />
-                            )}
-                            <div className="panel-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                    <span>{strat.name || strat.strategy_id}</span>
-                                    {strat.is_active && <span className="pill ok">ACTIVE</span>}
+                    <div className="panel span-7">
+                        {selectedId ? (
+                            <div>
+                                <div className="panel-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                    <span>{selectedDetails.name || selectedId} Source Code</span>
+                                    <span className="pill info">{selectedDetails.filepath}</span>
                                 </div>
-                                <button
-                                    className="small secondary"
-                                    onClick={() => switchStrategy(strat.strategy_id)}
-                                    disabled={strat.is_active}
-                                    style={{ padding: "4px 10px", fontSize: 12, minHeight: 28 }}
-                                >
-                                    {strat.is_active ? "Active" : "Switch"}
-                                </button>
-                            </div>
-
-                            <div style={{ marginBottom: 14 }}>
-                                <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.5px", color: "var(--muted)", marginBottom: 4 }}>Health Score</div>
-                                <HealthBar score={strat.health_score || 0} />
-                            </div>
-
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 16px", fontSize: 13, marginBottom: 12 }}>
-                                <div>
-                                    <div style={{ color: "var(--muted)", fontSize: 11, marginBottom: 2 }}>Win Rate</div>
-                                    <WinRateBar rate={strat.win_rate} />
-                                </div>
-                                <div>
-                                    <div style={{ color: "var(--muted)", fontSize: 11, marginBottom: 2 }}>Profit Factor</div>
-                                    <div style={{ fontWeight: 700, color: (strat.profit_factor || 0) >= 1.5 ? "var(--emerald)" : (strat.profit_factor || 0) >= 1.0 ? "var(--amber)" : "var(--rose)" }}>
-                                        {(strat.profit_factor || 0).toFixed(2)}
+                                <p style={{ fontSize: 13, color: "var(--muted)", margin: "4px 0 12px 0" }}>{selectedDetails.description}</p>
+                                
+                                <div style={{ background: "var(--bg)", border: "1.5px solid var(--line)", borderRadius: "var(--radius-sm)", padding: 12, marginBottom: 16 }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--muted)", borderBottom: "1px solid var(--line)", paddingBottom: 6, marginBottom: 8 }}>
+                                        <span>SUPPORTED TIMEFRAMES: {selectedDetails.timeframes ? selectedDetails.timeframes.join(", ") : "—"}</span>
+                                        <span>TYPE: {selectedDetails.strategy_type}</span>
                                     </div>
+                                    {selectedDetails.code ? (
+                                        <pre style={{ margin: 0, maxHeight: 300, overflow: "auto", fontFamily: "JetBrains Mono, monospace", fontSize: 12, whiteSpace: "pre-wrap" }}>
+                                            <code>{selectedDetails.code}</code>
+                                        </pre>
+                                    ) : (
+                                        <div style={{ textAlign: "center", color: "var(--muted)", padding: 24, fontSize: 13 }}>
+                                            Python logic defined natively in codebase (<a href={`file:///${selectedDetails.filepath}`} target="_blank" rel="noopener noreferrer" style={{ color: "var(--indigo)" }}>{selectedDetails.filepath}</a>).
+                                        </div>
+                                    )}
                                 </div>
-                                <div>
-                                    <div style={{ color: "var(--muted)", fontSize: 11, marginBottom: 2 }}>Avg PnL</div>
-                                    <div style={{ fontWeight: 700, color: (strat.avg_pnl_pct || 0) >= 0 ? "var(--emerald)" : "var(--rose)" }}>
-                                        {(strat.avg_pnl_pct || 0) >= 0 ? "+" : ""}{(strat.avg_pnl_pct || 0).toFixed(2)}%
-                                    </div>
-                                </div>
-                                <div>
-                                    <div style={{ color: "var(--muted)", fontSize: 11, marginBottom: 2 }}>Max Drawdown</div>
-                                    <div style={{ fontWeight: 700, color: "var(--rose)" }}>
-                                        {(strat.max_drawdown_pct || 0).toFixed(2)}%
-                                    </div>
-                                </div>
-                            </div>
 
-                            <div style={{ display: "flex", gap: 16, fontSize: 12, color: "var(--muted)", borderTop: "1px solid var(--line)", paddingTop: 10 }}>
-                                <span>Signals: <strong style={{ color: "var(--ink)" }}>{strat.total_signals || 0}</strong></span>
-                                <span>24h: <strong style={{ color: "var(--ink)" }}>{strat.signal_count_24h || 0}</strong></span>
-                                <span>Last: <strong style={{ color: strat.last_signal_age_seconds !== null && strat.last_signal_age_seconds < 300 ? "var(--emerald)" : "var(--amber)" }}>{formatAge(strat.last_signal_age_seconds)}</strong></span>
+                                <div className="panel" style={{ background: "var(--surface-soft)", border: "1.5px solid var(--line)" }}>
+                                    <div className="panel-title" style={{ fontSize: 14 }}>Diagnostic Backtest Smoke Test</div>
+                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 10, marginTop: 8 }}>
+                                        <label style={{ fontSize: 11 }}>
+                                            <span>Symbol</span>
+                                            <input value={smokeParams.symbol} onChange={e => setSmokeParams({ ...smokeParams, symbol: e.target.value.toUpperCase() })} style={{ minHeight: 32, fontSize: 12, padding: 6 }} />
+                                        </label>
+                                        <label style={{ fontSize: 11 }}>
+                                            <span>Timeframe</span>
+                                            <input value={smokeParams.timeframe} onChange={e => setSmokeParams({ ...smokeParams, timeframe: e.target.value })} style={{ minHeight: 32, fontSize: 12, padding: 6 }} />
+                                        </label>
+                                        <label style={{ fontSize: 11 }}>
+                                            <span>Bars</span>
+                                            <input type="number" value={smokeParams.bars} onChange={e => setSmokeParams({ ...smokeParams, bars: parseInt(e.target.value) || 200 })} style={{ minHeight: 32, fontSize: 12, padding: 6 }} />
+                                        </label>
+                                        <label style={{ fontSize: 11 }}>
+                                            <span>Min Conf</span>
+                                            <input type="number" value={smokeParams.min_confluence} onChange={e => setSmokeParams({ ...smokeParams, min_confluence: parseFloat(e.target.value) || 70 })} style={{ minHeight: 32, fontSize: 12, padding: 6 }} />
+                                        </label>
+                                    </div>
+                                    <button
+                                        className="primary"
+                                        onClick={runSmokeTest}
+                                        disabled={smokeLoading}
+                                        style={{ marginTop: 12, minHeight: 32, padding: "6px 12px", fontSize: 12 }}
+                                    >
+                                        {smokeLoading ? "Scoring..." : "🔥 Run Smoke Backtest"}
+                                    </button>
+
+                                    {smokeResult && (
+                                        <div style={{ marginTop: 12, borderTop: "1px solid var(--line)", paddingTop: 10, fontSize: 12 }}>
+                                            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+                                                <div>Scored Bars: <b>{smokeResult.bars_scored}</b></div>
+                                                <div>Signals Generated: <b>{smokeResult.signals_generated}</b></div>
+                                                <div>Max Confluence: <b>{smokeResult.max_confluence}</b></div>
+                                            </div>
+                                            {smokeResult.sample_scores && smokeResult.sample_scores.length > 0 && (
+                                                <div style={{ marginTop: 8 }}>
+                                                    <strong>Sample Scores:</strong>
+                                                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 }}>
+                                                        {smokeResult.sample_scores.map((s, idx) => (
+                                                            <span key={idx} className={`pill ${s.direction === "LONG" ? "ok" : s.direction === "SHORT" ? "error" : "info"}`} style={{ fontSize: 10 }}>
+                                                                {s.direction} ({s.confluence_score}%)
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        ) : (
+                            <p className="muted" style={{ textAlign: "center", padding: 40 }}>Select a strategy from the repository to view code and run diagnostics.</p>
+                        )}
+                    </div>
                 </div>
             );
         }
+
 
         function ConfidencePanel({ request, addLog }) {
             const [stats, setStats] = React.useState({});
@@ -5980,6 +6139,535 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                         ) : (
                             <div style={{ textAlign: "center", color: "var(--muted)", padding: 20 }}>No performance data yet. Execute some trades first.</div>
                         )}
+                    </div>
+                </div>
+            );
+        }
+
+        // -------------------------------------------------------------
+        // Policy Analytics & PPO Academy Backtesting Panel
+        // -------------------------------------------------------------
+        function PolicyAnalyticsPanel({ request, addLog }) {
+            const [params, setParams] = useState({
+                ppo_backend: "heuristic",
+                ppo_target_scout_index: "0",
+                ppo_min_reward: "0.5",
+                ppo_min_accuracy: "0.6",
+                ppo_initial_cash: "10000",
+                ppo_records_json: "[]"
+            });
+            const [running, setRunning] = useState(false);
+            const [result, setResult] = useState(null);
+
+            const update = (key, val) => setParams(p => ({ ...p, [key]: val }));
+
+            async function runPpoAction(action) {
+                setRunning(true);
+                let path = "";
+                if (action === "run") path = "/academy/policy/backtesting/run";
+                if (action === "optimize") path = "/academy/policy/backtesting/optimize";
+                if (action === "report") path = "/academy/policy/backtesting/report";
+                try {
+                    const data = await request(path, {
+                        method: "POST",
+                        body: JSON.stringify({
+                            ppo_backend: params.ppo_backend,
+                            ppo_target_scout_index: parseInt(params.ppo_target_scout_index),
+                            ppo_min_reward: parseFloat(params.ppo_min_reward),
+                            ppo_min_accuracy: parseFloat(params.ppo_min_accuracy),
+                            ppo_initial_cash: parseFloat(params.ppo_initial_cash),
+                            ppo_records_json: JSON.parse(params.ppo_records_json || "[]")
+                        })
+                    });
+                    setResult(data);
+                    addLog("system", `PPO Academy Backtesting ${action} succeeded`, data);
+                } catch (e) {
+                    addLog("error", `PPO Academy Backtesting ${action} failed`, { error: e.message });
+                } finally {
+                    setRunning(false);
+                }
+            }
+
+            return (
+                <div className="panel" data-testid="ppo-academy-backtesting-panel">
+                    <div className="panel-title">PPO Academy Backtesting & Policy Analytics</div>
+                    <div className="form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, padding: 16 }}>
+                        <label>
+                            <span>PPO Backend</span>
+                            <select name="ppo_backend" value={params.ppo_backend} onChange={e => update("ppo_backend", e.target.value)}>
+                                <option value="heuristic">Heuristic</option>
+                                <option value="onnx">ONNX Model</option>
+                            </select>
+                        </label>
+                        <label>
+                            <span>Target Scout Index</span>
+                            <input name="ppo_target_scout_index" type="number" value={params.ppo_target_scout_index} onChange={e => update("ppo_target_scout_index", e.target.value)} />
+                        </label>
+                        <label>
+                            <span>Min Reward</span>
+                            <input name="ppo_min_reward" type="number" step="0.1" value={params.ppo_min_reward} onChange={e => update("ppo_min_reward", e.target.value)} />
+                        </label>
+                        <label>
+                            <span>Min Accuracy</span>
+                            <input name="ppo_min_accuracy" type="number" step="0.1" value={params.ppo_min_accuracy} onChange={e => update("ppo_min_accuracy", e.target.value)} />
+                        </label>
+                        <label>
+                            <span>Initial Cash</span>
+                            <input name="ppo_initial_cash" type="number" value={params.ppo_initial_cash} onChange={e => update("ppo_initial_cash", e.target.value)} />
+                        </label>
+                        <label className="full" style={{ gridColumn: "span 2" }}>
+                            <span>Records JSON</span>
+                            <textarea name="ppo_records_json" value={params.ppo_records_json} onChange={e => update("ppo_records_json", e.target.value)} style={{ fontFamily: "monospace", minHeight: 80 }} />
+                        </label>
+                    </div>
+                    <div className="row-actions" style={{ display: "flex", gap: 8, padding: "0 16px 16px" }}>
+                        <button type="button" className="primary" onClick={() => runPpoAction("run")} disabled={running}>Run</button>
+                        <button type="button" onClick={() => runPpoAction("optimize")} disabled={running}>Optimize</button>
+                        <button type="button" onClick={() => runPpoAction("report")} disabled={running}>Report</button>
+                    </div>
+                    {result && (
+                        <div style={{ padding: 16, borderTop: "1px solid var(--line)", background: "rgba(0,0,0,0.1)" }}>
+                            <h4>Results</h4>
+                            {result.charts_base64 && (
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                                    {Object.entries(result.charts_base64).map(([name, base64]) => (
+                                        <div key={name} style={{ border: "1px solid var(--line)", padding: 4, background: "var(--bg)" }}>
+                                            <div style={{ fontSize: 11, color: "var(--muted)", textTransform: "capitalize", marginBottom: 2 }}>{name.replace(/_/g, ' ')}</div>
+                                            <img src={`data:image/png;base64,${base64}`} alt={name} style={{ width: "100%", display: "block" }} />
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            <pre style={{ fontSize: 12, overflow: "auto" }}>{pretty(result.metrics || result)}</pre>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // -------------------------------------------------------------
+        // Wiki & 2ndBrain Panel
+        // -------------------------------------------------------------
+        function SecondBrainPanel({ request, addLog }) {
+            const [content, setContent] = useState("");
+            const [search, setSearch] = useState("");
+            const [loading, setLoading] = useState(false);
+
+            async function fetchWiki() {
+                setLoading(true);
+                try {
+                    const data = await request("/db/second-brain");
+                    setContent(data.content || "");
+                } catch (e) {
+                    addLog("error", "Failed to load Second Brain", { error: e.message });
+                } finally {
+                    setLoading(false);
+                }
+            }
+
+            useEffect(() => {
+                fetchWiki();
+            }, []);
+
+            const renderedContent = useMemo(() => {
+                if (!content) return <div style={{ color: "var(--muted)" }}>No entries found.</div>;
+                
+                let lines = content.split("\n");
+                if (search.trim()) {
+                    const query = search.toLowerCase();
+                    lines = lines.filter(line => line.toLowerCase().includes(query));
+                }
+                
+                return lines.map((line, idx) => {
+                    const trimmed = line.trim();
+                    if (trimmed.startsWith("# ")) {
+                        return <h1 key={idx} style={{ borderBottom: "1px solid var(--line)", paddingBottom: 6, margin: "16px 0 8px", fontSize: "1.5em" }}>{trimmed.slice(2)}</h1>;
+                    } else if (trimmed.startsWith("## ")) {
+                        return <h2 key={idx} style={{ margin: "14px 0 6px", fontSize: "1.3em" }}>{trimmed.slice(3)}</h2>;
+                    } else if (trimmed.startsWith("### ")) {
+                        return <h3 key={idx} style={{ margin: "12px 0 4px", fontSize: "1.1em" }}>{trimmed.slice(4)}</h3>;
+                    } else if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
+                        return <li key={idx} style={{ marginLeft: 20 }}>{trimmed.slice(2)}</li>;
+                    } else if (trimmed.startsWith("`") && trimmed.endsWith("`")) {
+                        return <pre key={idx} style={{ background: "rgba(0,0,0,0.2)", padding: "4px 8px", borderRadius: "var(--radius-sm)", fontFamily: "monospace", margin: "4px 0" }}>{trimmed.slice(1, -1)}</pre>;
+                    }
+                    return <p key={idx} style={{ margin: "4px 0", lineHeight: "1.4" }}>{line}</p>;
+                });
+            }, [content, search]);
+
+            return (
+                <div className="panel" style={{ display: "flex", flexDirection: "column", gap: 16, height: "100%" }}>
+                    <div className="panel-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span>Wiki & 2ndBrain</span>
+                        <button onClick={fetchWiki} disabled={loading} className="small">{loading ? "Refreshing..." : "Refresh"}</button>
+                    </div>
+                    <div style={{ display: "flex", gap: 10 }}>
+                        <input
+                            type="text"
+                            placeholder="Search second brain..."
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                            style={{ flex: 1 }}
+                        />
+                    </div>
+                    <div className="wiki-content" style={{ flex: 1, overflowY: "auto", background: "var(--bg)", border: "1px solid var(--line)", borderRadius: "var(--radius-sm)", padding: 16, fontFamily: "var(--font-mono, monospace)", fontSize: 13 }}>
+                        {renderedContent}
+                    </div>
+                </div>
+            );
+        }
+
+        // -------------------------------------------------------------
+        // Risk & Paper Trading Control Panel
+        // -------------------------------------------------------------
+        function RiskControlPanel({ request, addLog }) {
+            const [config, setConfig] = useState({
+                PAPER_TRADING_RELAX_RISK: false,
+                REGIME_ALLOW_RW1_SIGNALS: false
+            });
+            const [loading, setLoading] = useState(false);
+            const [status, setStatus] = useState(null);
+
+            async function fetchConfig() {
+                try {
+                    const data = await request("/paper/config");
+                    setConfig(data);
+                } catch (e) {
+                    addLog("error", "Failed to fetch paper config", { error: e.message });
+                }
+            }
+
+            async function fetchStatus() {
+                try {
+                    const data = await request("/kraken/paper/status");
+                    setStatus(data);
+                } catch (e) {
+                    // Silently fail if Kraken Paper API not enabled or simulated
+                }
+            }
+
+            async function toggleConfig(key) {
+                setLoading(true);
+                const nextVal = !config[key];
+                const updated = { ...config, [key]: nextVal };
+                try {
+                    const res = await request("/paper/config", {
+                        method: "POST",
+                        body: JSON.stringify(updated)
+                    });
+                    setConfig(updated);
+                    addLog("system", `Updated risk config: ${key} = ${nextVal}`, res);
+                } catch (e) {
+                    addLog("error", `Failed to update risk config ${key}`, { error: e.message });
+                } finally {
+                    setLoading(false);
+                }
+            }
+
+            useEffect(() => {
+                fetchConfig();
+                fetchStatus();
+                const timer = setInterval(() => {
+                    fetchStatus();
+                }, 15000);
+                return () => clearInterval(timer);
+            }, []);
+
+            const isRelaxed = config.PAPER_TRADING_RELAX_RISK;
+
+            return (
+                <div className="grid">
+                    <div className="panel span-6">
+                        <div className="panel-title">Risk Config & Toggles</div>
+                        <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 16 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <div>
+                                    <h4 style={{ margin: 0 }}>Relax Risk Gates</h4>
+                                    <p style={{ margin: 0, fontSize: 12, color: "var(--muted)" }}>Bypass strict filters in simulation / paper trading</p>
+                                </div>
+                                <button
+                                    onClick={() => toggleConfig("PAPER_TRADING_RELAX_RISK")}
+                                    disabled={loading}
+                                    className={isRelaxed ? "primary" : "secondary"}
+                                >
+                                    {isRelaxed ? "RELAXED (ON)" : "STRICT (OFF)"}
+                                </button>
+                            </div>
+
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <div>
+                                    <h4 style={{ margin: 0 }}>Allow RW1 Signals</h4>
+                                    <p style={{ margin: 0, fontSize: 12, color: "var(--muted)" }}>Allow Random Walk Regime type 1 signals</p>
+                                </div>
+                                <button
+                                    onClick={() => toggleConfig("REGIME_ALLOW_RW1_SIGNALS")}
+                                    disabled={loading}
+                                    className={config.REGIME_ALLOW_RW1_SIGNALS ? "primary" : "secondary"}
+                                >
+                                    {config.REGIME_ALLOW_RW1_SIGNALS ? "ALLOWED (ON)" : "BLOCKED (OFF)"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="panel span-6">
+                        <div className="panel-title">Deterministic Gate Status</div>
+                        <div style={{ padding: 16, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                            <div style={{ border: "1px solid var(--line)", padding: 12, borderRadius: "var(--radius-sm)", background: isRelaxed ? "rgba(216,101,69,0.1)" : "rgba(51,165,107,0.1)" }}>
+                                <div style={{ fontSize: 12, color: "var(--muted)" }}>Confluence Gate</div>
+                                <div style={{ fontSize: 14, fontWeight: "bold", color: isRelaxed ? "var(--warning)" : "var(--ok)" }}>
+                                    {isRelaxed ? "⚠️ RELAXED" : "● ACTIVE (MIN 70)"}
+                                </div>
+                            </div>
+
+                            <div style={{ border: "1px solid var(--line)", padding: 12, borderRadius: "var(--radius-sm)", background: isRelaxed ? "rgba(216,101,69,0.1)" : "rgba(51,165,107,0.1)" }}>
+                                <div style={{ fontSize: 12, color: "var(--muted)" }}>Spread Gate</div>
+                                <div style={{ fontSize: 14, fontWeight: "bold", color: isRelaxed ? "var(--warning)" : "var(--ok)" }}>
+                                    {isRelaxed ? "⚠️ RELAXED" : "● ACTIVE (MAX 0.2%)"}
+                                </div>
+                            </div>
+
+                            <div style={{ border: "1px solid var(--line)", padding: 12, borderRadius: "var(--radius-sm)", background: isRelaxed ? "rgba(216,101,69,0.1)" : "rgba(51,165,107,0.1)" }}>
+                                <div style={{ fontSize: 12, color: "var(--muted)" }}>Crisis Gate</div>
+                                <div style={{ fontSize: 14, fontWeight: "bold", color: isRelaxed ? "var(--warning)" : "var(--ok)" }}>
+                                    {isRelaxed ? "⚠️ RELAXED" : "● ACTIVE (MAX 50)"}
+                                </div>
+                            </div>
+
+                            <div style={{ border: "1px solid var(--line)", padding: 12, borderRadius: "var(--radius-sm)", background: isRelaxed ? "rgba(216,101,69,0.1)" : "rgba(0,0,0,0.1)" }}>
+                                <div style={{ fontSize: 12, color: "var(--muted)" }}>Regime Halt Override</div>
+                                <div style={{ fontSize: 14, fontWeight: "bold", color: isRelaxed ? "var(--warning)" : "var(--muted)" }}>
+                                    {isRelaxed ? "⚡ ACTIVE (BYPASSED)" : "● INACTIVE"}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="panel span-12">
+                        <div className="panel-title">Kraken Broker Live Fail-Safe & Status</div>
+                        <div style={{ padding: 16, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+                            <div>
+                                <span className="kpi-caption">Spot Mode Only</span>
+                                <span className="kpi-value">{status?.broker?.spot_only ? "Yes" : "No"}</span>
+                            </div>
+                            <div>
+                                <span className="kpi-caption">Fee Percentage</span>
+                                <span className="kpi-value">{status?.broker?.fee_pct ? `${(status.broker.fee_pct * 100).toFixed(2)}%` : "—"}</span>
+                            </div>
+                            <div>
+                                <span className="kpi-caption">Initial Balance</span>
+                                <span className="kpi-value">${status?.broker?.initial_balance || "—"}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // -------------------------------------------------------------
+        // Model Hub (ONNX)
+        // -------------------------------------------------------------
+        function ModelHubPanel({ request, addLog }) {
+            const [models, setModels] = useState([]);
+            const [loading, setLoading] = useState(false);
+
+            async function fetchModels() {
+                setLoading(true);
+                try {
+                    const data = await request("/academy/policy/onnx/details");
+                    setModels(data.models || []);
+                } catch (e) {
+                    addLog("error", "Failed to fetch ONNX models details", { error: e.message });
+                } finally {
+                    setLoading(false);
+                }
+            }
+
+            useEffect(() => {
+                fetchModels();
+            }, []);
+
+            return (
+                <div className="panel" style={{ height: "100%" }}>
+                    <div className="panel-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span>Model Hub (ONNX Deployment)</span>
+                        <button onClick={fetchModels} disabled={loading} className="small">{loading ? "Scanning..." : "Scan Models"}</button>
+                    </div>
+                    <div style={{ padding: 16 }}>
+                        {models.length === 0 ? (
+                            <div style={{ color: "var(--muted)" }}>No compiled .onnx models found in data/academy_policy/models/</div>
+                        ) : (
+                            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                                {models.map((m, idx) => (
+                                    <div key={idx} style={{ border: "1px solid var(--line)", borderRadius: "var(--radius-sm)", padding: 14, background: "rgba(0,0,0,0.15)" }}>
+                                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
+                                            <h4 style={{ margin: 0, fontFamily: "monospace" }}>{m.filename}</h4>
+                                            <div style={{ fontSize: 12, color: "var(--muted)" }}>
+                                                {new Date(m.mtime * 1000).toLocaleString()} · {(m.size / 1024).toFixed(1)} KB
+                                            </div>
+                                        </div>
+                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 12 }}>
+                                            <div>
+                                                <div style={{ fontSize: 11, color: "var(--muted)" }}>Input Tensors</div>
+                                                {m.inputs.map((inp, i) => (
+                                                    <div key={i} style={{ fontFamily: "monospace", fontSize: 12 }}>
+                                                        {inp.name}: [{inp.shape?.join(", ")}]
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div>
+                                                <div style={{ fontSize: 11, color: "var(--muted)" }}>Output Tensors</div>
+                                                {m.outputs.map((out, i) => (
+                                                    <div key={i} style={{ fontFamily: "monospace", fontSize: 12 }}>
+                                                        {out.name}: [{out.shape?.join(", ")}]
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid var(--line)", paddingTop: 10 }}>
+                                            <span style={{ fontSize: 12, color: "var(--muted)" }}>Average Inference Latency (10 runs benchmark)</span>
+                                            <span style={{ fontFamily: "monospace", color: "var(--emerald)", fontWeight: "bold" }}>
+                                                {m.latency_ms ? `${m.latency_ms.toFixed(3)} ms` : "N/A"}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        // -------------------------------------------------------------
+        // Shadow Queue Panel
+        // -------------------------------------------------------------
+        function ShadowQueuePanel({ request, addLog }) {
+            const [queueData, setQueueData] = useState({ entries: [], count: 0, pending_count: 0, evaluated_count: 0 });
+            const [workers, setWorkers] = useState(null);
+            const [loading, setLoading] = useState(false);
+
+            async function fetchData() {
+                setLoading(true);
+                try {
+                    const [q, w] = await Promise.all([
+                        request("/paper/shadow-queue?limit=50"),
+                        request("/paper/workers/status")
+                    ]);
+                    setQueueData(q);
+                    setWorkers(w);
+                } catch (e) {
+                    addLog("error", "Failed to fetch shadow queue/workers status", { error: e.message });
+                } finally {
+                    setLoading(false);
+                }
+            }
+
+            useEffect(() => {
+                fetchData();
+                const timer = setInterval(fetchData, 15000);
+                return () => clearInterval(timer);
+            }, []);
+
+            return (
+                <div className="grid">
+                    <div className="panel span-12">
+                        <div className="panel-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span>Background Worker Loops & Tasks</span>
+                            <button onClick={fetchData} disabled={loading} className="small">{loading ? "Refreshing..." : "Refresh"}</button>
+                        </div>
+                        <div style={{ padding: 16, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+                            <div style={{ border: "1px solid var(--line)", borderRadius: "var(--radius-sm)", padding: 12, background: "rgba(0,0,0,0.1)" }}>
+                                <h4 style={{ margin: "0 0 8px 0" }}>Webhook Consumer</h4>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                    <span style={{ fontSize: 12, color: "var(--muted)" }}>Status</span>
+                                    <span style={{ color: workers?.webhook_consumer?.is_running ? "var(--ok)" : "var(--danger)", fontWeight: "bold" }}>
+                                        {workers?.webhook_consumer?.is_running ? "RUNNING" : "STOPPED"}
+                                    </span>
+                                </div>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>
+                                    <span style={{ fontSize: 12, color: "var(--muted)" }}>Queue Size</span>
+                                    <span style={{ fontFamily: "monospace" }}>{workers?.webhook_consumer?.queue_size || 0}</span>
+                                </div>
+                            </div>
+
+                            <div style={{ border: "1px solid var(--line)", borderRadius: "var(--radius-sm)", padding: 12, background: "rgba(0,0,0,0.1)" }}>
+                                <h4 style={{ margin: "0 0 8px 0" }}>Position Monitor</h4>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                    <span style={{ fontSize: 12, color: "var(--muted)" }}>Status</span>
+                                    <span style={{ color: workers?.position_monitor?.is_running ? "var(--ok)" : "var(--danger)", fontWeight: "bold" }}>
+                                        {workers?.position_monitor?.is_running ? "RUNNING" : "STOPPED"}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div style={{ border: "1px solid var(--line)", borderRadius: "var(--radius-sm)", padding: 12, background: "rgba(0,0,0,0.1)" }}>
+                                <h4 style={{ margin: "0 0 8px 0" }}>Training Loop</h4>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                    <span style={{ fontSize: 12, color: "var(--muted)" }}>Status</span>
+                                    <span style={{ color: workers?.training_loop?.is_running ? "var(--ok)" : "var(--muted)", fontWeight: "bold" }}>
+                                        {workers?.training_loop?.is_running ? "ACTIVE" : "STANDBY"}
+                                    </span>
+                                </div>
+                                {workers?.training_loop?.interval_seconds && (
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>
+                                        <span style={{ fontSize: 12, color: "var(--muted)" }}>Interval</span>
+                                        <span>{workers.training_loop.interval_seconds}s</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="panel span-12">
+                        <div className="panel-title">Shadow Queue (Rejected Signal Feedback)</div>
+                        <div style={{ padding: 16 }}>
+                            <div style={{ display: "flex", gap: 16, marginBottom: 12, fontSize: 12, color: "var(--muted)" }}>
+                                <div>Total Rejected Candidates: <b>{queueData.count}</b></div>
+                                <div>Pending Evaluation: <b>{queueData.pending_count}</b></div>
+                                <div>Evaluated Outcomes: <b>{queueData.evaluated_count}</b></div>
+                            </div>
+                            <div style={{ overflowX: "auto" }}>
+                                <table className="table" style={{ width: "100%", fontSize: 12 }}>
+                                    <thead>
+                                        <tr>
+                                            <th>Signal ID</th>
+                                            <th>Added At</th>
+                                            <th>Symbol</th>
+                                            <th>Direction</th>
+                                            <th>Price</th>
+                                            <th>Scout Votes</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {queueData.entries.length === 0 ? (
+                                            <tr>
+                                                <td colSpan="7" style={{ textAlign: "center", color: "var(--muted)" }}>No rejected signals in shadow queue.</td>
+                                            </tr>
+                                        ) : (
+                                            queueData.entries.map((e, i) => (
+                                                <tr key={i}>
+                                                    <td style={{ fontFamily: "monospace" }}>{e.signal_id}</td>
+                                                    <td>{new Date(e.added_at * 1000).toLocaleTimeString()}</td>
+                                                    <td>{e.symbol}</td>
+                                                    <td style={{ color: e.direction === "LONG" || e.direction === "BUY" ? "var(--ok)" : "var(--danger)" }}>{e.direction}</td>
+                                                    <td>{e.entry_price}</td>
+                                                    <td style={{ fontFamily: "monospace", fontSize: 11 }}>
+                                                        {e.scout_decisions ? Object.entries(e.scout_decisions).map(([scout, dec]) => `${scout}:${dec}`).join(", ") : "—"}
+                                                    </td>
+                                                    <td>
+                                                        <span className={`badge ${e.evaluated ? "ok" : "warning"}`} style={{ padding: "2px 6px", borderRadius: 4, fontSize: 10 }}>
+                                                            {e.evaluated ? "EVALUATED" : "PENDING"}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
             );
