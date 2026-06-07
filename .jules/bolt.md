@@ -35,3 +35,6 @@
 ## 2024-06-28 - Fast API Sync I/O blocking Async endpoints
 **Learning:** Calling synchronous networking or disk functions (like file writing or SQLite commits) directly inside `async def` route handlers in FastAPI blocks the asyncio event loop and starves all other concurrent requests, creating massive performance degradation under load.
 **Action:** When a sync method is required within a FastAPI route, wrap the call with `await asyncio.to_thread(sync_function, args...)` to offload to a worker thread pool, keeping the main loop unblocked.
+## 2024-05-31 - Optimized generator expressions inside repetitive summary methods
+**Learning:** Multiple O(N) generator expressions iterating over the same list (like `sum(1 for row in results if ...)`) for calculating metrics causes unnecessary overhead. Additionally, repeated `sum()` calls on static lists in the return statement calculates the same value multiple times.
+**Action:** Consolidate multiple list iteration operations into a single explicit unrolled `for` loop, and assign list sums to variables when they are referenced multiple times. This transforms O(M*N) down to O(N) execution and avoids Python generator overhead, significantly speeding up metric calculations on large logs.
