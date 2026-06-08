@@ -6252,12 +6252,17 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
             const [content, setContent] = useState("");
             const [search, setSearch] = useState("");
             const [loading, setLoading] = useState(false);
+            const [docs, setDocs] = useState([]);
+            const [selectedDoc, setSelectedDoc] = useState("");
 
             async function fetchWiki() {
                 setLoading(true);
                 try {
                     const data = await request("/db/second-brain");
                     setContent(data.content || "");
+                    if (data.docs) {
+                        setDocs(data.docs);
+                    }
                 } catch (e) {
                     addLog("error", "Failed to load Second Brain", { error: e.message });
                 } finally {
@@ -6266,32 +6271,201 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
             }
 
             useEffect(() => {
-                fetchWiki();
-            }, []);
+                if (selectedDoc) {
+                    async function fetchDoc() {
+                        setLoading(true);
+                        try {
+                            const data = await request(`/db/second-brain/doc/${selectedDoc}`);
+                            setContent(data.content || "");
+                        } catch (e) {
+                            addLog("error", `Failed to load document: ${selectedDoc}`, { error: e.message });
+                        } finally {
+                            setLoading(false);
+                        }
+                    }
+                    fetchDoc();
+                } else {
+                    fetchWiki();
+                }
+            }, [selectedDoc]);
+
+            function parseInlineMarkdown(text) {
+                if (!text) return "";
+                const parts = [];
+                let currentIdx = 0;
+                const tokenRegex = /(\*\*.*?\*\*|`.*?`)/g;
+                let match;
+                while ((match = tokenRegex.exec(text)) !== null) {
+                    const matchIndex = match.index;
+                    const matchText = match[0];
+                    if (matchIndex > currentIdx) {
+                        parts.push(text.substring(currentIdx, matchIndex));
+                    }
+                    if (matchText.startsWith("**") && matchText.endsWith("**")) {
+                        parts.push(<strong key={matchIndex}>{matchText.slice(2, -2)}</strong>);
+                    } else if (matchText.startsWith("`") && matchText.endsWith("`")) {
+                        parts.push(<code key={matchIndex} style={{ background: "rgba(255,255,255,0.08)", padding: "2px 5px", borderRadius: 4, fontFamily: "var(--font-mono, monospace)" }}>{matchText.slice(1, -1)}</code>);
+                    }
+                    currentIdx = tokenRegex.lastIndex;
+                }
+                if (currentIdx < text.length) {
+                    parts.push(text.substring(currentIdx));
+                }
+                return parts.length > 0 ? parts : text;
+            }
 
             const renderedContent = useMemo(() => {
                 if (!content) return <div style={{ color: "var(--muted)" }}>No entries found.</div>;
                 
-                let lines = content.split("\n");
+                const lines = content.split("\n");
+                const blocks = [];
+                let currentBlock = null;
+
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i];
+                    const trimmed = line.trim();
+
+                    // 1. Code blocks
+                    if (trimmed.startsWith("```")) {
+                        if (currentBlock && currentBlock.type === "code") {
+                            blocks.push(currentBlock);
+                            currentBlock = null;
+                        } else {
+                            if (currentBlock) blocks.push(currentBlock);
+                            currentBlock = { type: "code", lines: [] };
+                        }
+                        continue;
+                    }
+                    if (currentBlock && currentBlock.type === "code") {
+                        currentBlock.lines.push(line);
+                        continue;
+                    }
+
+                    // 2. Tables
+                    if (trimmed.startsWith("|") && trimmed.endsWith("|")) {
+                        if (currentBlock && currentBlock.type === "table") {
+                            currentBlock.lines.push(trimmed);
+                        } else {
+                            if (currentBlock) blocks.push(currentBlock);
+                            currentBlock = { type: "table", lines: [trimmed] };
+                        }
+                        continue;
+                    }
+
+                    // 3. Lists
+                    if (trimmed.startsWith("- ") || trimmed.startsWith("* ") || /^\d+\.\s/.test(trimmed)) {
+                        if (currentBlock && currentBlock.type === "list") {
+                            currentBlock.lines.push(trimmed);
+                        } else {
+                            if (currentBlock) blocks.push(currentBlock);
+                            currentBlock = { type: "list", lines: [trimmed] };
+                        }
+                        continue;
+                    }
+
+                    // 4. Empty lines
+                    if (trimmed === "") {
+                        if (currentBlock) {
+                            blocks.push(currentBlock);
+                            currentBlock = null;
+                        }
+                        continue;
+                    }
+
+                    // 5. Headers
+                    if (trimmed.startsWith("# ") || trimmed.startsWith("## ") || trimmed.startsWith("### ") || trimmed.startsWith("#### ")) {
+                        if (currentBlock) blocks.push(currentBlock);
+                        blocks.push({ type: "header", text: trimmed });
+                        currentBlock = null;
+                        continue;
+                    }
+
+                    // 6. Paragraphs
+                    if (currentBlock && currentBlock.type === "paragraph") {
+                        currentBlock.lines.push(line);
+                    } else {
+                        if (currentBlock) blocks.push(currentBlock);
+                        currentBlock = { type: "paragraph", lines: [line] };
+                    }
+                }
+                if (currentBlock) blocks.push(currentBlock);
+
+                // Filter by search query if applicable
+                let filteredBlocks = blocks;
                 if (search.trim()) {
                     const query = search.toLowerCase();
-                    lines = lines.filter(line => line.toLowerCase().includes(query));
+                    filteredBlocks = blocks.filter(b => {
+                        if (b.type === "header") return b.text.toLowerCase().includes(query);
+                        return b.lines.some(l => l.toLowerCase().includes(query));
+                    });
                 }
-                
-                return lines.map((line, idx) => {
-                    const trimmed = line.trim();
-                    if (trimmed.startsWith("# ")) {
-                        return <h1 key={idx} style={{ borderBottom: "1px solid var(--line)", paddingBottom: 6, margin: "16px 0 8px", fontSize: "1.5em" }}>{trimmed.slice(2)}</h1>;
-                    } else if (trimmed.startsWith("## ")) {
-                        return <h2 key={idx} style={{ margin: "14px 0 6px", fontSize: "1.3em" }}>{trimmed.slice(3)}</h2>;
-                    } else if (trimmed.startsWith("### ")) {
-                        return <h3 key={idx} style={{ margin: "12px 0 4px", fontSize: "1.1em" }}>{trimmed.slice(4)}</h3>;
-                    } else if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
-                        return <li key={idx} style={{ marginLeft: 20 }}>{trimmed.slice(2)}</li>;
-                    } else if (trimmed.startsWith("`") && trimmed.endsWith("`")) {
-                        return <pre key={idx} style={{ background: "rgba(0,0,0,0.2)", padding: "4px 8px", borderRadius: "var(--radius-sm)", fontFamily: "monospace", margin: "4px 0" }}>{trimmed.slice(1, -1)}</pre>;
+
+                return filteredBlocks.map((block, idx) => {
+                    if (block.type === "header") {
+                        if (block.text.startsWith("# ")) return <h1 key={idx} style={{ borderBottom: "1px solid var(--line)", paddingBottom: 6, margin: "20px 0 10px", fontSize: "1.6em" }}>{block.text.slice(2)}</h1>;
+                        if (block.text.startsWith("## ")) return <h2 key={idx} style={{ borderBottom: "1px solid var(--line)", paddingBottom: 4, margin: "16px 0 8px", fontSize: "1.35em", color: "var(--text)" }}>{block.text.slice(3)}</h2>;
+                        if (block.text.startsWith("### ")) return <h3 key={idx} style={{ margin: "12px 0 6px", fontSize: "1.15em", color: "var(--text)" }}>{block.text.slice(4)}</h3>;
+                        return <h4 key={idx} style={{ margin: "10px 0 4px", fontSize: "1em", color: "var(--text)" }}>{block.text.slice(5)}</h4>;
                     }
-                    return <p key={idx} style={{ margin: "4px 0", lineHeight: "1.4" }}>{line}</p>;
+                    if (block.type === "list") {
+                        return (
+                            <ul key={idx} style={{ margin: "8px 0", paddingLeft: 20 }}>
+                                {block.lines.map((item, lidx) => {
+                                    const contentStr = item.replace(/^[-*\d.]+\s+/, "");
+                                    return <li key={lidx} style={{ margin: "4px 0", lineHeight: "1.4" }}>{parseInlineMarkdown(contentStr)}</li>;
+                                })}
+                            </ul>
+                        );
+                    }
+                    if (block.type === "code") {
+                        return (
+                            <pre key={idx} style={{ background: "rgba(0,0,0,0.3)", padding: 12, borderRadius: "var(--radius-sm)", border: "1px solid var(--line)", overflowX: "auto", fontFamily: "var(--font-mono, monospace)", fontSize: 12, margin: "10px 0" }}>
+                                <code>{block.lines.join("\n")}</code>
+                            </pre>
+                        );
+                    }
+                    if (block.type === "table") {
+                        const rows = block.lines.map(line => {
+                            return line.split("|").slice(1, -1).map(p => p.trim());
+                        });
+                        const isSeparator = row => row.every(cell => /^[-:\s]+$/.test(cell));
+                        const validRows = rows.filter(r => !isSeparator(r));
+                        if (validRows.length === 0) return null;
+
+                        const hasHeader = rows.length > 1 && isSeparator(rows[1]);
+                        const headerRow = hasHeader ? validRows[0] : null;
+                        const bodyRows = hasHeader ? validRows.slice(1) : validRows;
+
+                        return (
+                            <div key={idx} style={{ overflowX: "auto", margin: "12px 0" }}>
+                                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                                    {headerRow && (
+                                        <thead>
+                                            <tr style={{ borderBottom: "2px solid var(--line)", background: "rgba(255,255,255,0.02)" }}>
+                                                {headerRow.map((cell, cidx) => (
+                                                    <th key={cidx} style={{ padding: "8px 12px", textAlign: "left", fontWeight: "600" }}>{parseInlineMarkdown(cell)}</th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                    )}
+                                    <tbody>
+                                        {bodyRows.map((row, ridx) => (
+                                            <tr key={ridx} style={{ borderBottom: "1px solid var(--line)", background: ridx % 2 === 0 ? "transparent" : "rgba(255,255,255,0.01)" }}>
+                                                {row.map((cell, cidx) => (
+                                                    <td key={cidx} style={{ padding: "8px 12px" }}>{parseInlineMarkdown(cell)}</td>
+                                                ))}
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        );
+                    }
+                    return (
+                        <p key={idx} style={{ margin: "8px 0", lineHeight: "1.5" }}>
+                            {parseInlineMarkdown(block.lines.join(" "))}
+                        </p>
+                    );
                 });
             }, [content, search]);
 
@@ -6299,12 +6473,29 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                 <div className="panel" style={{ display: "flex", flexDirection: "column", gap: 16, height: "100%" }}>
                     <div className="panel-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <span>Wiki & 2ndBrain</span>
-                        <button onClick={fetchWiki} disabled={loading} className="small">{loading ? "Refreshing..." : "Refresh"}</button>
+                        <button onClick={() => selectedDoc ? setSelectedDoc("") : fetchWiki()} disabled={loading} className="small">
+                            {loading ? "Refreshing..." : "Refresh"}
+                        </button>
                     </div>
-                    <div style={{ display: "flex", gap: 10 }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                            <span style={{ fontSize: 12, color: "var(--muted)" }}>Document:</span>
+                            <select
+                                value={selectedDoc}
+                                onChange={e => setSelectedDoc(e.target.value)}
+                                style={{ flex: 1, padding: "6px 10px", background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-xs)", color: "var(--ink)", outline: "none" }}
+                            >
+                                <option value="">-- Compiled Second Brain --</option>
+                                {docs.map(doc => (
+                                    <option key={doc.name} value={doc.name}>
+                                        {doc.name} ({Math.round(doc.size_bytes / 10.24) / 100} KB)
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
                         <input
                             type="text"
-                            placeholder="Search second brain..."
+                            placeholder={selectedDoc ? `Search inside ${selectedDoc}...` : "Search second brain..."}
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                             style={{ flex: 1 }}

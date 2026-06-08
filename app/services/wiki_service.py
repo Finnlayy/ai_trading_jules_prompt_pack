@@ -94,7 +94,44 @@ When processing trade signals, strategy updates, or configuration inputs:
 2. **Flag Decay**: If any agent accuracy drops below 60% after 20+ calls, prioritize executing training drills for that specific agent.
 3. **Prevent Congestion**: Avoid opening new positions in symbols that correlate heavily with currently open positions.
 4. **Log Learning Outcomes**: Evolution Optimizer (Phase 10) must write all learning outcomes to the database so they are compiled here.
+
+---
 """
+
+        # 6. Scan project documentation files in root
+        md_index_rows = []
+        try:
+            import os
+            for p in sorted(Path(".").glob("*.md")):
+                if p.is_file():
+                    stat = p.stat()
+                    size_kb = stat.st_size / 1024.0
+                    modified_time = datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+                    md_index_rows.append(f"| `{p.name}` | {size_kb:.2f} KB | {modified_time} UTC |")
+        except Exception as scan_err:
+            md_index_rows = [f"| Error scanning docs | {scan_err} | - |"]
+
+        md += """
+---
+
+## 🛠️ System Library & Code Repository (Strategies & Models)
+To maintain structural integrity of custom strategies and models:
+1. **Custom PineScript Strategies**: Uploaded scripts via the AI Chat or frontend are physically saved as `.pine` files in `app/scripts/generated_pines/`. The system scans this folder on startup to register them dynamically. Strategy IDs can contain alphanumeric characters, underscores, and hyphens (regex `^[a-zA-Z0-9_-]+$`), and support `pine_placeholder` models.
+2. **ONNX Deployment Models**: Machine learning models and policy weights are stored in `data/academy_policy/models/`. The active model is named `policy.onnx` with its metadata preserved in `manifest.json`.
+3. **System Folder Explorer**: An explorer shortcut (`POST /api/academy/policy/onnx/open-folder`) opens the active local model hub directory directly in the host OS file explorer.
+
+---
+
+## 📂 Project Documentation Index
+This section lists all prompt pack instructions and design assets stored in the repository root directory:
+
+| Document Name | Size | Last Modified (UTC) |
+| --- | --- | --- |
+"""
+        if not md_index_rows:
+            md += "| None found | - | - |\n"
+        else:
+            md += "\n".join(md_index_rows) + "\n"
 
         # Write to wiki/second_brain.md
         with open(SECOND_BRAIN_FILE, "w", encoding="utf-8") as f:

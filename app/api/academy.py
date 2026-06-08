@@ -457,10 +457,10 @@ def get_onnx_policy_details():
     for f in onnx_files:
         is_active = (f.name == "policy.onnx")
         latency_ms = None
-        input_name = None
-        input_shape = None
-        input_type = None
+        inputs_list = []
+        outputs_list = []
         load_error = None
+        stat = f.stat()
         
         try:
             import onnxruntime as ort
@@ -468,30 +468,46 @@ def get_onnx_policy_details():
             
             # Setup session
             sess = ort.InferenceSession(str(f), providers=["CPUExecutionProvider"])
+            
             inputs = sess.get_inputs()
-            input_name = inputs[0].name
-            input_shape = inputs[0].shape
-            input_type = inputs[0].type
+            for inp in inputs:
+                inputs_list.append({
+                    "name": inp.name,
+                    "shape": inp.shape,
+                    "type": inp.type
+                })
+                
+            outputs = sess.get_outputs()
+            for out in outputs:
+                outputs_list.append({
+                    "name": out.name,
+                    "shape": out.shape,
+                    "type": out.type
+                })
             
-            # Resolve dummy observation shape
-            dummy_shape = input_shape or [1, OBSERVATION_SIZE]
-            # Handle dynamic dimensions (e.g. batch size indicated by strings or None)
-            dummy_shape = [x if isinstance(x, int) and x > 0 else 1 for x in dummy_shape]
-            
-            dummy_obs = np.zeros(dummy_shape, dtype=np.float32)
-            
-            # Warm up
-            sess.run(None, {input_name: dummy_obs})
-            
-            # Measure latency over 10 iterations
-            t0 = time.perf_counter()
-            for _ in range(10):
+            if inputs:
+                input_name = inputs[0].name
+                input_shape = inputs[0].shape
+                
+                # Resolve dummy observation shape
+                dummy_shape = input_shape or [1, OBSERVATION_SIZE]
+                # Handle dynamic dimensions (e.g. batch size indicated by strings or None)
+                dummy_shape = [x if isinstance(x, int) and x > 0 else 1 for x in dummy_shape]
+                
+                dummy_obs = np.zeros(dummy_shape, dtype=np.float32)
+                
+                # Warm up
                 sess.run(None, {input_name: dummy_obs})
-            t1 = time.perf_counter()
-            latency_ms = round(((t1 - t0) / 10) * 1000, 3)
-            
-            if is_active:
-                active_latency = latency_ms
+                
+                # Measure latency over 10 iterations
+                t0 = time.perf_counter()
+                for _ in range(10):
+                    sess.run(None, {input_name: dummy_obs})
+                t1 = time.perf_counter()
+                latency_ms = round(((t1 - t0) / 10) * 1000, 3)
+                
+                if is_active:
+                    active_latency = latency_ms
         except Exception as exc:
             load_error = str(exc)
             
@@ -500,9 +516,10 @@ def get_onnx_policy_details():
             "path": str(f),
             "is_active": is_active,
             "latency_ms": latency_ms,
-            "input_name": input_name,
-            "input_shape": input_shape,
-            "input_type": input_type,
+            "inputs": inputs_list,
+            "outputs": outputs_list,
+            "size": stat.st_size,
+            "mtime": stat.st_mtime,
             "load_error": load_error,
             "model_id": manifest.get("model_id") if is_active else f.stem,
         })
