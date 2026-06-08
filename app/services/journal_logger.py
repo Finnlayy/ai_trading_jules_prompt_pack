@@ -63,6 +63,7 @@ class JournalLogger:
             f.write(entry.model_dump_json() + "\n")
 
         # Also persist to SQLite
+        db = None
         try:
             from app.db import SessionLocal
             from app.db.models import Trade
@@ -89,9 +90,12 @@ class JournalLogger:
                 ai_decision=entry.ai_decision,
             ))
             db.commit()
-            db.close()
         except Exception:
-            pass
+            if db:
+                db.rollback()
+        finally:
+            if db:
+                db.close()
 
         # Also update the Second Brain
         try:

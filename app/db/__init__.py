@@ -11,7 +11,10 @@ from app.core.config import DATABASE_URL
 
 engine = create_engine(
     DATABASE_URL,
-    connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {},
+    connect_args={"check_same_thread": False, "timeout": 60} if DATABASE_URL.startswith("sqlite") else {},
+    pool_size=20,
+    max_overflow=30,
+    pool_timeout=60.0,
     echo=False,
 )
 
