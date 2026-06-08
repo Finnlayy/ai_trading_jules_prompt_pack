@@ -293,7 +293,7 @@ class PaperPositionMonitor:
         """Main loop: check all open positions every N seconds."""
         while self.is_running:
             try:
-                self._check_positions()
+                await asyncio.to_thread(self._check_positions)
             except Exception as exc:
                 logger.error("PaperPositionMonitor error: %s", exc)
             await asyncio.sleep(self.check_interval_seconds)
