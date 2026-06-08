@@ -6483,6 +6483,15 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                 }
             }
 
+            async function openFolder() {
+                try {
+                    await request("/academy/policy/onnx/open-folder", { method: "POST" });
+                    addLog("info", "Opened ONNX models folder in explorer");
+                } catch (e) {
+                    addLog("error", "Failed to open ONNX models folder", { error: e.message });
+                }
+            }
+
             useEffect(() => {
                 fetchModels();
             }, []);
@@ -6491,7 +6500,10 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                 <div className="panel" style={{ height: "100%" }}>
                     <div className="panel-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <span>Model Hub (ONNX Deployment)</span>
-                        <button onClick={fetchModels} disabled={loading} className="small">{loading ? "Scanning..." : "Scan Models"}</button>
+                        <div style={{ display: "flex", gap: 8 }}>
+                            <button onClick={openFolder} className="small secondary">📁 Open Folder</button>
+                            <button onClick={fetchModels} disabled={loading} className="small">{loading ? "Scanning..." : "Scan Models"}</button>
+                        </div>
                     </div>
                     <div style={{ padding: 16 }}>
                         {models.length === 0 ? (
