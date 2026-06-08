@@ -47,6 +47,63 @@ async def list_strategies():
     )
 
 
+@router.get("/library")
+def get_strategy_library():
+    """Return all strategies along with their code, file links, and tags."""
+    from pathlib import Path
+    from app.services.strategy_engine import strategy_registry
+    
+    library = []
+    metadata_list = strategy_registry.list_metadata()
+    for meta in metadata_list:
+        strat_id = meta.strategy_id
+        name = meta.name
+        desc = meta.description
+        stype = meta.strategy_type
+        timeframes = meta.timeframes
+        
+        filepath = None
+        tags = ["Core"]
+        if stype == "pine_placeholder":
+            tags.append("Pine Script v6")
+            base_dir = Path("app/scripts/generated_pines")
+            fpath = base_dir / f"{strat_id}.pine"
+            if fpath.exists():
+                filepath = str(fpath)
+            else:
+                for f in base_dir.glob("*.pine"):
+                    if f.stem == strat_id or f.stem.lower() == strat_id.lower():
+                        filepath = str(f)
+                        break
+        else:
+            tags.append("Python")
+            filepath = "app/services/strategy_engine.py"
+            
+        code = None
+        if filepath and filepath.endswith(".pine"):
+            try:
+                code = Path(filepath).read_text(encoding="utf-8")
+            except Exception:
+                pass
+                
+        library.append({
+            "strategy_id": strat_id,
+            "name": name,
+            "description": desc,
+            "strategy_type": stype,
+            "timeframes": timeframes,
+            "filepath": filepath,
+            "tags": tags,
+            "code": code,
+        })
+        
+    return {
+        "status": "ok",
+        "strategies": library,
+    }
+
+
+
 @router.get("/active", response_model=StrategyConfig)
 async def get_active_strategy():
     """Return metadata for the currently active strategy."""
@@ -119,70 +176,128 @@ async def backtest_smoke(strategy_id: str, req: StrategySmokeRequest | None = No
 async def get_strategies_health():
     """
     Return a health dashboard for every registered strategy.
-    Aggregates system-wide metrics from ConfidenceRegistry and JournalLogger.
+    Aggregates per-strategy metrics from the SQL database (outcomes and candidates).
     """
-    aggregate = confidence_registry.get_aggregate_stats()
+    from app.db import SessionLocal
+    from app.db.models import PaperOutcome, SignalCandidate
+    
     all_strategies = strategy_registry.list_metadata()
     active_id = strategy_registry.active_strategy_id
     now = datetime.now(timezone.utc)
-
-    # Count journal entries in last 24h (system-wide proxy since journal lacks strategy_id)
-    try:
-        entries = journal_logger_instance.get_entries(limit=5000)
-        cutoff = now - timedelta(hours=24)
-        signal_count_24h = 0
-        last_journal_ts = None
-        for entry in entries:
-            ts_str = entry.get("timestamp") or entry.get("created_at")
-            if not ts_str:
-                continue
-            try:
-                ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
-                if last_journal_ts is None or ts > last_journal_ts:
-                    last_journal_ts = ts
-                if ts >= cutoff:
-                    signal_count_24h += 1
-            except (ValueError, TypeError):
-                continue
-    except Exception:
-        entries = []
-        signal_count_24h = 0
-        last_journal_ts = None
-
-    # Use the most recent timestamp we have (journal or registry)
-    registry_age = aggregate.get("last_signal_age_seconds")
-    journal_age = (now - last_journal_ts).total_seconds() if last_journal_ts else None
-    if registry_age is not None and journal_age is not None:
-        best_age = min(registry_age, journal_age)
-    elif registry_age is not None:
-        best_age = registry_age
-    else:
-        best_age = journal_age
+    cutoff = now - timedelta(hours=24)
 
     items: list[StrategyHealthItem] = []
-    for meta in all_strategies:
-        last_switch = strategy_registry.last_switch if meta.strategy_id == active_id else None
-        # Derive a per-strategy health score that nudges active strategy up slightly
-        base_score = aggregate.get("health_score", 0.0)
-        score = base_score + (5.0 if meta.strategy_id == active_id else 0.0)
-        score = round(min(100.0, score), 1)
-
-        items.append(
-            StrategyHealthItem(
-                strategy_id=meta.strategy_id,
-                name=meta.name,
-                description=meta.description,
-                is_active=meta.strategy_id == active_id,
-                last_switch=last_switch,
-                total_signals=aggregate.get("total_signals", 0),
-                win_rate=aggregate.get("win_rate", 0.0),
-                profit_factor=aggregate.get("profit_factor", 0.0),
-                avg_pnl_pct=aggregate.get("avg_pnl_pct", 0.0),
-                max_drawdown_pct=aggregate.get("max_drawdown_pct", 0.0),
-                last_signal_age_seconds=best_age,
-                health_score=score,
-                signal_count_24h=signal_count_24h,
+    
+    with SessionLocal() as db:
+        for meta in all_strategies:
+            last_switch = strategy_registry.last_switch if meta.strategy_id == active_id else None
+            
+            # Fetch all closed outcomes for this strategy
+            outcomes = (
+                db.query(PaperOutcome)
+                .filter(PaperOutcome.strategy_id == meta.strategy_id)
+                .all()
             )
-        )
+            
+            # Total signals count from SignalCandidate
+            total_signals = (
+                db.query(SignalCandidate)
+                .filter(SignalCandidate.strategy_id == meta.strategy_id)
+                .count()
+            )
+            
+            # 24h signal count
+            signal_count_24h = (
+                db.query(SignalCandidate)
+                .filter(SignalCandidate.strategy_id == meta.strategy_id)
+                .filter(SignalCandidate.created_at >= cutoff)
+                .count()
+            )
+            
+            # Calculate win rate, profit factor, avg pnl pct
+            total_trades = len(outcomes)
+            total_wins = sum(1 for o in outcomes if o.win)
+            win_rate = total_wins / total_trades if total_trades > 0 else 0.0
+            
+            gross_profit = sum(o.pnl for o in outcomes if o.win and o.pnl is not None)
+            gross_loss = sum(abs(o.pnl) for o in outcomes if not o.win and o.pnl is not None)
+            profit_factor = gross_profit / gross_loss if gross_loss > 0 else (gross_profit if gross_profit > 0 else 0.0)
+            
+            avg_pnl_pct = sum(o.pnl_pct for o in outcomes if o.pnl_pct is not None) / total_trades if total_trades > 0 else 0.0
+            
+            # Max drawdown calculation
+            sorted_outcomes = sorted(outcomes, key=lambda x: x.created_at or datetime.min)
+            cum_pnl = 0.0
+            peak = 0.0
+            max_dd = 0.0
+            for o in sorted_outcomes:
+                cum_pnl += o.pnl_pct or 0.0
+                if cum_pnl > peak:
+                    peak = cum_pnl
+                dd = peak - cum_pnl
+                if dd > max_dd:
+                    max_dd = dd
+            max_drawdown_pct = max_dd
+            
+            # Last signal/trade age
+            last_candidate = (
+                db.query(SignalCandidate)
+                .filter(SignalCandidate.strategy_id == meta.strategy_id)
+                .order_by(SignalCandidate.created_at.desc())
+                .first()
+            )
+            last_outcome = (
+                db.query(PaperOutcome)
+                .filter(PaperOutcome.strategy_id == meta.strategy_id)
+                .order_by(PaperOutcome.created_at.desc())
+                .first()
+            )
+            
+            last_ts = None
+            if last_candidate and last_candidate.created_at:
+                c_ts = last_candidate.created_at
+                if c_ts.tzinfo is None:
+                    c_ts = c_ts.replace(tzinfo=timezone.utc)
+                last_ts = c_ts
+            if last_outcome and last_outcome.created_at:
+                o_ts = last_outcome.created_at
+                if o_ts.tzinfo is None:
+                    o_ts = o_ts.replace(tzinfo=timezone.utc)
+                if last_ts is None or o_ts > last_ts:
+                    last_ts = o_ts
+                    
+            best_age = (now - last_ts).total_seconds() if last_ts else None
+            
+            # Health Score
+            score = 0.0
+            if total_trades > 0:
+                score += min(win_rate * 100, 40)
+                score += min(profit_factor * 20, 20)
+                if best_age is not None:
+                    recency_score = max(0, 20 - (best_age / 3600))  # decays over 20h
+                    score += recency_score
+                volume_score = min(total_trades / 10, 20)  # 20 trades = full score
+                score += volume_score
+            if meta.strategy_id == active_id:
+                score += 5.0
+            score = round(max(0.0, min(100.0, score)), 1)
+            
+            items.append(
+                StrategyHealthItem(
+                    strategy_id=meta.strategy_id,
+                    name=meta.name,
+                    description=meta.description,
+                    is_active=meta.strategy_id == active_id,
+                    last_switch=last_switch,
+                    total_signals=total_signals,
+                    win_rate=round(win_rate, 4),
+                    profit_factor=round(profit_factor, 2),
+                    avg_pnl_pct=round(avg_pnl_pct, 4),
+                    max_drawdown_pct=round(max_drawdown_pct, 4),
+                    last_signal_age_seconds=best_age,
+                    health_score=score,
+                    signal_count_24h=signal_count_24h,
+                )
+            )
 
     return StrategyHealthResponse(strategies=items)
