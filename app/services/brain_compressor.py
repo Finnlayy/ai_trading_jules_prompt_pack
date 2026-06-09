@@ -101,7 +101,8 @@ class BrainCompressor:
             )
             
             doc_type = "chat conversation transcript" if is_chat else "project planning document"
-            user_prompt = f"Please summarize this {doc_type} named '{name}':\n\n{text[:30000]}" # Truncate if extremely large to prevent OOM
+            max_chars = 10000 if provider in {"lmstudio", "lm-studio", "local"} else 30000
+            user_prompt = f"Please summarize this {doc_type} named '{name}':\n\n{text[:max_chars]}"
             
             response = await client.chat.completions.create(
                 model=provider_config.model,

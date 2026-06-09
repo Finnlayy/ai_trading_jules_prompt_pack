@@ -1,5 +1,5 @@
-from pydantic import BaseModel, Field
-from typing import List, Dict, Optional, Any
+from pydantic import BaseModel, ConfigDict, Field
+from typing import List, Dict, Optional, Any, Literal
 from datetime import datetime, timezone
 import uuid
 
@@ -170,3 +170,50 @@ class AcademyPolicyStatus(BaseModel):
 class AcademyPolicyPreviewRequest(BaseModel):
     training_status: Dict[str, Any] = Field(default_factory=dict)
     count: int = Field(default=1, ge=1, le=16)
+
+
+class AcademyBacktestRecord(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    timestamp: Optional[str] = None
+    close: float = Field(gt=0)
+    open: Optional[float] = None
+    high: Optional[float] = None
+    low: Optional[float] = None
+    volume: Optional[float] = None
+    scout_index: int = Field(default=0, ge=0)
+    difficulty: int = Field(default=1, ge=0)
+    total_reward: float = 0.0
+    accuracy: float = 0.0
+    calibration: float = 0.0
+    ab_lift: float = 0.0
+
+
+class AcademyBacktestingRunRequest(BaseModel):
+    backend: Literal["backtrader", "vectorbt"] = "vectorbt"
+    records: List[AcademyBacktestRecord] = Field(min_length=1)
+    params: Dict[str, Any] = Field(default_factory=dict)
+
+
+class AcademyBacktestingOptimizeRequest(BaseModel):
+    records: List[AcademyBacktestRecord] = Field(min_length=1)
+    initial_params: Dict[str, Any] = Field(default_factory=dict)
+    weights: Dict[str, float] = Field(default_factory=lambda: {
+        "sharpe": 1.0,
+        "drawdown": 1.0,
+        "calmar": 1.0,
+    })
+    method: Literal["differential_evolution", "minimize"] = "differential_evolution"
+    maxiter: int = Field(default=10, ge=1, le=100)
+
+
+class AcademyBacktestingGridSearchRequest(BaseModel):
+    records: List[AcademyBacktestRecord] = Field(min_length=1)
+    param_grid: Dict[str, List[Any]] = Field(min_length=1)
+
+
+class AcademyBacktestingReportRequest(BaseModel):
+    backend: Literal["backtrader", "vectorbt"] = "vectorbt"
+    records: List[AcademyBacktestRecord] = Field(min_length=1)
+    params: Dict[str, Any] = Field(default_factory=dict)
+    include_charts: bool = True
