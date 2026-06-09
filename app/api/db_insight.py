@@ -254,3 +254,37 @@ def get_second_brain_doc(filename: str):
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Could not read document file: {exc}")
 
+
+@router.post("/second-brain/compress")
+async def trigger_second_brain_compression():
+    """Trigger the BrainCompressor to scan, format, and summarize all chats and plans."""
+    from app.services.brain_compressor import BrainCompressor
+    try:
+        compressor = BrainCompressor()
+        index_path = await compressor.run_sync_and_compile()
+        return {
+            "status": "success",
+            "message": "Second brain compression and summarization completed successfully.",
+            "index_file": str(index_path)
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Error running compression: {exc}")
+
+
+@router.get("/second-brain/summaries")
+def get_second_brain_summaries():
+    """Fetch compiled consolidated summaries index content."""
+    from pathlib import Path
+    summaries_file = Path("wiki/second_brain_summaries.md")
+    if not summaries_file.exists():
+        raise HTTPException(status_code=404, detail="Summaries index not compiled yet. Call POST /api/db/second-brain/compress first.")
+        
+    try:
+        content = summaries_file.read_text(encoding="utf-8")
+        return {
+            "filename": "second_brain_summaries.md",
+            "content": content
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Could not read summaries file: {exc}")
+

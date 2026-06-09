@@ -122,6 +122,12 @@ To maintain structural integrity of custom strategies and models:
 
 ---
 
+## 🧠 Second Brain Summaries Index
+A consolidated fast-browsing layer of summaries and raw data for all developer chat logs and project plans is automatically compiled here:
+- **Consolidated Summaries Index**: [second_brain_summaries.md](file:///g:/Downloads_Sortiert_2026-05-20/ai_trading_jules_prompt_pack/wiki/second_brain_summaries.md)
+
+---
+
 ## 📂 Project Documentation Index
 This section lists all prompt pack instructions and design assets stored in the repository root directory:
 
@@ -139,6 +145,24 @@ This section lists all prompt pack instructions and design assets stored in the 
 
         # Print success
         print("Second brain (wiki/second_brain.md) successfully updated!")
+
+        # 7. Run Brain Compressor to summarize chats and plans asynchronously
+        try:
+            from app.services.brain_compressor import BrainCompressor
+            import asyncio
+            
+            compressor = BrainCompressor()
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = None
+                
+            if loop and loop.is_running():
+                loop.create_task(compressor.run_sync_and_compile())
+            else:
+                asyncio.run(compressor.run_sync_and_compile())
+        except Exception as compress_err:
+            print(f"Error executing brain compressor: {compress_err}")
 
     except Exception as exc:
         print(f"Error updating second brain: {exc}")
