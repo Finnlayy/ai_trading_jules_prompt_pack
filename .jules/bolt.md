@@ -39,3 +39,6 @@
 ## 2024-06-29 - Inefficient JSONL parsing in Agent Registry
 **Learning:** `get_career_log` and `get_recent_career_events` were eagerly parsing every line of `agent_careers.jsonl` using `json.loads` before filtering by `scout_name` or `event_type`. This caused high CPU overhead and slow reads.
 **Action:** Implemented a fast substring check (e.g., `if f'"scout_name":"{scout_name}"' not in line and f'"scout_name": "{scout_name}"' not in line: continue`) before `json.loads` to skip irrelevant lines. This provides a massive speedup when filtering large JSONL files and avoids eager memory allocation.
+## 2026-06-12 - Prevent Eager Loading in Academy Policy Endpoints
+**Learning:** Using list comprehensions like `[line for line in file if line.strip()]` to read the end of unbounded `.jsonl` log files causes massive memory bloat, loading the entire file into memory before slicing.
+**Action:** Use `collections.deque(maxlen=limit)` to tail-read unbounded log files when no substring pre-filtering is required, reducing memory complexity from O(N) to O(limit).
