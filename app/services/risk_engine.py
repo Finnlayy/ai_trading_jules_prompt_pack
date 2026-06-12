@@ -1,3 +1,6 @@
+from app.schemas.trading_plan import TradingPlan
+from app.schemas.risk_result import RiskValidationResult
+import polars as pl
 from app.schemas.m8_payload import M8Payload
 from app.schemas.ai_review import SignalReview, DecisionEnum as AIDecisionEnum
 from app.schemas.journal import DecisionEnum, FinalDecisionEnum
@@ -236,6 +239,45 @@ class RiskEngine:
         except (TypeError, ValueError):
             return None
 
+
+# Global instance for FastAPI usage
+
+    def validate_trading_plan(self, plan: TradingPlan) -> RiskValidationResult:
+        """
+        Gate 2.0: Validates an agent-generated TradingPlan deterministically.
+        """
+        violations = []
+
+        # 1. Setup must be complete
+        if not plan.setup.market_conditions or not plan.setup.regime:
+            violations.append("SETUP_INCOMPLETE")
+
+        # 2. Trigger must be testable
+        if not plan.trigger.entry_condition or plan.trigger.price_zone_min >= plan.trigger.price_zone_max:
+            violations.append("TRIGGER_INVALID")
+
+        # 3. Invalidation is mandatory
+        if not plan.invalidation.hard_stop_price:
+            violations.append("NO_HARD_STOP")
+
+        if plan.invalidation.max_loss_pct > 25.0:
+            violations.append("MAX_LOSS_EXCEEDED")
+
+        # 4. R/R Validation
+        if plan.risk_intent.risk_reward_ratio < 0.5:
+            violations.append("RR_TOO_LOW")
+
+        decision = "PROCEED_TO_SIMULATION" if not violations else "REJECT"
+        reject_reason = violations[0] if violations else None
+
+        return RiskValidationResult(
+            decision=decision,
+            reject_reason=reject_reason,
+            risk_score=90.0 if not violations else 10.0,
+            violated_rules=violations,
+            allowed_size=plan.risk_intent.target_size_usd if not violations else 0.0,
+            risk_adjusted_plan=plan.dict() if not violations else None
+        )
 
 # Global instance for FastAPI usage
 risk_engine_instance = RiskEngine()

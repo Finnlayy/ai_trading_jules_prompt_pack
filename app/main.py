@@ -29,6 +29,9 @@ from app.api.kraken import router as kraken_router
 from app.api.kraken_paper import router as kraken_paper_router
 from app.api.lifecycle import router as lifecycle_router
 from app.api.webhook_signal import router as webhook_signal_router
+from app.api.perception import router as perception_router
+from app.api.agentic import router as agentic_router
+from app.api.simulator import router as simulator_router
 from app.services.webhook_consumer import webhook_consumer_instance
 from app.services.position_monitor import paper_position_monitor_instance
 
@@ -64,6 +67,11 @@ app.include_router(kraken_router, tags=["kraken"])
 app.include_router(kraken_paper_router, tags=["kraken-paper"])
 app.include_router(lifecycle_router, prefix="/lifecycle", tags=["lifecycle"])
 app.include_router(webhook_signal_router, tags=["webhook"])
+
+app.include_router(perception_router, prefix="/perception", tags=["perception"])
+app.include_router(agentic_router, prefix="/agentic", tags=["agentic"])
+app.include_router(simulator_router, prefix="/simulator", tags=["simulator"])
+
 
 @app.get("/", include_in_schema=False)
 def frontend():
