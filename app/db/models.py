@@ -270,3 +270,24 @@ class NewsImpact(Base):
     risk_confluence_offset = Column(Float, default=0.0)
     risk_crisis_offset = Column(Float, default=0.0)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class AgenticRun(Base):
+    """Complete lifecycle of an Agentic Trading Run."""
+    __tablename__ = "agentic_runs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    run_id = Column(String, unique=True, index=True, nullable=False)
+    signal_id = Column(String, index=True, nullable=True)
+    symbol = Column(String, index=True, nullable=False)
+    status = Column(String, default="started", nullable=False)  # started, planning, risk_validation, simulated, rejected, executed
+
+    # State components stored as JSON
+    perception_context_json = Column(Text, nullable=True)
+    trading_plan_json = Column(Text, nullable=True)
+    risk_result_json = Column(Text, nullable=True)
+    simulator_result_json = Column(Text, nullable=True)
+    audit_trace_json = Column(Text, nullable=True)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    completed_at = Column(DateTime(timezone=True), nullable=True)
