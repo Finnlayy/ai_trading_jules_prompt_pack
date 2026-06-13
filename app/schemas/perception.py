@@ -27,3 +27,19 @@ class PerceptionContext(BaseModel):
     advisor_consensus: Optional[str] = None
     orderbook_imbalance: Optional[float] = None
     raw_data_refs: Dict[str, Any] = Field(default_factory=dict)
+
+class ScoutVoteState(BaseModel):
+    scout_name: str
+    vote: str
+    confidence: float
+    reason_codes: List[str]
+    model: str
+
+class SwarmStateResponse(BaseModel):
+    run_id: str
+    symbol: str
+    direction: str
+    consensus_score: float
+    votes: List[ScoutVoteState]
+    commentary: str
+    timestamp: int

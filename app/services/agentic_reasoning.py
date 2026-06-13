@@ -11,9 +11,9 @@ from app.schemas.ai_review import SignalReview, DecisionEnum
 from app.schemas.lifecycle import SignalCandidateRecord
 from app.services.perception_engine import perception_engine
 from app.services.agent_registry import agent_registry
-from app.services.ai_factory import ai_factory
+from app.services.ai_factory import ai_review_instance
 from app.db.models import AgenticRun
-from app.db.repository import db_session
+from app.db import get_db, SessionLocal
 
 class AgenticState(BaseModel):
     run_id: str
@@ -107,8 +107,42 @@ class AgenticReasoningLayer:
         state.critique = {"valid": True, "notes": "Plan looks solid."}
         return state
 
+
+    def _generate_swarm_commentary(self, state: AgenticState) -> str:
+        # Generate esports commentary based on scout votes and perception context
+        votes = []
+        for v in state.scout_reviews.values():
+            if isinstance(v, dict):
+                votes.append(v.get('decision', 'HOLD'))
+
+        proceeds = sum(1 for v in votes if v == 'PROCEED')
+        rejects = sum(1 for v in votes if v == 'REJECT')
+
+        regime = "Unknown"
+        volatility = "Medium"
+        if state.perception and state.perception.regime:
+            regime = state.perception.regime.market_regime
+            volatility = state.perception.regime.volatility
+
+        direction = getattr(state.signal, 'direction', 'LONG')
+
+        if proceeds > rejects and rejects == 0:
+            return f"Unanimous Swarm conviction to go {direction}! Risk teams and Quants are aligned in this {regime} regime."
+        elif proceeds > rejects and rejects > 0:
+            return f"Fierce debate in the war room! Quants push for {direction} but Risk counters with high {volatility} volatility concerns. Proceeding with caution."
+        elif rejects > proceeds:
+            return f"Swarm rejects the {direction} setup. The models are stepping back, waiting for better structure in this {regime} market."
+        else:
+            return f"Gridlock in the Swarm. The teams are evenly split on this {direction} idea. Holding fire."
+
     async def _node_finalize(self, state: AgenticState) -> AgenticState:
+
         if state.error: return state
+
+
+        commentary = self._generate_swarm_commentary(state)
+
+        audit_trace = {"trading_plan": state.plan.dict() if state.plan else None, "swarm_commentary": commentary}
 
         state.final_review = SignalReview(
             schema_version="1.0",
@@ -118,16 +152,17 @@ class AgenticReasoningLayer:
             reason_codes=["PLAN_VALIDATED"],
             risk_flags=[],
             requires_human_review=False,
-            audit_trace={"trading_plan": state.plan.dict() if state.plan else None}
+            audit_trace=audit_trace
         )
 
         # Persist to DB
-        with db_session() as db:
+        with SessionLocal() as db:
             run = db.query(AgenticRun).filter(AgenticRun.run_id == state.run_id).first()
             if run:
                 run.perception_context_json = state.perception.json() if state.perception else None
                 run.trading_plan_json = state.plan.json() if state.plan else None
-                run.audit_trace_json = json.dumps(state.final_review.dict())
+                run.audit_trace_json = json.dumps(audit_trace)
+
                 run.status = "planning_completed"
                 run.completed_at = func.now()
                 db.commit()
@@ -137,7 +172,7 @@ class AgenticReasoningLayer:
     async def run(self, signal: Any) -> AgenticState:
         run_id = f"run_{int(time.time())}_{str(uuid.uuid4())[:8]}"
 
-        with db_session() as db:
+        with SessionLocal() as db:
             db_run = AgenticRun(
                 run_id=run_id,
                 signal_id=signal.signal_id if hasattr(signal, 'signal_id') else None,

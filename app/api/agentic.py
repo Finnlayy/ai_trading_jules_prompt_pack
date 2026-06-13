@@ -4,9 +4,13 @@ from app.schemas.lifecycle import SignalCandidateRecord
 from app.schemas.ai_review import SignalReview
 from app.schemas.trading_plan import TradingPlan
 from app.services.agentic_reasoning import agentic_reasoning
-from app.db.repository import db_session
+from app.db import get_db, SessionLocal
 from app.db.models import AgenticRun
 import json
+
+from app.schemas.perception import SwarmStateResponse, ScoutVoteState
+from app.db.models import AgentReviewEvent
+import time
 
 router = APIRouter()
 
@@ -54,7 +58,7 @@ async def create_trading_plan(req: SignalRequest):
 
 @router.get("/runs/{run_id}")
 async def get_run(run_id: str):
-    with db_session() as db:
+    with SessionLocal() as db:
         run = db.query(AgenticRun).filter(AgenticRun.run_id == run_id).first()
         if not run:
             raise HTTPException(status_code=404, detail="Run not found")
@@ -69,3 +73,56 @@ async def get_run(run_id: str):
             "simulator_result": json.loads(run.simulator_result_json) if run.simulator_result_json else None,
             "audit_trace": json.loads(run.audit_trace_json) if run.audit_trace_json else None
         }
+
+
+@router.get("/swarm-state/{run_id}", response_model=SwarmStateResponse)
+async def get_swarm_state(run_id: str):
+    with SessionLocal() as db:
+        run = db.query(AgenticRun).filter(AgenticRun.run_id == run_id).first()
+        if not run:
+            raise HTTPException(status_code=404, detail="Run not found")
+
+        events = db.query(AgentReviewEvent).filter(AgentReviewEvent.candidate_id == run_id).all()
+        votes = []
+        for e in events:
+            reasons = []
+            if e.reasons_json:
+                try:
+                    reasons = json.loads(e.reasons_json)
+                except Exception:
+                    pass
+            votes.append(ScoutVoteState(
+                scout_name=e.scout_name,
+                vote=e.decision,
+                confidence=e.confidence,
+                reason_codes=reasons,
+                model=e.model or "unknown"
+            ))
+
+        audit = {}
+        if run.audit_trace_json:
+            try:
+                audit = json.loads(run.audit_trace_json)
+            except Exception:
+                pass
+
+        commentary = audit.get("swarm_commentary", "")
+
+        return SwarmStateResponse(
+            run_id=run.run_id,
+            symbol=run.symbol or "UNKNOWN",
+            direction="LONG", # Placeholder, would be pulled from run/candidate
+            consensus_score=0.5, # Placeholder
+            votes=votes,
+            commentary=commentary,
+            timestamp=int(time.time())
+        )
+
+@router.get("/runs/latest/swarm", response_model=SwarmStateResponse)
+async def get_latest_swarm_state():
+    with SessionLocal() as db:
+        run = db.query(AgenticRun).order_by(AgenticRun.id.desc()).first()
+        if not run:
+            raise HTTPException(status_code=404, detail="No runs found")
+
+        return await get_swarm_state(run.run_id)

@@ -1803,28 +1803,13 @@
         }
 
         const DEFAULT_LAYOUT_CONFIG = {
-            mode: "left",
-            locked: false,
-            showSettings: false,
-            panels: {
-                sidebar: true,
-                chart: true,
-                overview: true,
-                wallets: true,
-                control: true,
-                aiLayer: true,
-                logs: true,
-                news: true,
-                agents: true,
-                training: true,
-                strategies: true,
-                ctrader: true,
-                secondBrain: true,
-                modelHub: true,
-                shadowQueue: true,
-                riskControl: true
-            }
-        };
+  activeSymbol: true,
+  ohlcvChart: true,
+  riskAuditLogs: true,
+  activeConnections: true,
+  unifiedBroker: true,
+  swarmWarRoom: true,
+};
 
         function mergeLayoutConfig(saved) {
             return {
