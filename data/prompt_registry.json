@@ -129,9 +129,17 @@
   },
   {
     "version_id": "v2_auto_evolved",
-    "scout_name": "correlation",
-    "prompt_text": "Auto-evolved prompt for correlation focusing on recent failures.",
-    "created_at": "2026-06-06T03:18:51.063118+00:00",
+    "scout_name": "sentiment",
+    "prompt_text": "Auto-evolved prompt for sentiment focusing on recent failures.",
+    "created_at": "2026-06-13T12:22:05.319463+00:00",
+    "parent_version": "v1_base",
+    "change_summary": "Auto-correction from Training Loop"
+  },
+  {
+    "version_id": "v3_auto_evolved",
+    "scout_name": "sentiment",
+    "prompt_text": "Auto-evolved prompt for sentiment focusing on recent failures.",
+    "created_at": "2026-06-13T12:22:05.358979+00:00",
     "parent_version": "v1_base",
     "change_summary": "Auto-correction from Training Loop"
   }
