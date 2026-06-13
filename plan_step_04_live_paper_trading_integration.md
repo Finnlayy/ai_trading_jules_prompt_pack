@@ -50,7 +50,7 @@ Der autonome Loop aus Schritt 3 wird mit einem Live-Paper-Broker verbunden. Das 
 ## Neue Dateien
 
 ### 1. `app/services/live_fill_tracker.py`
-**Typ:** Service (State Management)  
+**Typ:** Service (State Management)
 **Agent-Zuweisung:** Backend-Dev / Broker-Integration-Agent
 
 Enthält:
@@ -75,7 +75,7 @@ class FillData:
     fees: float
     slippage: float
 
-@dataclass  
+@dataclass
 class OpenPosition:
     trade_id: str
     symbol: str
@@ -92,7 +92,7 @@ class OpenPosition:
 ```
 
 ### 2. `app/services/performance_calculator.py`
-**Typ:** Service (Analytics)  
+**Typ:** Service (Analytics)
 **Agent-Zuweisung:** Quant-Agent / Backend-Dev
 
 Enthält:
@@ -132,7 +132,7 @@ class PerformanceMetrics:
 ```
 
 ### 3. `app/services/dashboard_sse.py`
-**Typ:** Service (Realtime)  
+**Typ:** Service (Realtime)
 **Agent-Zuweisung:** Backend-Dev / Frontend-Agent
 
 Enthält:
@@ -147,7 +147,7 @@ Enthält:
 - Hintergrund-Task: Pusht alle 5s Position-Updates, bei Trades sofort
 
 ### 4. `app/api/live_trading.py`
-**Typ:** API Router  
+**Typ:** API Router
 **Agent-Zuweisung:** Backend-Dev
 
 Endpunkte:
@@ -162,7 +162,7 @@ Endpunkte:
 - `POST /live/emergency-stop` — Sofortiger Halt aller neuen Entries, Schließen offener Positionen
 
 ### 5. `app/schemas/live_trading.py`
-**Typ:** Schema (Pydantic v2)  
+**Typ:** Schema (Pydantic v2)
 **Agent-Zuweisung:** Backend-Dev
 
 ```python
@@ -210,7 +210,7 @@ class SSEEvent(BaseModel):
 ```
 
 ### 6. `app/scripts/live_paper_smoke.py`
-**Typ:** Standalone-Script  
+**Typ:** Standalone-Script
 **Agent-Zuweisung:** DevOps-Agent
 
 - Führt 5 Papier-Trades auf Bybit Testnet durch
@@ -253,7 +253,7 @@ class PaperBroker(BaseBroker):
         #   - Warte auf Fill-Confirmation
         #   - Rufe LiveFillTracker.record_fill() auf
         pass
-    
+
     # NEU: Position-Sync
     async def sync_positions(self) -> list[dict]:
         # Ruft Bybit Testnet /v5/position/list auf
@@ -280,14 +280,14 @@ class BrokerFactory:
 ```python
 async def process_signal(payload: M8Payload):
     # ... bestehende Pipeline ...
-    
+
     # NEU: Live-Fill-Tracking vor Execution
     from app.services.live_fill_tracker import live_fill_tracker_instance
     live_fill_tracker_instance.record_intent(payload, decision_result["decision"])
-    
+
     # Bestehende Broker-Execution
     journal_entry = broker_instance.execute_trade(...)
-    
+
     # NEU: Post-Execution Fill-Tracking
     if journal_entry.simulated_fill:
         live_fill_tracker_instance.record_fill(
@@ -301,7 +301,7 @@ async def process_signal(payload: M8Payload):
                 slippage=journal_entry.simulated_fill.get("slippage", 0.0),
             )
         )
-    
+
     # ... restliche Logik ...
 ```
 
@@ -365,11 +365,11 @@ class TelegramNotifier:
     async def send_position_update(self, position: OpenPosition):
         # Formatierter Position-Update-Text
         pass
-    
+
     async def send_performance_summary(self, metrics: PerformanceMetrics):
         # Tägliche Performance-Zusammenfassung
         pass
-    
+
     async def send_emergency_stop_alert(self, reason: str):
         # Sofort-Alert bei Emergency Stop
         pass

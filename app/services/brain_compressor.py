@@ -52,6 +52,15 @@ class BrainCompressor:
                     line_str = line_str.strip()
                     if not line_str:
                         continue
+
+                    # ⚡ Bolt Optimization: Fast substring check to bypass JSON parsing for irrelevant chat turns
+                    if (
+                        "USER_INPUT" not in line_str and
+                        "PLANNER_RESPONSE" not in line_str and
+                        "MODEL_RESPONSE" not in line_str
+                    ):
+                        continue
+
                     try:
                         step = json.loads(line_str)
                         source = step.get("source")

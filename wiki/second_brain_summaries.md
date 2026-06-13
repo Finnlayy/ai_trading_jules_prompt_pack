@@ -182,3 +182,86 @@ By reading this index, the AI can scan the high-level summaries. If more details
 ## 💬 Conversation & Chats Summaries
 
 No conversation logs compiled.
+### [Conversation eb049f27](file:///G:/Downloads_Sortiert_2026-05-20/ai_trading_jules_prompt_pack/wiki/raw/chats/eb049f27-d58e-431b-84ba-a0f0d1b535c9_chat.md)
+- **Conversation ID**: `eb049f27-d58e-431b-84ba-a0f0d1b535c9`
+- **Last Active**: `2026-06-09T01:04:32.023673+00:00`
+- **Summary**: [View Full Summary](file:///G:/Downloads_Sortiert_2026-05-20/ai_trading_jules_prompt_pack/wiki/summaries/chats/eb049f27-d58e-431b-84ba-a0f0d1b535c9_summary.md)
+
+
+
+---
+
+### [Conversation 8913585a](file:///G:/Downloads_Sortiert_2026-05-20/ai_trading_jules_prompt_pack/wiki/raw/chats/8913585a-707b-4589-bfa1-8961d07c8261_chat.md)
+- **Conversation ID**: `8913585a-707b-4589-bfa1-8961d07c8261`
+- **Last Active**: `2026-06-09T00:44:56.061249+00:00`
+- **Summary**: [View Full Summary](file:///G:/Downloads_Sortiert_2026-05-20/ai_trading_jules_prompt_pack/wiki/summaries/chats/8913585a-707b-4589-bfa1-8961d07c8261_summary.md)
+
+### [Mock Summary] Conversation 8913585a
+
+- **Goal**: Summarize a developer-assistant interaction session.
+- **Key Accomplishments**:
+  - Analyzed interaction containing 50 user requests and 2087 AI turns.
+  - Captured context related to active development session.
+- **Decisions & Open Items**: Needs active AI connection to perform full semantic synthesis.
+
+---
+
+### [Conversation 59b9aa40](file:///G:/Downloads_Sortiert_2026-05-20/ai_trading_jules_prompt_pack/wiki/raw/chats/59b9aa40-e790-456c-8237-8819161ec41b_chat.md)
+- **Conversation ID**: `59b9aa40-e790-456c-8237-8819161ec41b`
+- **Last Active**: `2026-06-07T12:40:34.105519+00:00`
+- **Summary**: [View Full Summary](file:///G:/Downloads_Sortiert_2026-05-20/ai_trading_jules_prompt_pack/wiki/summaries/chats/59b9aa40-e790-456c-8237-8819161ec41b_summary.md)
+
+### [Mock Summary] Conversation 59b9aa40
+
+- **Goal**: Summarize a developer-assistant interaction session.
+- **Key Accomplishments**:
+  - Analyzed interaction containing 4 user requests and 4 AI turns.
+  - Captured context related to active development session.
+- **Decisions & Open Items**: Needs active AI connection to perform full semantic synthesis.
+
+---
+
+### [Conversation 052af38f](file:///G:/Downloads_Sortiert_2026-05-20/ai_trading_jules_prompt_pack/wiki/raw/chats/052af38f-1e19-4c79-bda7-01f2ae08be5c_chat.md)
+- **Conversation ID**: `052af38f-1e19-4c79-bda7-01f2ae08be5c`
+- **Last Active**: `2026-06-07T02:24:16.584753+00:00`
+- **Summary**: [View Full Summary](file:///G:/Downloads_Sortiert_2026-05-20/ai_trading_jules_prompt_pack/wiki/summaries/chats/052af38f-1e19-4c79-bda7-01f2ae08be5c_summary.md)
+
+### [Mock Summary] Conversation 052af38f
+
+- **Goal**: Summarize a developer-assistant interaction session.
+- **Key Accomplishments**:
+  - Analyzed interaction containing 10 user requests and 434 AI turns.
+  - Captured context related to active development session.
+- **Decisions & Open Items**: Needs active AI connection to perform full semantic synthesis.
+
+---
+
+### [Conversation c281945f](file:///G:/Downloads_Sortiert_2026-05-20/ai_trading_jules_prompt_pack/wiki/raw/chats/c281945f-9ff0-458f-90ce-f57f7c59f436_chat.md)
+- **Conversation ID**: `c281945f-9ff0-458f-90ce-f57f7c59f436`
+- **Last Active**: `2026-06-06T03:19:50.321903+00:00`
+- **Summary**: [View Full Summary](file:///G:/Downloads_Sortiert_2026-05-20/ai_trading_jules_prompt_pack/wiki/summaries/chats/c281945f-9ff0-458f-90ce-f57f7c59f436_summary.md)
+
+### [Mock Summary] Conversation c281945f
+
+- **Goal**: Summarize a developer-assistant interaction session.
+- **Key Accomplishments**:
+  - Analyzed interaction containing 3 user requests and 76 AI turns.
+  - Captured context related to active development session.
+- **Decisions & Open Items**: Needs active AI connection to perform full semantic synthesis.
+
+---
+
+### [Conversation 6e2532cb](file:///G:/Downloads_Sortiert_2026-05-20/ai_trading_jules_prompt_pack/wiki/raw/chats/6e2532cb-9df3-44ce-a61c-8df31deb9b35_chat.md)
+- **Conversation ID**: `6e2532cb-9df3-44ce-a61c-8df31deb9b35`
+- **Last Active**: `2026-05-31T18:18:55.085317+00:00`
+- **Summary**: [View Full Summary](file:///G:/Downloads_Sortiert_2026-05-20/ai_trading_jules_prompt_pack/wiki/summaries/chats/6e2532cb-9df3-44ce-a61c-8df31deb9b35_summary.md)
+
+### [Mock Summary] Conversation 6e2532cb
+
+- **Goal**: Summarize a developer-assistant interaction session.
+- **Key Accomplishments**:
+  - Analyzed interaction containing 23 user requests and 425 AI turns.
+  - Captured context related to active development session.
+- **Decisions & Open Items**: Needs active AI connection to perform full semantic synthesis.
+
+---
