@@ -1,9 +1,6 @@
-feat(ai): Implement gem10_native mode with 10 native gems
+feat(backtest): add dynamic base64 equity/drawdown charts
 
-- Introduces AI_REVIEW_ENGINE config to switch between legacy6 and gem10_native.
-- Implements GemNativeReviewService utilizing 10 new distinct gems:
-  macro_sentinel, market_dna, structural_architect, harmony_coordinator,
-  indicator_fusion, risk_kernel, pine_core, payload_qa, execution_watchdog,
-  evolution_optimizer.
-- Updates agent and confidence registries to recognize the new gem names.
-- Adds mock tests and updates E2E/integration tests to accommodate the factory pattern.
+- Generate headless Matplotlib/Seaborn chart in backtest endpoint.
+- Convert PnL to Equity & Drawdown curves in Dark Terminal Theme.
+- Wrap generation in asyncio.to_thread to prevent blocking event loop.
+- Refactor frontend to render base64 chart instead of absolute positioned dots.
