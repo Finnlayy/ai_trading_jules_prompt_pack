@@ -11,9 +11,9 @@ from app.schemas.ai_review import SignalReview, DecisionEnum
 from app.schemas.lifecycle import SignalCandidateRecord
 from app.services.perception_engine import perception_engine
 from app.services.agent_registry import agent_registry
-from app.services.ai_factory import ai_factory
+from app.services.ai_factory import ai_review_instance
 from app.db.models import AgenticRun
-from app.db.repository import db_session
+from app.db.session import db_session
 
 class AgenticState(BaseModel):
     run_id: str
@@ -118,16 +118,16 @@ class AgenticReasoningLayer:
             reason_codes=["PLAN_VALIDATED"],
             risk_flags=[],
             requires_human_review=False,
-            audit_trace={"trading_plan": state.plan.dict() if state.plan else None}
+            audit_trace={"trading_plan": state.plan.model_dump() if state.plan else None}
         )
 
         # Persist to DB
         with db_session() as db:
             run = db.query(AgenticRun).filter(AgenticRun.run_id == state.run_id).first()
             if run:
-                run.perception_context_json = state.perception.json() if state.perception else None
-                run.trading_plan_json = state.plan.json() if state.plan else None
-                run.audit_trace_json = json.dumps(state.final_review.dict())
+                run.perception_context_json = state.perception.model_dump_json() if state.perception else None
+                run.trading_plan_json = state.plan.model_dump_json() if state.plan else None
+                run.audit_trace_json = json.dumps(state.final_review.model_dump())
                 run.status = "planning_completed"
                 run.completed_at = func.now()
                 db.commit()
