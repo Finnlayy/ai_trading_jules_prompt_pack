@@ -5,7 +5,3 @@
 ## 2024-05-30 - UI TDD Single File
 **Learning:** Testing React inside a single `.html` with Babel via CDN using Playwright Python requires careful wait instructions because the initial state might not render immediately and React mounts asynchronously. Also, state initialization bugs due to duplicate identifiers can easily occur when editing via regex/Bash tools and must be validated carefully.
 **Action:** Always assert element visibility and wait for React to be interactive before executing clicks or verifying classes in Pytest/Playwright.
-
-## 2024-05-24 - Agentic Stack Explorer Integration
-**Learning:** React state components and conditional grid sections can quickly become desynchronized if layout states are not strictly mapped. Subjunctive mood copy ("Simulated win-rate beliefe sich auf...") works best when paired directly with prominent visual veto warnings.
-**Action:** When creating multi-column grid layouts with deep conditional logic, always verify that `tab === "Tab Name"` mappings correctly correspond to the string values set inside sidebar navigation arrays.

@@ -1689,8 +1689,7 @@
                     agents: "Agent Registry",
                     training: "Training Academy",
                     strategies: "Strategy Health",
-                    ctrader: "cTrader Panel",
-                    agenticStack: "Agentic Stack Explorer"
+                    ctrader: "cTrader Panel"
                 };
                 return map[key] || key;
             };
@@ -1712,8 +1711,8 @@
                         agents: true,
                         training: true,
                         strategies: true,
-                        ctrader: true,
-                            agenticStack: true}
+                        ctrader: true
+                        }
                     });
                 }
             };
@@ -1820,7 +1819,6 @@
                 training: true,
                 strategies: true,
                 ctrader: true,
-                agenticStack: true,
                 secondBrain: true,
                 modelHub: true,
                 shadowQueue: true,
@@ -1842,43 +1840,18 @@
 
         // -------------------------------------------------------------
         // Agentic Stack Panel
-
-        // -------------------------------------------------------------
-        // Agentic Stack Panel
         // -------------------------------------------------------------
         function AgenticStackPanel({ request, addLog }) {
             const [runId, setRunId] = useState("");
             const [runData, setRunData] = useState(null);
             const [loading, setLoading] = useState(false);
-            const [recentRuns, setRecentRuns] = useState([]);
 
-            // Trigger Form State
-            const [formSymbol, setFormSymbol] = useState("BTCUSD");
-            const [formDirection, setFormDirection] = useState("LONG");
-            const [formEntryPrice, setFormEntryPrice] = useState("50000");
-            const [formTimeframe, setFormTimeframe] = useState("1m");
-
-            useEffect(() => {
-                fetchRecentRuns();
-            }, []);
-
-            async function fetchRecentRuns() {
-                try {
-                    const data = await request(`/agentic/runs`);
-                    setRecentRuns(data);
-                } catch (e) {
-                    addLog("error", "Failed to fetch recent runs", { error: e.message });
-                }
-            }
-
-            async function fetchRun(idToFetch) {
-                const targetId = idToFetch || runId;
-                if (!targetId) return;
+            async function fetchRun() {
+                if (!runId) return;
                 setLoading(true);
                 try {
-                    const data = await request(`/agentic/runs/${targetId}`);
+                    const data = await request(`/agentic/runs/${runId}`);
                     setRunData(data);
-                    setRunId(targetId);
                 } catch (e) {
                     addLog("error", "Failed to fetch Agentic Run", { error: e.message });
                 } finally {
@@ -1886,162 +1859,79 @@
                 }
             }
 
-            async function handleTriggerRun(e) {
-                e.preventDefault();
-                setLoading(true);
-                try {
-                    const payload = {
-                        signal_id: `manual_${Date.now()}`,
-                        symbol: formSymbol,
-                        direction: formDirection,
-                        entry_price: parseFloat(formEntryPrice),
-                        timeframe: formTimeframe
-                    };
-                    const res = await request("/agentic/review-signal", "POST", payload);
-                    addLog("info", "Agentic Swarm Triggered", { run_id: res.run_id });
-
-                    // After triggering, refetch runs and load the new run
-                    await fetchRecentRuns();
-                    if (res.run_id) {
-                        await fetchRun(res.run_id);
-                    }
-                } catch (e) {
-                    addLog("error", "Failed to trigger run", { error: e.message });
-                } finally {
-                    setLoading(false);
-                }
-            }
-
             return (
                 <div className="grid">
-                    {/* LEFT COLUMN: Controls & History */}
-                    <div className="panel span-4" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                        <div className="panel-title">Command & Control</div>
-
-                        {/* Trigger Form */}
-                        <div style={{ padding: 16, border: "1px solid var(--line)", borderRadius: "var(--radius-sm)", background: "var(--surface)" }}>
-                            <h4 style={{ margin: "0 0 12px 0", color: "var(--fg)" }}>Trigger Agentic Swarm</h4>
-                            <form onSubmit={handleTriggerRun} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                                <input type="text" value={formSymbol} onChange={e => setFormSymbol(e.target.value)} placeholder="Symbol (e.g. BTCUSD)" style={{ padding: "6px", background: "var(--bg)", border: "1px solid var(--line)", color: "var(--fg)" }} />
-                                <select value={formDirection} onChange={e => setFormDirection(e.target.value)} style={{ padding: "6px", background: "var(--bg)", border: "1px solid var(--line)", color: "var(--fg)" }}>
-                                    <option value="LONG">LONG</option>
-                                    <option value="SHORT">SHORT</option>
-                                </select>
-                                <input type="number" step="0.01" value={formEntryPrice} onChange={e => setFormEntryPrice(e.target.value)} placeholder="Entry Price" style={{ padding: "6px", background: "var(--bg)", border: "1px solid var(--line)", color: "var(--fg)" }} />
-                                <input type="text" value={formTimeframe} onChange={e => setFormTimeframe(e.target.value)} placeholder="Timeframe (e.g. 1m)" style={{ padding: "6px", background: "var(--bg)", border: "1px solid var(--line)", color: "var(--fg)" }} />
-                                <button type="submit" className="primary" disabled={loading} style={{ marginTop: "4px" }}>
-                                    {loading ? "Running Swarm..." : "Run Agentic Swarm"}
-                                </button>
-                            </form>
-                        </div>
-
-                        {/* Recent Runs Table */}
-                        <div style={{ padding: 16, border: "1px solid var(--line)", borderRadius: "var(--radius-sm)", background: "var(--surface)", flex: 1, overflowY: 'auto', maxHeight: '400px' }}>
-                            <h4 style={{ margin: "0 0 12px 0", color: "var(--fg)" }}>Recent Runs</h4>
-                            <table className="data-table" style={{ width: '100%', fontSize: '13px' }}>
-                                <thead>
-                                    <tr>
-                                        <th>Run ID</th>
-                                        <th>Symbol</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {recentRuns.map(r => (
-                                        <tr key={r.run_id} onClick={() => fetchRun(r.run_id)} style={{ cursor: "pointer", background: runId === r.run_id ? "var(--surface-soft)" : "transparent" }}>
-                                            <td style={{ fontFamily: "monospace", color: "var(--sky)" }}>{r.run_id.split('_')[1] || r.run_id.substring(0,8)}...</td>
-                                            <td>{r.symbol}</td>
-                                            <td>
-                                                <span style={{
-                                                    color: r.status === 'started' ? 'var(--amber)' :
-                                                           r.status === 'planning_completed' ? 'var(--emerald)' :
-                                                           r.status === 'rejected' ? 'var(--rose)' : 'var(--fg)'
-                                                }}>{r.status}</span>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                    {recentRuns.length === 0 && <tr><td colSpan="3" style={{textAlign: "center", color: "var(--muted)"}}>No recent runs found.</td></tr>}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    {/* RIGHT COLUMN: Telemetry Details */}
-                    <div className="panel span-8">
-                        <div className="panel-title">Swarm Telemetry: {runId ? runId : "Select a Run"}</div>
+                    <div className="panel span-12">
+                        <div className="panel-title">Agentic Stack Explorer</div>
                         <div style={{ padding: 16 }}>
-                            {!runData && !loading && (
-                                <div style={{ color: "var(--muted)", textAlign: "center", marginTop: "40px" }}>
-                                    Select a run from the list or trigger a new swarm to view telemetry.
-                                </div>
-                            )}
-                            {loading && !runData && (
-                                <div style={{ color: "var(--muted)", textAlign: "center", marginTop: "40px" }}>Loading Telemetry...</div>
-                            )}
+                            <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
+                                <input
+                                    type="text"
+                                    placeholder="Enter Run ID"
+                                    value={runId}
+                                    onChange={(e) => setRunId(e.target.value)}
+                                    style={{ padding: "8px 12px", borderRadius: "var(--radius-sm)", border: "1px solid var(--line)", flex: 1 }}
+                                />
+                                <button className="primary" onClick={fetchRun} disabled={loading}>
+                                    {loading ? "Loading..." : "Load Run"}
+                                </button>
+                            </div>
 
                             {runData && (
                                 <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
                                     {/* Timeline */}
                                     <div style={{ padding: 16, border: "1px solid var(--line)", borderRadius: "var(--radius-sm)", background: "var(--surface-soft)" }}>
-                                        <h4 style={{ margin: "0 0 12px 0" }}>Interactive Timeline Tracker</h4>
-                                        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, fontWeight: "bold" }}>
-                                            <span style={{ color: runData.perception_context ? "var(--emerald)" : "var(--muted)" }}>[ Perception ]</span>
-                                            <span style={{ color: "var(--line)" }}>→</span>
-                                            <span style={{ color: runData.trading_plan ? "var(--emerald)" : "var(--muted)" }}>[ Plan ]</span>
-                                            <span style={{ color: "var(--line)" }}>→</span>
-                                            <span style={{ color: runData.risk_result ? (runData.risk_result.decision === 'PROCEED_TO_SIMULATION' ? "var(--emerald)" : "var(--rose)") : "var(--muted)" }}>[ Risk Gate ]</span>
-                                            <span style={{ color: "var(--line)" }}>→</span>
-                                            <span style={{ color: runData.simulator_result ? "var(--emerald)" : "var(--muted)" }}>[ Simulation ]</span>
+                                        <h4 style={{ margin: "0 0 12px 0" }}>Run Timeline</h4>
+                                        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14 }}>
+                                            <span style={{ color: runData.perception_context ? "var(--emerald)" : "var(--muted)" }}>Perception</span>
+                                            <span>→</span>
+                                            <span style={{ color: runData.trading_plan ? "var(--emerald)" : "var(--muted)" }}>Plan Generation</span>
+                                            <span>→</span>
+                                            <span style={{ color: runData.risk_result ? "var(--emerald)" : "var(--muted)" }}>Risk Gate</span>
+                                            <span>→</span>
+                                            <span style={{ color: runData.simulator_result ? "var(--emerald)" : "var(--muted)" }}>Simulation</span>
                                         </div>
                                     </div>
 
-                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                                        {/* Perception State Card */}
-                                        {runData.perception_context && (
-                                            <div style={{ padding: 16, border: "1px solid var(--line)", borderRadius: "var(--radius-sm)", background: "var(--surface)" }}>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                                                    <h4 style={{ margin: 0, color: "var(--sky)" }}>Perception State</h4>
-                                                    <button className="secondary" style={{ padding: "4px 8px", fontSize: "12px" }} onClick={() => { document.querySelector('button[data-label="Confidence"]').click() }}>
-                                                        View Scout Accuracy 🎯
-                                                    </button>
+                                    {/* Trading Plan Viewer */}
+                                    {runData.trading_plan && (
+                                        <div style={{ padding: 16, border: "1px solid var(--line)", borderRadius: "var(--radius-sm)", background: "var(--surface-soft)" }}>
+                                            <h4 style={{ margin: "0 0 12px 0" }}>Trading Plan Viewer</h4>
+                                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, fontSize: 13 }}>
+                                                <div>
+                                                    <div style={{ fontWeight: "bold", color: "var(--sky-strong)", marginBottom: 4 }}>Setup</div>
+                                                    <div>Regime: {runData.trading_plan.setup.regime}</div>
+                                                    <div>Volatility: {runData.trading_plan.setup.volatility}</div>
                                                 </div>
-                                                <div style={{ fontSize: 13, display: "flex", flexDirection: "column", gap: 4 }}>
-                                                    <div>Regime: <span style={{color: "var(--fg)"}}>{runData.perception_context.market_regime || "Unknown"}</span></div>
-                                                    <div>Trend: <span style={{color: "var(--fg)"}}>{runData.perception_context.trend_bias || "Unknown"}</span></div>
-                                                    <div>Volatility: <span style={{color: "var(--fg)"}}>{runData.perception_context.volatility_state || "Unknown"}</span></div>
+                                                <div>
+                                                    <div style={{ fontWeight: "bold", color: "var(--emerald)", marginBottom: 4 }}>Trigger</div>
+                                                    <div>Condition: {runData.trading_plan.trigger.entry_condition}</div>
+                                                    <div>Zone: {runData.trading_plan.trigger.price_zone_min} - {runData.trading_plan.trigger.price_zone_max}</div>
                                                 </div>
-                                            </div>
-                                        )}
-
-                                        {/* Trading Plan Card */}
-                                        {runData.trading_plan && (
-                                            <div style={{ padding: 16, border: "1px solid var(--line)", borderRadius: "var(--radius-sm)", background: "var(--surface)" }}>
-                                                <h4 style={{ margin: "0 0 12px 0", color: "var(--sky)" }}>Trading Plan</h4>
-                                                <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13 }}>
-                                                    <div><span style={{ color: "var(--muted)" }}>Setup:</span> {runData.trading_plan.setup.market_conditions}</div>
-                                                    <div><span style={{ color: "var(--emerald)" }}>Trigger:</span> {runData.trading_plan.trigger.entry_condition}</div>
-                                                    <div><span style={{ color: "var(--rose)" }}>Invalidation:</span> {runData.trading_plan.invalidation.thesis_invalidated_condition}</div>
-                                                    <div><span style={{ color: "var(--amber)" }}>Swarm Confidence:</span> {(runData.trading_plan.risk_intent.confidence_score * 100).toFixed(1)}%</div>
+                                                <div>
+                                                    <div style={{ fontWeight: "bold", color: "var(--rose)", marginBottom: 4 }}>Invalidation</div>
+                                                    <div>Hard Stop: {runData.trading_plan.invalidation.hard_stop_price}</div>
+                                                    <div>Max Loss: {runData.trading_plan.invalidation.max_loss_pct}%</div>
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontWeight: "bold", color: "var(--amber)", marginBottom: 4 }}>Risk Intent</div>
+                                                    <div>R/R Ratio: {runData.trading_plan.risk_intent.risk_reward_ratio}</div>
+                                                    <div>Confidence: {runData.trading_plan.risk_intent.confidence_score}</div>
                                                 </div>
                                             </div>
-                                        )}
-                                    </div>
+                                        </div>
+                                    )}
 
                                     {/* Risk Gate Matrix */}
                                     {runData.risk_result && (
-                                        <div style={{ padding: 16, border: "1px solid var(--line)", borderRadius: "var(--radius-sm)", background: "var(--surface)" }}>
-                                            <h4 style={{ margin: "0 0 12px 0", color: "var(--sky)" }}>Risk Gate Matrix</h4>
-
-                                            {/* Prominent Veto Banner */}
-                                            {runData.risk_result.decision !== "PROCEED_TO_SIMULATION" && (
-                                                <div style={{ padding: 12, marginBottom: 12, background: "var(--rose-soft)", border: "1px solid var(--rose)", borderRadius: 4, color: "var(--rose)", fontWeight: "bold" }}>
-                                                    ⚠️ DETERMINISTIC VETO: The AI Swarm approved this setup, but the Deterministic Risk Engine vetoed it. LLMs cannot bypass risk limits.
-                                                </div>
-                                            )}
-
-                                            <div style={{ display: "flex", gap: 16, fontSize: 13, alignItems: 'center' }}>
+                                        <div style={{ padding: 16, border: "1px solid var(--line)", borderRadius: "var(--radius-sm)", background: "var(--surface-soft)" }}>
+                                            <h4 style={{ margin: "0 0 12px 0" }}>Risk Gate Matrix</h4>
+                                            <div style={{ display: "flex", gap: 16, fontSize: 13 }}>
                                                 <div style={{ padding: "8px 12px", borderRadius: 4, background: runData.risk_result.decision === "PROCEED_TO_SIMULATION" ? "var(--emerald-soft)" : "var(--rose-soft)", color: runData.risk_result.decision === "PROCEED_TO_SIMULATION" ? "var(--emerald)" : "var(--rose)", fontWeight: "bold" }}>
                                                     Decision: {runData.risk_result.decision}
+                                                </div>
+                                                <div style={{ padding: "8px 12px", borderRadius: 4, background: "var(--surface)" }}>
+                                                    Risk Score: {runData.risk_result.risk_score}
                                                 </div>
                                             </div>
                                             {runData.risk_result.violated_rules?.length > 0 && (
@@ -2054,37 +1944,27 @@
 
                                     {/* Orderbook Simulator Panel */}
                                     {runData.simulator_result && (
-                                        <div style={{ padding: 16, border: "1px solid var(--line)", borderRadius: "var(--radius-sm)", background: "var(--surface)" }}>
-                                            <h4 style={{ margin: "0 0 12px 0", color: "var(--sky)" }}>Orderbook Simulator</h4>
-                                            <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 12 }}>
-                                                <p>Die simulierte Win-Rate beliefe sich auf Basis dieses Fills auf den historischen Durchschnitt. Basierend auf der simulierten Orderbuchtiefe würde die Order zu folgenden Werten gefüllt werden:</p>
+                                        <div style={{ padding: 16, border: "1px solid var(--line)", borderRadius: "var(--radius-sm)", background: "var(--surface-soft)" }}>
+                                            <h4 style={{ margin: "0 0 12px 0" }}>Orderbook Simulator Panel</h4>
+                                            <div style={{ fontSize: 13, color: "var(--muted)" }}>
+                                                <p>Die simulierte Win-Rate beliefe sich auf Basis dieses Fills auf den historischen Durchschnitt.</p>
                                             </div>
-                                            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
-                                                <div style={{ background: "var(--bg)", padding: 12, borderRadius: 8, textAlign: "center", border: "1px solid var(--line)" }}>
+                                            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginTop: 12 }}>
+                                                <div style={{ background: "var(--surface)", padding: 12, borderRadius: 8, textAlign: "center" }}>
                                                     <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 4 }}>VWAP Fill Price</div>
                                                     <div style={{ fontSize: 16, fontFamily: "monospace", color: "var(--emerald)" }}>{runData.simulator_result.fill_price.toFixed(4)}</div>
                                                 </div>
-                                                <div style={{ background: "var(--bg)", padding: 12, borderRadius: 8, textAlign: "center", border: "1px solid var(--line)" }}>
-                                                    <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 4 }}>Simulated Slippage</div>
+                                                <div style={{ background: "var(--surface)", padding: 12, borderRadius: 8, textAlign: "center" }}>
+                                                    <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 4 }}>Slippage</div>
                                                     <div style={{ fontSize: 16, fontFamily: "monospace", color: "var(--rose)" }}>{runData.simulator_result.slippage_pct.toFixed(3)}%</div>
                                                 </div>
-                                                <div style={{ background: "var(--bg)", padding: 12, borderRadius: 8, textAlign: "center", border: "1px solid var(--line)" }}>
-                                                    <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 4 }}>Fill Status</div>
+                                                <div style={{ background: "var(--surface)", padding: 12, borderRadius: 8, textAlign: "center" }}>
+                                                    <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 4 }}>Status</div>
                                                     <div style={{ fontSize: 14, fontWeight: "bold", color: runData.simulator_result.status === "FILLED" ? "var(--emerald)" : "var(--amber)" }}>{runData.simulator_result.status}</div>
                                                 </div>
                                             </div>
                                         </div>
                                     )}
-
-                                    {/* Attribution Loop Info Panel */}
-                                    <div style={{ padding: 16, border: "1px dashed var(--line)", borderRadius: "var(--radius-sm)", background: "var(--bg)" }}>
-                                        <h4 style={{ margin: "0 0 8px 0", color: "var(--muted)" }}>Attribution Loop</h4>
-                                        <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: "1.5" }}>
-                                            Execution outcomes from this run are asynchronously fed back into the <strong>Confidence Registry</strong>.
-                                            The system isolates whether the Perception Scouts accurately assessed the regime or if the Risk Gate correctly identified an anomaly, continually calibrating each agent's trustworthiness weight.
-                                        </div>
-                                    </div>
-
                                 </div>
                             )}
                         </div>
@@ -2092,7 +1972,8 @@
                 </div>
             );
         }
-function App() {
+
+        function App() {
             const [tab, setTab] = useState("Overview");
 
             const [layoutConfig, setLayoutConfig] = useState(() => {
@@ -2700,15 +2581,6 @@ function App() {
                                     <span className="nav-dot">{tab === item ? "●" : ""}</span>
                                 </button>
                             ))}
-
-                            <div className="nav-category">Agentic Swarm</div>
-                            {["Agentic Stack"].map(item => (
-                                <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)} data-label={item}>
-                                    <span className="nav-icon">🧬</span>
-                                    <span className="nav-label">{item}</span>
-                                    <span className="nav-dot">{tab === item ? "●" : ""}</span>
-                                </button>
-                            ))}
                             <div className="nav-category">Wiki & 2ndBrain</div>
                             {["Wiki & 2ndBrain"].map(item => (
                                 <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)} data-label={item}>
@@ -2907,10 +2779,6 @@ function App() {
                             <KrakenPaperPanel request={request} addLog={addLog} />
                         </section>
 
-
-                        {layoutConfig.panels.agenticStack && (<section className={tab === "Agentic Stack" ? "" : "hidden"}>
-                            <AgenticStackPanel request={request} addLog={addLog} />
-                        </section>)}
                         <section className={tab === "Wiki & 2ndBrain" ? "" : "hidden"}>
                             <SecondBrainPanel request={request} addLog={addLog} />
                         </section>
@@ -4080,16 +3948,13 @@ function App() {
                                     <h3 style={{ margin: 0 }}>Backtest Results: {backtestResult.symbol}</h3>
                                     <button onClick={() => setShowModal(false)}>Close</button>
                                 </div>
-                                <div className="backtest-chart-container" style={{ minHeight: 320, border: "1px solid var(--line)", borderRadius: "var(--radius-sm)", marginBottom: 16, overflow: "hidden", background: "#0a0a0a" }}>
-                                    {backtestResult.chart_base64 ? (
-                                        <img
-                                            src={`data:image/png;base64,${backtestResult.chart_base64}`}
-                                            alt="Backtest Equity & Drawdown Chart"
-                                            style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
-                                        />
-                                    ) : (
-                                        <div style={{ padding: 40, textAlign: "center", color: "var(--muted)" }}>No chart trace data generated.</div>
-                                    )}
+                                <div className="backtest-chart-container" style={{ height: 320, border: "1px solid var(--line)", borderRadius: "var(--radius-sm)", marginBottom: 16, position: "relative" }}>
+                                    {backtestResult.results && backtestResult.results.map((r, i) => (
+                                        <div key={i} style={{ position: "absolute", left: `${(i / Math.max(backtestResult.results.length, 1)) * 90 + 5}%`, top: "10%" }}>
+                                            <div data-marker-type="entry" style={{ width: 8, height: 8, background: "#33a56b", borderRadius: "50%" }} />
+                                            <div data-marker-type="exit" style={{ width: 8, height: 8, background: "#d86545", borderRadius: "50%", marginTop: 4 }} />
+                                        </div>
+                                    ))}
                                 </div>
                                 <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
                                     <div><div className="kpi-caption">Signals</div><div className="kpi-value">{backtestResult.signals_generated}</div></div>

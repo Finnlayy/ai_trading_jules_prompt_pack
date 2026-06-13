@@ -1,10 +1,10 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from app.schemas.lifecycle import SignalCandidateRecord
-from app.schemas.ai_review import SignalReview, TriggerRunResponse
+from app.schemas.ai_review import SignalReview
 from app.schemas.trading_plan import TradingPlan
 from app.services.agentic_reasoning import agentic_reasoning
-from app.db.session import db_session
+from app.db.repository import db_session
 from app.db.models import AgenticRun
 import json
 
@@ -17,7 +17,7 @@ class SignalRequest(BaseModel):
     entry_price: float
     timeframe: str = "1m"
 
-@router.post("/review-signal", response_model=TriggerRunResponse)
+@router.post("/review-signal", response_model=SignalReview)
 async def review_signal(req: SignalRequest):
     try:
         # Mocking a SignalCandidateRecord
@@ -29,9 +29,9 @@ async def review_signal(req: SignalRequest):
             timeframe = req.timeframe
 
         final_state = await agentic_reasoning.run(MockSignal())
-        if final_state.get('error'):
-            raise HTTPException(status_code=500, detail=final_state.get('error'))
-        return TriggerRunResponse(run_id=final_state.get('run_id'), review=final_state.get('final_review'))
+        if final_state.error:
+            raise HTTPException(status_code=500, detail=final_state.error)
+        return final_state.final_review
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -46,18 +46,11 @@ async def create_trading_plan(req: SignalRequest):
             timeframe = req.timeframe
 
         final_state = await agentic_reasoning.run(MockSignal())
-        if final_state.get('error'):
-            raise HTTPException(status_code=500, detail=final_state.get('error'))
-        return final_state.get('plan')
+        if final_state.error:
+            raise HTTPException(status_code=500, detail=final_state.error)
+        return final_state.plan
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get("/runs")
-async def list_runs():
-    with db_session() as db:
-        runs = db.query(AgenticRun).order_by(AgenticRun.created_at.desc()).limit(20).all()
-        return [{"run_id": r.run_id, "symbol": r.symbol, "status": r.status, "created_at": r.created_at} for r in runs]
 
 @router.get("/runs/{run_id}")
 async def get_run(run_id: str):
