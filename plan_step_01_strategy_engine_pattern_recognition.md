@@ -56,7 +56,7 @@ Einführung eines konfigurierbaren, plugin-basierten Strategy Frameworks sowie e
 ## Neue Dateien
 
 ### 1. `app/services/strategy_engine.py`
-**Typ:** Service (Business Logic)  
+**Typ:** Service (Business Logic)
 **Agent-Zuweisung:** Backend-Dev / Core-Engine-Agent
 
 Enthält:
@@ -70,7 +70,7 @@ Enthält:
 - `StrategyScore` dataclass: `direction`, `confluence_score`, `confidence`, `metadata`
 
 ### 2. `app/services/pattern_recognition.py`
-**Typ:** Service (Algorithmik)  
+**Typ:** Service (Algorithmik)
 **Agent-Zuweisung:** Quant/Algorithm-Agent
 
 Enthält:
@@ -99,7 +99,7 @@ Enthält:
 - Wedges: Divergierende/konvergierende Trendlinien gegen den Trend
 
 ### 3. `app/schemas/strategy.py`
-**Typ:** Schema (Pydantic v2)  
+**Typ:** Schema (Pydantic v2)
 **Agent-Zuweisung:** Backend-Dev
 
 ```python
@@ -127,7 +127,7 @@ class StrategyStatusResponse(BaseModel):
 ```
 
 ### 4. `app/api/strategies.py`
-**Typ:** API Router  
+**Typ:** API Router
 **Agent-Zuweisung:** Backend-Dev
 
 Endpunkte:
@@ -139,7 +139,7 @@ Endpunkte:
 - `POST /strategies/{strategy_id}/backtest-smoke` — Schneller Smoke-Test der Strategie auf letzten 100 Bars
 
 ### 5. `app/api/patterns.py`
-**Typ:** API Router  
+**Typ:** API Router
 **Agent-Zuweisung:** Backend-Dev
 
 Endpunkte:
@@ -178,18 +178,18 @@ from app.services.strategy_engine import strategy_registry
 class SignalGenerator:
     def generate_payloads(self, symbol, timeframe, bars, min_confluence=None):
         # ... bestehender Code bis CISD-Scoring ...
-        
+
         # NEU: Aktive Strategie laden
         strategy = strategy_registry.get_active_strategy()
         strategy_scores = strategy.score_bars(raw_bars)
-        
+
         # NEU: Pattern-Erkennung (wenn PatternEnhancedStrategy aktiv)
         pattern_results = []
         if isinstance(strategy, PatternEnhancedStrategy):
             from app.services.pattern_recognition import PatternRecognitionEngine
             engine = PatternRecognitionEngine()
             pattern_results = engine.scan_bars(raw_bars)
-        
+
         # Payload-Erzeugung mit strategy_id + pattern_info
         for i, (bar, s_score, p_result) in enumerate(zip(raw_bars, strategy_scores, pattern_results)):
             # ... bestehende SL/TP-Logik ...

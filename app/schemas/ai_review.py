@@ -19,7 +19,3 @@ class SignalReview(BaseModel):
     reject_reason: Optional[str] = None
     requires_human_review: bool
     audit_trace: Optional[Dict[str, Any]] = None
-
-class TriggerRunResponse(BaseModel):
-    run_id: str
-    review: SignalReview
