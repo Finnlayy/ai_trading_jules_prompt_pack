@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException
 
 from app.schemas.autonomous_loop import (
+    StrategyRotationResponse,
     LoopControlRequest,
     LoopStatusResponse,
     WatchlistItemSchema,
@@ -146,3 +147,20 @@ async def get_rotation_log():
     """Return recent strategy rotation events."""
     logs = autonomous_loop_instance.get_rotation_log()
     return {"logs": logs, "count": len(logs)}
+
+
+@router.get("/rotations", response_model=list[StrategyRotationResponse])
+async def get_strategy_rotations():
+    loop = autonomous_loop_instance
+    return loop.get_rotation_log()
+
+@router.post("/toggle")
+async def toggle_loop(req: LoopControlRequest):
+    loop = autonomous_loop_instance
+    if req.action == "start" or req.action == "resume":
+        loop.start()
+        return {"status": "ok", "state": "running"}
+    elif req.action == "stop" or req.action == "pause":
+        loop.stop()
+        return {"status": "ok", "state": "stopped"}
+    return {"status": "error", "message": "Invalid action"}

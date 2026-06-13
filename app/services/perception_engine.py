@@ -1,7 +1,7 @@
 import time
 from typing import Dict, Any, Optional
 from app.schemas.perception import PerceptionContext, IndicatorState, RegimeContext, NewsContext
-from app.services.market_data import market_data_service
+
 from app.services.regime_engine import regime_engine_instance
 from app.services.news_aggregator import news_aggregator_instance
 from app.services.news_impact_scorer import news_impact_scorer
