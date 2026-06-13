@@ -202,6 +202,20 @@ class RiskEngine:
         if not result["allowed"]:
             raise RiskGateException(result["reason"], "CORRELATION_RISK_LIMIT")
 
+        # Volume scaling based on correlation caps
+        if hasattr(payload, 'volume') and payload.volume is not None:
+            if result["current_count"] > 0:
+                # Scale volume inversely proportional to current correlation count
+                scale_factor = 1.0 - (result["current_count"] / correlation_checker.max_per_sector)
+                # Ensure it doesn't go below 0
+                scale_factor = max(0.1, scale_factor)
+                payload.volume = payload.volume * scale_factor
+        elif hasattr(payload, 'execution_quantity') and payload.execution_quantity is not None:
+            if result["current_count"] > 0:
+                scale_factor = 1.0 - (result["current_count"] / correlation_checker.max_per_sector)
+                scale_factor = max(0.1, scale_factor)
+                payload.execution_quantity = payload.execution_quantity * scale_factor
+
 
     def _gate_paper_training_calibration(self, payload: M8Payload, weighted_scout_vote: Optional[float]):
         if self._should_relax():
