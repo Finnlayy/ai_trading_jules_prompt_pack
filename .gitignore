@@ -23,3 +23,7 @@ app/data/trading.db
 data/*.json
 data/*.jsonl
 data/runtime_archive/
+/archive/
+/pull_output.txt
+/sessions_test.json
+
