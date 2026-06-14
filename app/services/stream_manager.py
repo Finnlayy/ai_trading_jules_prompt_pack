@@ -10,19 +10,27 @@ class StreamManager:
         self.uri = uri
         self.connection = None
         self.running = False
+        self.min_delay = 1
+        self.max_delay = 60
 
     async def connect(self):
         self.running = True
+        delay = self.min_delay
         while self.running:
             try:
                 async with websockets.connect(self.uri) as websocket:
                     self.connection = websocket
                     logger.info(f"Connected to stream: {self.uri}")
+                    delay = self.min_delay # reset delay on successful connection
                     await self._listen(websocket)
             except Exception as e:
                 logger.error(f"WebSocket connection error: {e}")
                 if self.running:
-                    await asyncio.sleep(5) # Reconnect backoff
+                    import random
+                    # Exponential backoff with jitter
+                    sleep_time = delay + random.uniform(0, 1)
+                    await asyncio.sleep(sleep_time)
+                    delay = min(delay * 2, self.max_delay)
 
     async def _listen(self, websocket):
         try:
