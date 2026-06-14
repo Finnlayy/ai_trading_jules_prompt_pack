@@ -47,7 +47,7 @@ Das System wechselt vom passiven Webhook-Modell („wartet auf externe Signale�
 ## Neue Dateien
 
 ### 1. `app/services/autonomous_loop.py`
-**Typ:** Service (Background-Task)  
+**Typ:** Service (Background-Task)
 **Agent-Zuweisung:** Backend-Dev / Infrastructure-Agent
 
 Enthält:
@@ -81,7 +81,7 @@ Enthält:
 - Nach 20 Fehlern innerhalb 5 Minuten: Loop stoppt automatisch (Circuit-Breaker)
 
 ### 2. `app/services/watchlist_manager.py`
-**Typ:** Service (State Management)  
+**Typ:** Service (State Management)
 **Agent-Zuweisung:** Backend-Dev
 
 Enthält:
@@ -105,7 +105,7 @@ Enthält:
   - `get_active() -> list[WatchlistItem]`
 
 ### 3. `app/services/loop_health_monitor.py`
-**Typ:** Service (Observability)  
+**Typ:** Service (Observability)
 **Agent-Zuweisung:** Backend-Dev
 
 Enthält:
@@ -121,7 +121,7 @@ Enthält:
 - Telegram-Integration: Sendet Alert bei Status-Change (healthy → degraded → halted)
 
 ### 4. `app/schemas/autonomous_loop.py`
-**Typ:** Schema (Pydantic v2)  
+**Typ:** Schema (Pydantic v2)
 **Agent-Zuweisung:** Backend-Dev
 
 ```python
@@ -154,7 +154,7 @@ class StrategyRotationLog(BaseModel):
 ```
 
 ### 5. `app/api/autonomous_loop.py`
-**Typ:** API Router  
+**Typ:** API Router
 **Agent-Zuweisung:** Backend-Dev
 
 Endpunkte:

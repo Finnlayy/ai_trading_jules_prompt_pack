@@ -622,6 +622,9 @@ async def update_ai_profile(profile: AIBehaviorProfile):
 
 @router.post("/chat", response_model=AIChatResponse)
 async def chat_with_ai_layer(request: AIChatRequest):
+    if len(request.message) > 20000:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=413, detail="Payload too large")
     ai_layer_memory_instance.append_message("user", request.message)
     profile = ai_layer_memory_instance.get_profile()
 
