@@ -42,7 +42,7 @@ Der News Aggregator wird aktiv in den Trading-Loop eingebunden. Gefetchte News w
 ## Neue Dateien
 
 ### 1. `app/services/news_impact_scorer.py`
-**Typ:** Service (deterministisch)  
+**Typ:** Service (deterministisch)
 **Agent-Zuweisung:** Risk-Engine-Agent / Quant-Agent
 
 Enthält:
@@ -90,7 +90,7 @@ class RiskAdjustments:
 - Wenn Breaking-News zu Regulation/Exchange-Hack: `spread_multiplier = 1.5`
 
 ### 2. `app/services/news_sentiment_lexicon.py`
-**Typ:** Konfiguration/Daten  
+**Typ:** Konfiguration/Daten
 **Agent-Zuweisung:** Risk-Engine-Agent
 
 Enthält:
@@ -100,7 +100,7 @@ Enthält:
 - `SYMBOL_SYNONYMS: dict[str, list[str]]` — z.B. `{"BTCUSDT": ["bitcoin", "btc"], "ETHUSDT": ["ethereum", "eth"], "XAUUSDT": ["gold", "xau"]}`
 
 ### 3. `app/schemas/news_impact.py`
-**Typ:** Schema (Pydantic v2)  
+**Typ:** Schema (Pydantic v2)
 **Agent-Zuweisung:** Backend-Dev
 
 ```python
@@ -128,7 +128,7 @@ class NewsImpactRequest(BaseModel):
 ```
 
 ### 4. `app/api/news_impact.py`
-**Typ:** API Router  
+**Typ:** API Router
 **Agent-Zuweisung:** Backend-Dev
 
 Endpunkte:
@@ -160,7 +160,7 @@ async def _run_sentiment_scout(self, payload: M8Payload, symbol_context: str) ->
     # NEU: News-Abfrage
     from app.services.news_aggregator import news_aggregator_instance
     from app.services.news_impact_scorer import news_impact_scorer
-    
+
     cached_news = news_aggregator_instance.get_cached()
     scored = news_impact_scorer.score_items(cached_news, payload.symbol)
     # Nur Top-5 relevante News
@@ -169,7 +169,7 @@ async def _run_sentiment_scout(self, payload: M8Payload, symbol_context: str) ->
         f"- [{n.item.source}] {n.item.title} (Relevanz: {n.symbol_relevance:.2f}, Sentiment: {n.sentiment_polarity:.2f})"
         for n in relevant if n.symbol_relevance >= 0.3
     ) or "No relevant recent news."
-    
+
     system = (
         "You are the Sentiment Scout — a market sentiment analyst.\n"
         "Analyze news flow, social sentiment, and event risk for this signal.\n"
@@ -192,35 +192,35 @@ class RiskEngine:
         # NEU: News-basierte Anpassungen laden
         from app.services.news_impact_scorer import news_impact_scorer
         from app.services.news_aggregator import news_aggregator_instance
-        
+
         cached_news = news_aggregator_instance.get_cached()
         scored = news_impact_scorer.score_items(cached_news, payload.symbol)
         summary = news_impact_scorer.aggregate_impact(scored)
         adjustments = summary.risk_adjustments
-        
+
         # NEU: Anpassungen auf Thresholds anwenden
         effective_min_confluence = MIN_CONFLUENCE_SCORE + adjustments.confluence_offset
         effective_max_crisis = MAX_CRISIS_SCORE + adjustments.crisis_offset
         effective_max_spread = MAX_SPREAD * adjustments.spread_multiplier
         effective_cooldown = COOLDOWN_BARS + adjustments.cooldown_bars_offset
-        
+
         # Bestehende Gate-Logik mit angepassten Werten
         if payload.confluence_score < effective_min_confluence:
             raise RiskGateException(f"Confluence {payload.confluence_score} < {effective_min_confluence}", "LOW_CONFIDENCE")
-        
+
         if payload.crisis_score > effective_max_crisis:
             raise RiskGateException(f"Crisis {payload.crisis_score} > {effective_max_crisis}", "HIGH_CRISIS")
-        
+
         if payload.spread > effective_max_spread:
             raise RiskGateException(f"Spread {payload.spread} > {effective_max_spread}", "WIDE_SPREAD")
-        
+
         # NEU: Human Review Enforcement
         if adjustments.human_review_required:
             return {
                 "decision": DecisionEnum.HUMAN_REVIEW,
                 "reject_reason": "NEWS_IMPACT_MANDATES_HUMAN_REVIEW",
             }
-        
+
         # ... restliche Gate-Logik ...
 ```
 

@@ -5,7 +5,7 @@
     "archetype": "Stratege",
     "created_at": "2026-06-05T22:58:29.137155+00:00",
     "born_from": "v1_base",
-    "generation": 7,
+    "generation": 12,
     "specialization_symbols": [],
     "badges": [
       {
@@ -20,9 +20,9 @@
       "cautious": 0.7,
       "momentum_driven": 0.3
     },
-    "total_calls": 100,
-    "correct_calls": 39,
-    "accuracy": 0.39,
+    "total_calls": 156,
+    "correct_calls": 63,
+    "accuracy": 0.40384615384615385,
     "current_streak": 0,
     "confidence_level": 0.5,
     "experience_level": "Novice"
@@ -33,7 +33,7 @@
     "archetype": "Analyst",
     "created_at": "2026-06-05T22:58:29.137223+00:00",
     "born_from": "v1_base",
-    "generation": 4,
+    "generation": 5,
     "specialization_symbols": [],
     "badges": [
       {
@@ -48,9 +48,9 @@
       "cautious": 0.4,
       "momentum_driven": 0.8
     },
-    "total_calls": 100,
-    "correct_calls": 24,
-    "accuracy": 0.24,
+    "total_calls": 156,
+    "correct_calls": 39,
+    "accuracy": 0.25,
     "current_streak": 0,
     "confidence_level": 0.5,
     "experience_level": "Novice"
@@ -61,7 +61,7 @@
     "archetype": "Architekt",
     "created_at": "2026-06-05T22:58:29.137245+00:00",
     "born_from": "v1_base",
-    "generation": 3,
+    "generation": 6,
     "specialization_symbols": [],
     "badges": [
       {
@@ -82,10 +82,10 @@
       "cautious": 0.6,
       "momentum_driven": 0.2
     },
-    "total_calls": 100,
-    "correct_calls": 55,
-    "accuracy": 0.55,
-    "current_streak": 1,
+    "total_calls": 156,
+    "correct_calls": 79,
+    "accuracy": 0.5064102564102564,
+    "current_streak": 0,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -95,7 +95,7 @@
     "archetype": "Diplomat",
     "created_at": "2026-06-05T22:58:29.137262+00:00",
     "born_from": "v1_base",
-    "generation": 3,
+    "generation": 4,
     "specialization_symbols": [],
     "badges": [
       {
@@ -110,10 +110,10 @@
       "cautious": 0.5,
       "momentum_driven": 0.5
     },
-    "total_calls": 100,
-    "correct_calls": 10,
-    "accuracy": 0.1,
-    "current_streak": 1,
+    "total_calls": 156,
+    "correct_calls": 17,
+    "accuracy": 0.10897435897435898,
+    "current_streak": 0,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -123,7 +123,7 @@
     "archetype": "Analyst",
     "created_at": "2026-06-05T22:58:29.137279+00:00",
     "born_from": "v1_base",
-    "generation": 4,
+    "generation": 5,
     "specialization_symbols": [],
     "badges": [
       {
@@ -138,9 +138,9 @@
       "cautious": 0.4,
       "momentum_driven": 0.8
     },
-    "total_calls": 100,
-    "correct_calls": 13,
-    "accuracy": 0.13,
+    "total_calls": 156,
+    "correct_calls": 16,
+    "accuracy": 0.10256410256410256,
     "current_streak": 0,
     "confidence_level": 0.5,
     "experience_level": "Novice"
@@ -151,7 +151,7 @@
     "archetype": "W\u00e4chter",
     "created_at": "2026-06-05T22:58:29.137295+00:00",
     "born_from": "v1_base",
-    "generation": 4,
+    "generation": 5,
     "specialization_symbols": [],
     "badges": [
       {
@@ -166,9 +166,9 @@
       "cautious": 0.95,
       "momentum_driven": 0.1
     },
-    "total_calls": 100,
-    "correct_calls": 31,
-    "accuracy": 0.31,
+    "total_calls": 156,
+    "correct_calls": 47,
+    "accuracy": 0.30128205128205127,
     "current_streak": 1,
     "confidence_level": 0.5,
     "experience_level": "Novice"
@@ -179,7 +179,7 @@
     "archetype": "Entwickler",
     "created_at": "2026-06-05T22:58:29.137313+00:00",
     "born_from": "v1_base",
-    "generation": 8,
+    "generation": 10,
     "specialization_symbols": [],
     "badges": [
       {
@@ -194,9 +194,9 @@
       "cautious": 0.6,
       "momentum_driven": 0.3
     },
-    "total_calls": 100,
-    "correct_calls": 22,
-    "accuracy": 0.22,
+    "total_calls": 156,
+    "correct_calls": 35,
+    "accuracy": 0.22435897435897437,
     "current_streak": 0,
     "confidence_level": 0.5,
     "experience_level": "Novice"
@@ -207,7 +207,7 @@
     "archetype": "Pr\u00fcfer",
     "created_at": "2026-06-05T22:58:29.137328+00:00",
     "born_from": "v1_base",
-    "generation": 8,
+    "generation": 13,
     "specialization_symbols": [],
     "badges": [
       {
@@ -222,9 +222,9 @@
       "cautious": 0.9,
       "momentum_driven": 0.1
     },
-    "total_calls": 100,
-    "correct_calls": 19,
-    "accuracy": 0.19,
+    "total_calls": 156,
+    "correct_calls": 25,
+    "accuracy": 0.16025641025641027,
     "current_streak": 0,
     "confidence_level": 0.5,
     "experience_level": "Novice"
@@ -268,10 +268,10 @@
       "cautious": 0.8,
       "momentum_driven": 0.2
     },
-    "total_calls": 100,
-    "correct_calls": 85,
-    "accuracy": 0.85,
-    "current_streak": 1,
+    "total_calls": 156,
+    "correct_calls": 136,
+    "accuracy": 0.8717948717948718,
+    "current_streak": 0,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -281,7 +281,7 @@
     "archetype": "Forscher",
     "created_at": "2026-06-05T22:58:29.137357+00:00",
     "born_from": "v1_base",
-    "generation": 7,
+    "generation": 10,
     "specialization_symbols": [],
     "badges": [
       {
@@ -296,10 +296,10 @@
       "cautious": 0.4,
       "momentum_driven": 0.6
     },
-    "total_calls": 100,
-    "correct_calls": 38,
-    "accuracy": 0.38,
-    "current_streak": 1,
+    "total_calls": 156,
+    "correct_calls": 61,
+    "accuracy": 0.391025641025641,
+    "current_streak": 2,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -342,10 +342,10 @@
       "cautious": 0.4,
       "momentum_driven": 0.8
     },
-    "total_calls": 152,
-    "correct_calls": 152,
+    "total_calls": 208,
+    "correct_calls": 208,
     "accuracy": 1.0,
-    "current_streak": 152,
+    "current_streak": 208,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -355,7 +355,7 @@
     "archetype": "Diplomat",
     "created_at": "2026-06-05T22:58:29.137388+00:00",
     "born_from": "v1_base",
-    "generation": 4,
+    "generation": 6,
     "specialization_symbols": [],
     "badges": [
       {
@@ -370,9 +370,9 @@
       "cautious": 0.5,
       "momentum_driven": 0.9
     },
-    "total_calls": 152,
+    "total_calls": 208,
     "correct_calls": 4,
-    "accuracy": 0.02631578947368421,
+    "accuracy": 0.019230769230769232,
     "current_streak": 0,
     "confidence_level": 0.5,
     "experience_level": "Novice"
@@ -416,10 +416,10 @@
       "cautious": 0.95,
       "momentum_driven": 0.1
     },
-    "total_calls": 152,
-    "correct_calls": 152,
+    "total_calls": 208,
+    "correct_calls": 208,
     "accuracy": 1.0,
-    "current_streak": 152,
+    "current_streak": 208,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -462,10 +462,10 @@
       "cautious": 0.7,
       "momentum_driven": 0.5
     },
-    "total_calls": 152,
-    "correct_calls": 152,
+    "total_calls": 208,
+    "correct_calls": 208,
     "accuracy": 1.0,
-    "current_streak": 152,
+    "current_streak": 208,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -508,10 +508,10 @@
       "cautious": 0.8,
       "momentum_driven": 0.2
     },
-    "total_calls": 152,
-    "correct_calls": 152,
+    "total_calls": 208,
+    "correct_calls": 208,
     "accuracy": 1.0,
-    "current_streak": 152,
+    "current_streak": 208,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -521,7 +521,7 @@
     "archetype": "Architect",
     "created_at": "2026-06-05T22:58:29.137453+00:00",
     "born_from": "v1_base",
-    "generation": 7,
+    "generation": 10,
     "specialization_symbols": [],
     "badges": [
       {
@@ -536,10 +536,10 @@
       "cautious": 0.85,
       "momentum_driven": 0.1
     },
-    "total_calls": 152,
-    "correct_calls": 52,
-    "accuracy": 0.34210526315789475,
-    "current_streak": 0,
+    "total_calls": 208,
+    "correct_calls": 70,
+    "accuracy": 0.33653846153846156,
+    "current_streak": 1,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   }

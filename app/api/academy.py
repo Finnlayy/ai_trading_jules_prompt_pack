@@ -25,7 +25,13 @@ class AgentDeployRequest(BaseModel):
 @router.get("/agents/registry")
 def get_agents_registry():
     agents = agent_registry.get_all_identities()
-    return {"agents": [a.model_dump() for a in agents]}
+    res = []
+    for a in agents:
+        d = a.model_dump()
+        d.setdefault("confidence_level", getattr(a, "confidence_level", 0.5))
+        d.setdefault("experience_level", getattr(a, "experience_level", "Novice"))
+        res.append(d)
+    return {"agents": res}
 
 
 @router.post("/agents/deploy")

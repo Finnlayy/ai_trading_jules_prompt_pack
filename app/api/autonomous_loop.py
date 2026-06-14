@@ -131,12 +131,26 @@ async def update_watchlist_item(symbol: str, req: WatchlistItemSchema):
 async def get_loop_stats():
     """Return detailed loop statistics."""
     stats = autonomous_loop_instance._health.stats
+    error_history = []
+    for err in stats.error_history:
+        if isinstance(err, dict):
+            timestamp = err.get("timestamp")
+            if hasattr(timestamp, "isoformat"):
+                timestamp = timestamp.isoformat()
+            error_history.append({"timestamp": timestamp, "error": str(err.get("error"))})
+        elif isinstance(err, tuple) and len(err) == 2:
+            timestamp = err[0]
+            if hasattr(timestamp, "isoformat"):
+                timestamp = timestamp.isoformat()
+            error_history.append({"timestamp": timestamp, "error": str(err[1])})
+        else:
+            error_history.append({"timestamp": str(err), "error": str(err)})
     return LoopStatsResponse(
         cycles_completed=stats.cycles_completed,
         signals_generated=stats.signals_generated,
         trades_executed=stats.trades_executed,
         errors_last_5min=stats.errors_last_5min,
-        error_history=stats.error_history,
+        error_history=error_history,
         avg_cycle_time_ms=autonomous_loop_instance._health.get_avg_cycle_time_ms(),
         generated_at=datetime.now(timezone.utc),
     )
