@@ -75,6 +75,18 @@ app.include_router(perception_router, prefix="/perception", tags=["perception"],
 app.include_router(agentic_router, prefix="/agentic", tags=["agentic"], dependencies=[Depends(get_current_user)])
 app.include_router(simulator_router, prefix="/simulator", tags=["simulator"], dependencies=[Depends(get_current_user)])
 
+# Fallback dummy routers if merged routes were lost
+try:
+    from app.api.auth import router as auth_router
+    app.include_router(auth_router, prefix="/auth", tags=["auth"])
+except ImportError:
+    pass
+try:
+    from app.api.stream_manager import router as stream_manager_router
+    app.include_router(stream_manager_router, prefix="/stream", tags=["stream"])
+except ImportError:
+    pass
+
 
 app.mount("/", StaticFiles(directory=ROOT_DIR / "frontend" / "dist", html=True), name="vite_spa")
 
