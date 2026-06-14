@@ -17,3 +17,8 @@ requests
 ctrader-open-api
 krakenex
 service_identity
+psycopg2-binary>=2.9.9
+asyncpg>=0.29.0
+google-auth>=2.28.0
+PyJWT>=2.8.0
+websockets

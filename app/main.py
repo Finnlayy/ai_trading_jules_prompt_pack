@@ -5,6 +5,8 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
+from app.api.auth import router as auth_router, get_current_user
+from fastapi import Depends
 from app.api.ai_layer import router as ai_layer_router
 from app.api.backtest_runner import router as backtest_router
 from app.api.endpoints import router as m8_router
@@ -43,39 +45,38 @@ app = FastAPI(
 ROOT_DIR = Path(__file__).resolve().parents[1]
 app.mount("/static", StaticFiles(directory=ROOT_DIR / "app" / "static"), name="static")
 
+app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
 app.include_router(m8_router, prefix="/webhook", tags=["webhook"])
-app.include_router(backtest_router, prefix="/backtest", tags=["backtest"])
-app.include_router(ai_layer_router, prefix="/ai", tags=["ai-layer"])
-app.include_router(market_router, prefix="/market", tags=["market-data"])
-app.include_router(recommend_router, prefix="/market", tags=["market-data"])
-app.include_router(confidence_router, prefix="/confidence", tags=["confidence-registry"])
-app.include_router(circuit_breaker_router, prefix="/circuit", tags=["circuit-breaker"])
-app.include_router(reconciliation_router, prefix="/reconcile", tags=["reconciliation"])
-app.include_router(news_router, prefix="/news", tags=["news"])
-app.include_router(broker_router, prefix="/broker", tags=["broker"])
-app.include_router(paper_router, prefix="/paper", tags=["paper"])
-app.include_router(strategies_router, prefix="/strategies", tags=["strategies"])
-app.include_router(patterns_router, prefix="/patterns", tags=["patterns"])
-app.include_router(news_impact_router, prefix="/news", tags=["news-impact"])
-app.include_router(autonomous_loop_router, prefix="/loop", tags=["autonomous_loop"])
-app.include_router(live_trading_router, prefix="/live", tags=["live_trading"])
-app.include_router(db_insight_router, prefix="/db", tags=["db-insight"])
-app.include_router(academy_router, tags=["academy"])
-app.include_router(ctrader_router, prefix="/ctrader", tags=["ctrader"])
-app.include_router(ctrader_fix_router, prefix="/ctrader-fix", tags=["ctrader-fix"])
-app.include_router(kraken_router, tags=["kraken"])
-app.include_router(kraken_paper_router, tags=["kraken-paper"])
-app.include_router(lifecycle_router, prefix="/lifecycle", tags=["lifecycle"])
+app.include_router(backtest_router, prefix="/backtest", tags=["backtest"], dependencies=[Depends(get_current_user)])
+app.include_router(ai_layer_router, prefix="/ai", tags=["ai-layer"], dependencies=[Depends(get_current_user)])
+app.include_router(market_router, prefix="/market", tags=["market-data"], dependencies=[Depends(get_current_user)])
+app.include_router(recommend_router, prefix="/market", tags=["market-data"], dependencies=[Depends(get_current_user)])
+app.include_router(confidence_router, prefix="/confidence", tags=["confidence-registry"], dependencies=[Depends(get_current_user)])
+app.include_router(circuit_breaker_router, prefix="/circuit", tags=["circuit-breaker"], dependencies=[Depends(get_current_user)])
+app.include_router(reconciliation_router, prefix="/reconcile", tags=["reconciliation"], dependencies=[Depends(get_current_user)])
+app.include_router(news_router, prefix="/news", tags=["news"], dependencies=[Depends(get_current_user)])
+app.include_router(broker_router, prefix="/broker", tags=["broker"], dependencies=[Depends(get_current_user)])
+app.include_router(paper_router, prefix="/paper", tags=["paper"], dependencies=[Depends(get_current_user)])
+app.include_router(strategies_router, prefix="/strategies", tags=["strategies"], dependencies=[Depends(get_current_user)])
+app.include_router(patterns_router, prefix="/patterns", tags=["patterns"], dependencies=[Depends(get_current_user)])
+app.include_router(news_impact_router, prefix="/news", tags=["news-impact"], dependencies=[Depends(get_current_user)])
+app.include_router(autonomous_loop_router, prefix="/loop", tags=["autonomous_loop"], dependencies=[Depends(get_current_user)])
+app.include_router(live_trading_router, prefix="/live", tags=["live_trading"], dependencies=[Depends(get_current_user)])
+app.include_router(db_insight_router, prefix="/db", tags=["db-insight"], dependencies=[Depends(get_current_user)])
+app.include_router(academy_router, tags=["academy"], dependencies=[Depends(get_current_user)])
+app.include_router(ctrader_router, prefix="/ctrader", tags=["ctrader"], dependencies=[Depends(get_current_user)])
+app.include_router(ctrader_fix_router, prefix="/ctrader-fix", tags=["ctrader-fix"], dependencies=[Depends(get_current_user)])
+app.include_router(kraken_router, tags=["kraken"], dependencies=[Depends(get_current_user)])
+app.include_router(kraken_paper_router, tags=["kraken-paper"], dependencies=[Depends(get_current_user)])
+app.include_router(lifecycle_router, prefix="/lifecycle", tags=["lifecycle"], dependencies=[Depends(get_current_user)])
 app.include_router(webhook_signal_router, tags=["webhook"])
 
-app.include_router(perception_router, prefix="/perception", tags=["perception"])
-app.include_router(agentic_router, prefix="/agentic", tags=["agentic"])
-app.include_router(simulator_router, prefix="/simulator", tags=["simulator"])
+app.include_router(perception_router, prefix="/perception", tags=["perception"], dependencies=[Depends(get_current_user)])
+app.include_router(agentic_router, prefix="/agentic", tags=["agentic"], dependencies=[Depends(get_current_user)])
+app.include_router(simulator_router, prefix="/simulator", tags=["simulator"], dependencies=[Depends(get_current_user)])
 
 
-@app.get("/", include_in_schema=False)
-def frontend():
-    return FileResponse(ROOT_DIR / "frontend.html")
+app.mount("/", StaticFiles(directory=ROOT_DIR / "frontend" / "dist", html=True), name="vite_spa")
 
 @app.get("/favicon.ico", include_in_schema=False)
 def favicon():
