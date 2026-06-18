@@ -1015,6 +1015,7 @@
         .pill.ok { background: var(--mint); color: #155932; }
         .pill.warn { background: var(--butter); color: #795404; }
         .pill.bad { background: var(--peach); color: #88361f; }
+        .pill.risk-reject { background: #b84d4d; color: #ffffff; }
         .pill.error { background: var(--peach); color: #88361f; }
         .pill.ai { background: var(--lilac); color: #493c78; }
         .pill.info { background: var(--sky); color: #1e3a8a; }
@@ -1658,7 +1659,7 @@
 
         function statusPill(value) {
             if (String(value || "").includes("EXECUTED") || String(value || "").includes("ok")) return "pill ok";
-            if (String(value || "").includes("REJECT")) return "pill bad";
+            if (String(value || "").includes("REJECT")) return "pill bad risk-reject";
             return "pill warn";
         }
 
@@ -2957,7 +2958,7 @@
                         {report ? (
                             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 16, padding: 20 }}>
                                 <div style={{ textAlign: "center" }}>
-                                    <div style={{ fontSize: 11, color: "var(--muted)" }}>Winrate</div>
+                                    <div style={{ fontSize: 11, color: "var(--muted)" }}>Simulated Hit Rate</div>
                                     <div style={{ fontSize: 22, fontWeight: 600, color: report.winrate_pct >= 50 ? "var(--ok)" : "var(--danger)" }}>{report.winrate_pct}%</div>
                                 </div>
                                 <div style={{ textAlign: "center" }}>
@@ -2969,7 +2970,7 @@
                                     <div style={{ fontSize: 22, fontWeight: 600 }}>{report.total_trades}</div>
                                 </div>
                                 <div style={{ textAlign: "center" }}>
-                                    <div style={{ fontSize: 11, color: "var(--muted)" }}>Profit Factor</div>
+                                    <div style={{ fontSize: 11, color: "var(--muted)" }}>Simulated Profit Factor</div>
                                     <div style={{ fontSize: 22, fontWeight: 600, color: (report.profit_factor || 0) >= 1 ? "var(--ok)" : "var(--danger)" }}>{report.profit_factor || "—"}</div>
                                 </div>
                             </div>
@@ -5185,10 +5186,10 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                         <Kpi title="Candidates" value={candidateStats.total || 0} caption={`${candidateStats.closed || 0} closed`} tone="ok" />
                     </div>
                     <div className="panel span-3">
-                        <Kpi title="Winrate" value={`${formatNumber((outcomeStats.win_rate || 0) * 100, 1)}%`} caption={`${outcomeStats.wins || 0}W / ${outcomeStats.losses || 0}L`} tone={(outcomeStats.win_rate || 0) >= 0.5 ? "ok" : "warn"} />
+                        <Kpi title="Simulated Hit Rate" value={`${formatNumber((outcomeStats.win_rate || 0) * 100, 1)}%`} caption={`${outcomeStats.wins || 0}W / ${outcomeStats.losses || 0}L`} tone={(outcomeStats.win_rate || 0) >= 0.5 ? "ok" : "warn"} />
                     </div>
                     <div className="panel span-3">
-                        <Kpi title="Total PnL" value={formatNumber(outcomeStats.total_pnl || 0, 4)} caption={`Avg R ${formatNumber(outcomeStats.avg_r_multiple || 0, 2)}`} tone={(outcomeStats.total_pnl || 0) >= 0 ? "ok" : "warn"} />
+                        <Kpi title="Simulated PnL" value={formatNumber(outcomeStats.total_pnl || 0, 4)} caption={`Avg R ${formatNumber(outcomeStats.avg_r_multiple || 0, 2)}`} tone={(outcomeStats.total_pnl || 0) >= 0 ? "ok" : "warn"} />
                     </div>
                     <div className="panel span-3">
                         <Kpi title="Learning Events" value={learningStats.events || 0} caption={`${scoutRows.length} scouts`} tone="info" />
@@ -5288,7 +5289,21 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                                     <tr key={row.candidate_id} title={row.confidence_context || ""}>
                                         <td><b>{row.symbol}</b></td>
                                         <td>{row.timeframe}</td>
-                                        <td><span className={`pill ${row.status === "paper_closed" ? "ok" : row.status === "risk_rejected" ? "error" : "warn"}`}>{row.status}</span></td>
+                                        <td>
+                                            <span
+                                                className={`pill ${row.status === "paper_closed" ? "ok" : row.status === "risk_rejected" ? "error" : "warn"}`}
+                                                style={{ cursor: row.status === "risk_rejected" ? "pointer" : "default" }}
+                                                onClick={(e) => {
+                                                    if (row.status === "risk_rejected") {
+                                                        e.preventDefault();
+                                                        const btn = document.querySelector('button[data-label="Shadow Queue"]');
+                                                        if (btn) btn.click();
+                                                    }
+                                                }}
+                                            >
+                                                {row.status}
+                                            </span>
+                                        </td>
                                         <td>{row.risk_decision ? <span className={`pill ${row.risk_decision === 'PROCEED_TO_SIMULATION' ? 'ok' : 'error'}`}>{shortId(row.risk_decision)}</span> : "-"}</td>
                                         <td>{shortId(row.reject_reason) || "-"}</td>
                                         <td>{row.weighted_scout_vote !== undefined && row.weighted_scout_vote !== null ? formatNumber(row.weighted_scout_vote, 2) : "-"}</td>
@@ -5593,7 +5608,7 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                                     <span>Sim only</span>
                                 </label>
                                 <div className="winrate-percentage" style={{ fontWeight: 700, color: "var(--emerald)" }}>
-                                    Winrate: {winrate}%
+                                    Simulated Hit Rate: {winrate}%
                                 </div>
                             </div>
                         </div>
@@ -5677,6 +5692,7 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                                 {!compact && <th>Mode</th>}
                                 {!compact && <th>Client Order ID</th>}
                                 <th>Price</th>
+                                <th>Target/Stop</th>
                                 {!compact && <th>Size</th>}
                                 <th>Status</th>
                             </tr>
@@ -5687,11 +5703,23 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                                     <td className="mono">{new Date(order.at).toLocaleString()}</td>
                                     <td>{order.symbol}</td>
                                     <td>{order.direction}</td>
-                                    <td>{order.intent}</td>
+                                    <td>
+                                        <span
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                const btn = document.querySelector('button[data-label="Wiki & 2ndBrain"]');
+                                                if (btn) btn.click();
+                                            }}
+                                            style={{ cursor: "pointer", textDecoration: "underline" }}
+                                        >
+                                            {order.intent}
+                                        </span>
+                                    </td>
                                     <td><span className={statusPill(order.final_decision)}>{order.final_decision || "UNKNOWN"}</span></td>
                                     {!compact && <td><span className={`pill ${order.execution_mode === "live" ? "error" : "ok"}`}>{order.execution_mode || "simulation"}</span></td>}
                                     {!compact && <td className="mono">{order.client_order_id || "-"}</td>}
                                     <td>{order.entry_price}</td>
+                                    <td>{order.target_price || "-"} / {order.stop_price || "-"}</td>
                                     {!compact && <td>{order.size_base || "-"}</td>}
                                     <td>{order.reject_reason || order.broker_status || order.source}</td>
                                 </tr>
@@ -6251,9 +6279,9 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                         {performance ? (
                             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 12, marginTop: 8 }}>
                                 <Kpi title="Total Trades" value={performance.total_trades || 0} caption="Completed" tone="ok" />
-                                <Kpi title="Winrate" value={`${(performance.winrate_pct || 0).toFixed(1)}%`} caption={`${performance.winning_trades || 0}W / ${performance.losing_trades || 0}L`} tone={performance.winrate_pct >= 50 ? "ok" : "warn"} />
-                                <Kpi title="Total PnL" value={`${(performance.total_pnl || 0).toFixed(2)}`} caption="Quote currency" tone={performance.total_pnl >= 0 ? "ok" : "warn"} />
-                                <Kpi title="Profit Factor" value={`${(performance.profit_factor || 0).toFixed(2)}`} caption="Gross win / gross loss" tone={performance.profit_factor >= 1.5 ? "ok" : "warn"} />
+                                <Kpi title="Simulated Hit Rate" value={`${(performance.winrate_pct || 0).toFixed(1)}%`} caption={`${performance.winning_trades || 0}W / ${performance.losing_trades || 0}L`} tone={performance.winrate_pct >= 50 ? "ok" : "warn"} />
+                                <Kpi title="Simulated PnL" value={`${(performance.total_pnl || 0).toFixed(2)}`} caption="Quote currency" tone={performance.total_pnl >= 0 ? "ok" : "warn"} />
+                                <Kpi title="Simulated Profit Factor" value={`${(performance.profit_factor || 0).toFixed(2)}`} caption="Gross win / gross loss" tone={performance.profit_factor >= 1.5 ? "ok" : "warn"} />
                                 <Kpi title="Sharpe" value={`${(performance.sharpe_ratio || 0).toFixed(2)}`} caption="Risk-adjusted" tone={performance.sharpe_ratio >= 1 ? "ok" : "warn"} />
                                 <Kpi title="Max DD" value={`${(performance.max_drawdown_pct || 0).toFixed(2)}%`} caption="Peak to trough" tone="warn" />
                             </div>
