@@ -5,7 +5,7 @@
     "archetype": "Stratege",
     "created_at": "2026-06-05T22:58:29.137155+00:00",
     "born_from": "v1_base",
-    "generation": 16,
+    "generation": 17,
     "specialization_symbols": [],
     "badges": [
       {
@@ -20,10 +20,10 @@
       "cautious": 0.7,
       "momentum_driven": 0.3
     },
-    "total_calls": 240,
-    "correct_calls": 101,
-    "accuracy": 0.42083333333333334,
-    "current_streak": 2,
+    "total_calls": 268,
+    "correct_calls": 111,
+    "accuracy": 0.4141791044776119,
+    "current_streak": 0,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -33,7 +33,7 @@
     "archetype": "Analyst",
     "created_at": "2026-06-05T22:58:29.137223+00:00",
     "born_from": "v1_base",
-    "generation": 7,
+    "generation": 8,
     "specialization_symbols": [],
     "badges": [
       {
@@ -48,10 +48,10 @@
       "cautious": 0.4,
       "momentum_driven": 0.8
     },
-    "total_calls": 240,
-    "correct_calls": 60,
-    "accuracy": 0.25,
-    "current_streak": 1,
+    "total_calls": 268,
+    "correct_calls": 69,
+    "accuracy": 0.2574626865671642,
+    "current_streak": 0,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -82,10 +82,10 @@
       "cautious": 0.6,
       "momentum_driven": 0.2
     },
-    "total_calls": 240,
-    "correct_calls": 116,
-    "accuracy": 0.48333333333333334,
-    "current_streak": 0,
+    "total_calls": 268,
+    "correct_calls": 128,
+    "accuracy": 0.47761194029850745,
+    "current_streak": 2,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -95,7 +95,7 @@
     "archetype": "Diplomat",
     "created_at": "2026-06-05T22:58:29.137262+00:00",
     "born_from": "v1_base",
-    "generation": 8,
+    "generation": 9,
     "specialization_symbols": [],
     "badges": [
       {
@@ -110,10 +110,10 @@
       "cautious": 0.5,
       "momentum_driven": 0.5
     },
-    "total_calls": 240,
-    "correct_calls": 24,
-    "accuracy": 0.1,
-    "current_streak": 0,
+    "total_calls": 268,
+    "correct_calls": 29,
+    "accuracy": 0.10820895522388059,
+    "current_streak": 1,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -123,7 +123,7 @@
     "archetype": "Analyst",
     "created_at": "2026-06-05T22:58:29.137279+00:00",
     "born_from": "v1_base",
-    "generation": 11,
+    "generation": 12,
     "specialization_symbols": [],
     "badges": [
       {
@@ -138,9 +138,9 @@
       "cautious": 0.4,
       "momentum_driven": 0.8
     },
-    "total_calls": 240,
-    "correct_calls": 18,
-    "accuracy": 0.075,
+    "total_calls": 268,
+    "correct_calls": 21,
+    "accuracy": 0.07835820895522388,
     "current_streak": 0,
     "confidence_level": 0.5,
     "experience_level": "Novice"
@@ -151,7 +151,7 @@
     "archetype": "W\u00e4chter",
     "created_at": "2026-06-05T22:58:29.137295+00:00",
     "born_from": "v1_base",
-    "generation": 12,
+    "generation": 14,
     "specialization_symbols": [],
     "badges": [
       {
@@ -166,9 +166,9 @@
       "cautious": 0.95,
       "momentum_driven": 0.1
     },
-    "total_calls": 240,
-    "correct_calls": 73,
-    "accuracy": 0.30416666666666664,
+    "total_calls": 268,
+    "correct_calls": 82,
+    "accuracy": 0.30597014925373134,
     "current_streak": 0,
     "confidence_level": 0.5,
     "experience_level": "Novice"
@@ -179,7 +179,7 @@
     "archetype": "Entwickler",
     "created_at": "2026-06-05T22:58:29.137313+00:00",
     "born_from": "v1_base",
-    "generation": 12,
+    "generation": 17,
     "specialization_symbols": [],
     "badges": [
       {
@@ -194,9 +194,9 @@
       "cautious": 0.6,
       "momentum_driven": 0.3
     },
-    "total_calls": 240,
-    "correct_calls": 55,
-    "accuracy": 0.22916666666666666,
+    "total_calls": 268,
+    "correct_calls": 58,
+    "accuracy": 0.21641791044776118,
     "current_streak": 0,
     "confidence_level": 0.5,
     "experience_level": "Novice"
@@ -222,10 +222,10 @@
       "cautious": 0.9,
       "momentum_driven": 0.1
     },
-    "total_calls": 240,
-    "correct_calls": 45,
-    "accuracy": 0.1875,
-    "current_streak": 1,
+    "total_calls": 268,
+    "correct_calls": 51,
+    "accuracy": 0.19029850746268656,
+    "current_streak": 0,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -268,10 +268,10 @@
       "cautious": 0.8,
       "momentum_driven": 0.2
     },
-    "total_calls": 240,
-    "correct_calls": 209,
-    "accuracy": 0.8708333333333333,
-    "current_streak": 9,
+    "total_calls": 268,
+    "correct_calls": 237,
+    "accuracy": 0.8843283582089553,
+    "current_streak": 37,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -281,7 +281,7 @@
     "archetype": "Forscher",
     "created_at": "2026-06-05T22:58:29.137357+00:00",
     "born_from": "v1_base",
-    "generation": 13,
+    "generation": 14,
     "specialization_symbols": [],
     "badges": [
       {
@@ -296,10 +296,10 @@
       "cautious": 0.4,
       "momentum_driven": 0.6
     },
-    "total_calls": 240,
-    "correct_calls": 85,
-    "accuracy": 0.3541666666666667,
-    "current_streak": 0,
+    "total_calls": 268,
+    "correct_calls": 94,
+    "accuracy": 0.35074626865671643,
+    "current_streak": 1,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -342,10 +342,10 @@
       "cautious": 0.4,
       "momentum_driven": 0.8
     },
-    "total_calls": 292,
-    "correct_calls": 292,
+    "total_calls": 320,
+    "correct_calls": 320,
     "accuracy": 1.0,
-    "current_streak": 292,
+    "current_streak": 320,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -355,7 +355,7 @@
     "archetype": "Diplomat",
     "created_at": "2026-06-05T22:58:29.137388+00:00",
     "born_from": "v1_base",
-    "generation": 10,
+    "generation": 13,
     "specialization_symbols": [],
     "badges": [
       {
@@ -370,9 +370,9 @@
       "cautious": 0.5,
       "momentum_driven": 0.9
     },
-    "total_calls": 292,
-    "correct_calls": 4,
-    "accuracy": 0.0136986301369863,
+    "total_calls": 320,
+    "correct_calls": 5,
+    "accuracy": 0.015625,
     "current_streak": 0,
     "confidence_level": 0.5,
     "experience_level": "Novice"
@@ -416,10 +416,10 @@
       "cautious": 0.95,
       "momentum_driven": 0.1
     },
-    "total_calls": 292,
-    "correct_calls": 292,
+    "total_calls": 320,
+    "correct_calls": 320,
     "accuracy": 1.0,
-    "current_streak": 292,
+    "current_streak": 320,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -462,10 +462,10 @@
       "cautious": 0.7,
       "momentum_driven": 0.5
     },
-    "total_calls": 292,
-    "correct_calls": 292,
+    "total_calls": 320,
+    "correct_calls": 320,
     "accuracy": 1.0,
-    "current_streak": 292,
+    "current_streak": 320,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -508,10 +508,10 @@
       "cautious": 0.8,
       "momentum_driven": 0.2
     },
-    "total_calls": 292,
-    "correct_calls": 292,
+    "total_calls": 320,
+    "correct_calls": 320,
     "accuracy": 1.0,
-    "current_streak": 292,
+    "current_streak": 320,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -536,9 +536,9 @@
       "cautious": 0.85,
       "momentum_driven": 0.1
     },
-    "total_calls": 292,
-    "correct_calls": 97,
-    "accuracy": 0.3321917808219178,
+    "total_calls": 320,
+    "correct_calls": 109,
+    "accuracy": 0.340625,
     "current_streak": 0,
     "confidence_level": 0.5,
     "experience_level": "Novice"
