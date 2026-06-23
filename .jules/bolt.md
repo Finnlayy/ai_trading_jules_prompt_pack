@@ -43,3 +43,7 @@
 ## 2024-07-02 - Avoid Eager JSON Parsing in Brain Compressor Transcript Lookups
 **Learning:** `parse_transcript_to_markdown` in `app/services/brain_compressor.py` was previously calling `json.loads` eagerly for every line in the `transcript.jsonl` files (often very large files from agent sessions), only to discard lines that weren't `USER_INPUT`, `PLANNER_RESPONSE`, or `MODEL_RESPONSE`.
 **Action:** By adding a fast string substring filter `if "USER_INPUT" not in line_str...` before attempting to parse JSON, we avoid allocating thousands of dicts for irrelevant tool calls and thoughts, significantly reducing CPU and memory overhead during second brain compression.
+
+## 2025-02-27 - Bounded Deques with Post-Filtering Cause Truncation
+**Learning:** Using a bounded `deque(maxlen=limit)` to pre-buffer lines before parsing and filtering (like in `JournalLogger.get_entries()`) can cause the final result set to be smaller than the `limit` if some lines fail validation (e.g., invalid JSON), because the false-positive lines consumed the limited capacity of the deque.
+**Action:** When retrieving the last N valid items from a sequential file, use an unbounded list to collect all lines, iterate backwards using `reversed()`, apply the parsing/validation, break when `len(results) == limit`, and finally reverse the results back to chronological order.
