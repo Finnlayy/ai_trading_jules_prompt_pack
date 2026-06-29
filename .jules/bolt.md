@@ -43,3 +43,6 @@
 ## 2024-07-02 - Avoid Eager JSON Parsing in Brain Compressor Transcript Lookups
 **Learning:** `parse_transcript_to_markdown` in `app/services/brain_compressor.py` was previously calling `json.loads` eagerly for every line in the `transcript.jsonl` files (often very large files from agent sessions), only to discard lines that weren't `USER_INPUT`, `PLANNER_RESPONSE`, or `MODEL_RESPONSE`.
 **Action:** By adding a fast string substring filter `if "USER_INPUT" not in line_str...` before attempting to parse JSON, we avoid allocating thousands of dicts for irrelevant tool calls and thoughts, significantly reducing CPU and memory overhead during second brain compression.
+## 2024-07-06 - FastAPI Sync I/O in Async Endpoints
+**Learning:** Synchronous operations like `SessionLocal()` queries and `json.loads` inside `async def` FastAPI route handlers directly block the asyncio event loop.
+**Action:** When sync DB or file I/O is required inside an `async def` endpoint, explicitly wrap it inside an inner function and offload execution via `await asyncio.to_thread(_fetch_func)`.
