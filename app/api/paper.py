@@ -219,3 +219,86 @@ async def stop_paper_session(session_id: str) -> dict[str, Any]:
         return await paper_sessions.stop(session_id)
     except KeyError:
         raise HTTPException(status_code=404, detail="Paper session not found")
+
+
+@router.get("/config")
+def get_paper_config():
+    """Fetch paper trading and regime engine settings."""
+    import app.core.config as config
+    from app.services.regime_engine import regime_engine_instance
+    return {
+        "PAPER_TRADING_RELAX_RISK": config.PAPER_TRADING_RELAX_RISK,
+        "REGIME_ALLOW_RW1_SIGNALS": regime_engine_instance.allow_rw1_signals,
+    }
+
+
+@router.post("/config")
+def update_paper_config(settings: dict):
+    """Update paper trading and regime engine settings in-memory."""
+    import app.core.config as config
+    from app.services.regime_engine import regime_engine_instance
+    
+    if "PAPER_TRADING_RELAX_RISK" in settings:
+        config.PAPER_TRADING_RELAX_RISK = bool(settings["PAPER_TRADING_RELAX_RISK"])
+    if "REGIME_ALLOW_RW1_SIGNALS" in settings:
+        val = bool(settings["REGIME_ALLOW_RW1_SIGNALS"])
+        config.REGIME_ALLOW_RW1_SIGNALS = val
+        regime_engine_instance.allow_rw1_signals = val
+        
+    return {
+        "status": "success",
+        "PAPER_TRADING_RELAX_RISK": config.PAPER_TRADING_RELAX_RISK,
+        "REGIME_ALLOW_RW1_SIGNALS": regime_engine_instance.allow_rw1_signals,
+    }
+
+
+@router.get("/shadow-queue")
+def get_shadow_queue_entries(limit: int = 100):
+    """Fetch rejected signal entries tracked in the shadow queue."""
+    from app.services.shadow_queue import shadow_queue
+    entries = shadow_queue._load()
+    result = []
+    for e in reversed(entries):
+        result.append({
+            "signal_id": e.signal_id,
+            "timestamp": e.timestamp,
+            "symbol": e.symbol,
+            "timeframe": e.timeframe,
+            "direction": e.direction,
+            "entry_price": e.entry_price,
+            "stop_price": e.stop_price,
+            "target_price": e.target_price,
+            "scout_decisions": e.scout_decisions,
+            "added_at": e.added_at,
+            "evaluated": e.evaluated,
+        })
+    return {
+        "status": "ok",
+        "entries": result[:limit],
+        "count": len(entries),
+        "pending_count": sum(1 for e in entries if not e.evaluated),
+        "evaluated_count": sum(1 for e in entries if e.evaluated),
+    }
+
+
+@router.get("/workers/status")
+def get_workers_status():
+    """Fetch active background task worker statuses."""
+    from app.services.webhook_consumer import webhook_consumer_instance
+    from app.services.position_monitor import paper_position_monitor_instance
+    from app.services.training_loop import training_loop
+    
+    return {
+        "webhook_consumer": {
+            "is_running": getattr(webhook_consumer_instance, "is_running", True),
+            "queue_size": webhook_consumer_instance.queue.qsize() if hasattr(webhook_consumer_instance, "queue") else 0,
+        },
+        "position_monitor": {
+            "is_running": getattr(paper_position_monitor_instance, "is_running", True),
+        },
+        "training_loop": {
+            "is_running": getattr(training_loop, "is_running", False),
+            "interval_seconds": getattr(training_loop, "interval_seconds", None),
+        }
+    }
+

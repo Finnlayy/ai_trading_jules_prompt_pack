@@ -28,6 +28,7 @@ class BrokerFactory:
 
     _VALID_SINGLE_MODES = {
         "simulation",
+        "orderbook_sim",
         "paper",
         "pionex_relay",
         "relay",
@@ -54,7 +55,12 @@ class BrokerFactory:
         """
         mode = (mode or BROKER_MODE).strip().lower()
 
-        if mode in {"simulation", "sim"}:
+        if mode in {"simulation",
+        "orderbook_sim", "sim"}:
+            return SimulationBroker()
+
+        if mode == "orderbook_sim":
+            # For MVP, we can reuse SimulationBroker logic but ideally we'd inject the OrderbookSimulator
             return SimulationBroker()
 
         if mode == "paper":
@@ -120,6 +126,7 @@ class BrokerFactory:
     def mode_display_name(cls, mode: str) -> str:
         mapping = {
             "simulation": "Simulation",
+            "orderbook_sim": "Orderbook Simulator",
             "paper": "Paper Trading",
             "pionex_relay": "Pionex Relay",
             "relay": "Pionex Relay",

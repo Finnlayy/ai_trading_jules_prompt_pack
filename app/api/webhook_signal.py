@@ -51,11 +51,12 @@ async def receive_signal(
 
     # Validate signature if a webhook secret is configured
     webhook_secret = config.WEBHOOK_SECRET
-    if webhook_secret:
-        if not x_signature:
-            raise HTTPException(status_code=401, detail="Missing X-Signature header")
-        if not _verify_signature(body, x_signature, webhook_secret):
-            raise HTTPException(status_code=401, detail="Invalid signature")
+    if not webhook_secret or not webhook_secret.strip():
+        raise HTTPException(status_code=401, detail="Webhook secret not configured")
+    if not x_signature:
+        raise HTTPException(status_code=401, detail="Missing X-Signature header")
+    if not _verify_signature(body, x_signature, webhook_secret):
+        raise HTTPException(status_code=401, detail="Invalid signature")
 
     # Parse and validate payload schema
     try:

@@ -14,9 +14,8 @@ router = APIRouter()
 def _verify_webhook_signature(body: bytes, signature: str | None) -> bool:
     """Verify HMAC-SHA256 signature of the raw request body."""
     webhook_secret = config.WEBHOOK_SECRET
-    if not webhook_secret:
-        # If no secret is configured, skip verification (backward compatible)
-        return True
+    if not webhook_secret or not webhook_secret.strip():
+        return False
     if not signature:
         return False
     expected = hmac.new(
@@ -25,7 +24,6 @@ def _verify_webhook_signature(body: bytes, signature: str | None) -> bool:
         hashlib.sha256,
     ).hexdigest()
     return hmac.compare_digest(expected, signature)
-
 
 @router.post("/m8")
 async def receive_m8_payload(request: Request):
