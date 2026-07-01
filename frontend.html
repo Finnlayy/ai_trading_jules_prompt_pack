@@ -57,6 +57,7 @@
             --status-short: var(--coral);
             --status-executed: var(--mint-strong);
             --status-rejected: var(--rose);
+            --rust-red: #b84d4d;
             --status-sim: var(--sky-strong);
             --status-ai: var(--indigo);
             --status-warn: var(--amber);
@@ -2603,14 +2604,7 @@
                                     <span className="nav-dot">{tab === item ? "●" : ""}</span>
                                 </button>
                             ))}
-                            <div className="nav-category">Shadow Queue</div>
-                            {["Shadow Queue"].map(item => (
-                                <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)} data-label={item}>
-                                    <span className="nav-icon">⏳</span>
-                                    <span className="nav-label">{item}</span>
-                                    <span className="nav-dot">{tab === item ? "●" : ""}</span>
-                                </button>
-                            ))}
+
                             <div className="nav-category">Strategy Library</div>
                             {["Strategies", "Backtest"].map(item => (
                                 <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)} data-label={item}>
@@ -2781,9 +2775,7 @@
                             <ModelHubPanel request={request} addLog={addLog} />
                         </section>
 
-                        <section className={tab === "Shadow Queue" ? "" : "hidden"}>
-                            <ShadowQueuePanel request={request} addLog={addLog} />
-                        </section>
+
                     </div>
 
                     {layoutConfig.showSettings && (
@@ -6319,7 +6311,11 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                             <div style={{ textAlign: "center", color: "var(--muted)", padding: 20 }}>No performance data yet. Execute some trades first.</div>
                         )}
                     </div>
-                </div>
+
+                        <div className="panel span-12" style={{marginTop: "16px"}}>
+                            <ShadowQueuePanel request={request} addLog={addLog} />
+                        </div>
+                    </div>
             );
         }
 

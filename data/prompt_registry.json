@@ -177,17 +177,17 @@
   },
   {
     "version_id": "v8_auto_evolved",
-    "scout_name": "harmony_coordinator",
-    "prompt_text": "Auto-evolved prompt for harmony_coordinator focusing on recent failures.",
-    "created_at": "2026-06-14T16:37:18.255685+00:00",
+    "scout_name": "market_dna",
+    "prompt_text": "Auto-evolved prompt for market_dna focusing on recent failures.",
+    "created_at": "2026-06-21T04:45:58.692069+00:00",
     "parent_version": "v1_base",
     "change_summary": "Auto-correction from Training Loop"
   },
   {
     "version_id": "v9_auto_evolved",
-    "scout_name": "structural_architect",
-    "prompt_text": "Auto-evolved prompt for structural_architect focusing on recent failures.",
-    "created_at": "2026-06-14T16:37:18.263423+00:00",
+    "scout_name": "harmony_coordinator",
+    "prompt_text": "Auto-evolved prompt for harmony_coordinator focusing on recent failures.",
+    "created_at": "2026-06-21T04:42:31.372257+00:00",
     "parent_version": "v1_base",
     "change_summary": "Auto-correction from Training Loop"
   },
@@ -201,57 +201,57 @@
   },
   {
     "version_id": "v11_auto_evolved",
-    "scout_name": "risk_kernel",
-    "prompt_text": "Auto-evolved prompt for risk_kernel focusing on recent failures.",
-    "created_at": "2026-06-14T16:52:59.089285+00:00",
+    "scout_name": "sentiment",
+    "prompt_text": "Auto-evolved prompt for sentiment focusing on recent failures.",
+    "created_at": "2026-06-21T04:42:31.457247+00:00",
     "parent_version": "v1_base",
     "change_summary": "Auto-correction from Training Loop"
   },
   {
     "version_id": "v12_auto_evolved",
-    "scout_name": "risk_kernel",
-    "prompt_text": "Auto-evolved prompt for risk_kernel focusing on recent failures.",
-    "created_at": "2026-06-14T16:52:59.112486+00:00",
+    "scout_name": "indicator_fusion",
+    "prompt_text": "Auto-evolved prompt for indicator_fusion focusing on recent failures.",
+    "created_at": "2026-06-21T04:45:58.701690+00:00",
     "parent_version": "v1_base",
     "change_summary": "Auto-correction from Training Loop"
   },
   {
     "version_id": "v13_auto_evolved",
-    "scout_name": "evolution_optimizer",
-    "prompt_text": "Auto-evolved prompt for evolution_optimizer focusing on recent failures.",
-    "created_at": "2026-06-14T16:52:59.054100+00:00",
+    "scout_name": "sentiment",
+    "prompt_text": "Auto-evolved prompt for sentiment focusing on recent failures.",
+    "created_at": "2026-06-21T04:45:58.671670+00:00",
     "parent_version": "v1_base",
     "change_summary": "Auto-correction from Training Loop"
   },
   {
     "version_id": "v14_auto_evolved",
-    "scout_name": "correlation",
-    "prompt_text": "Auto-evolved prompt for correlation focusing on recent failures.",
-    "created_at": "2026-06-14T16:52:59.124856+00:00",
+    "scout_name": "risk_kernel",
+    "prompt_text": "Auto-evolved prompt for risk_kernel focusing on recent failures.",
+    "created_at": "2026-06-21T04:45:58.675124+00:00",
     "parent_version": "v1_base",
     "change_summary": "Auto-correction from Training Loop"
   },
   {
     "version_id": "v15_auto_evolved",
-    "scout_name": "macro_sentinel",
-    "prompt_text": "Auto-evolved prompt for macro_sentinel focusing on recent failures.",
-    "created_at": "2026-06-14T16:10:58.193922+00:00",
+    "scout_name": "pine_core",
+    "prompt_text": "Auto-evolved prompt for pine_core focusing on recent failures.",
+    "created_at": "2026-06-21T04:45:58.637075+00:00",
     "parent_version": "v1_base",
     "change_summary": "Auto-correction from Training Loop"
   },
   {
     "version_id": "v16_auto_evolved",
-    "scout_name": "macro_sentinel",
-    "prompt_text": "Auto-evolved prompt for macro_sentinel focusing on recent failures.",
-    "created_at": "2026-06-14T16:21:57.781844+00:00",
+    "scout_name": "pine_core",
+    "prompt_text": "Auto-evolved prompt for pine_core focusing on recent failures.",
+    "created_at": "2026-06-21T04:45:58.704311+00:00",
     "parent_version": "v1_base",
     "change_summary": "Auto-correction from Training Loop"
   },
   {
     "version_id": "v17_auto_evolved",
-    "scout_name": "payload_qa",
-    "prompt_text": "Auto-evolved prompt for payload_qa focusing on recent failures.",
-    "created_at": "2026-06-14T16:37:18.222130+00:00",
+    "scout_name": "pine_core",
+    "prompt_text": "Auto-evolved prompt for pine_core focusing on recent failures.",
+    "created_at": "2026-06-21T04:45:58.713252+00:00",
     "parent_version": "v1_base",
     "change_summary": "Auto-correction from Training Loop"
   }
