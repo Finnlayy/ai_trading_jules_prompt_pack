@@ -11,7 +11,6 @@ from typing import Dict
 
 import requests
 
-from app.core.config import AUTONOMOUS_LOOP_ENABLED
 from app.services.dashboard_sse import SSEEvent
 from app.services.live_fill_tracker import live_fill_tracker
 from app.services.position_monitor import position_monitor

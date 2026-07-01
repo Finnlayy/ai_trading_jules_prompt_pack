@@ -192,3 +192,99 @@ def get_db_news(
         ],
         "count": len(items),
     }
+
+
+@router.get("/second-brain")
+def get_second_brain():
+    """Fetch compiled Project Wiki & Second Brain content."""
+    from app.services.wiki_service import SECOND_BRAIN_FILE, update_second_brain
+    
+    # Refresh stats on access
+    try:
+        update_second_brain()
+    except Exception:
+        pass
+
+    if not SECOND_BRAIN_FILE.exists():
+        content = "# Project Wiki & Second Brain\n\nNo compiled entry found yet. Perform some trades or run training drills to populate memory."
+    else:
+        try:
+            content = SECOND_BRAIN_FILE.read_text(encoding="utf-8")
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"Could not read second brain file: {exc}")
+
+    # Build the list of documents dynamically
+    from pathlib import Path
+    from datetime import datetime, timezone
+    docs = []
+    try:
+        for p in sorted(Path(".").glob("*.md")):
+            if p.is_file():
+                stat = p.stat()
+                modified_time = datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat()
+                docs.append({
+                    "name": p.name,
+                    "size_bytes": stat.st_size,
+                    "modified": modified_time
+                })
+    except Exception:
+        pass
+
+    return {
+        "content": content,
+        "docs": docs
+    }
+
+
+@router.get("/second-brain/doc/{filename}")
+def get_second_brain_doc(filename: str):
+    """Fetch raw text content of a specified project document file from root."""
+    from pathlib import Path
+    # Security gates to prevent path traversal
+    if not filename.endswith(".md") or "/" in filename or "\\" in filename or ".." in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename parameter")
+    
+    doc_path = Path(filename)
+    if not doc_path.exists() or not doc_path.is_file():
+        raise HTTPException(status_code=404, detail="Document not found")
+        
+    try:
+        content = doc_path.read_text(encoding="utf-8")
+        return {"filename": filename, "content": content}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Could not read document file: {exc}")
+
+
+@router.post("/second-brain/compress")
+async def trigger_second_brain_compression():
+    """Trigger the BrainCompressor to scan, format, and summarize all chats and plans."""
+    from app.services.brain_compressor import BrainCompressor
+    try:
+        compressor = BrainCompressor()
+        index_path = await compressor.run_sync_and_compile()
+        return {
+            "status": "success",
+            "message": "Second brain compression and summarization completed successfully.",
+            "index_file": str(index_path)
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Error running compression: {exc}")
+
+
+@router.get("/second-brain/summaries")
+def get_second_brain_summaries():
+    """Fetch compiled consolidated summaries index content."""
+    from pathlib import Path
+    summaries_file = Path("wiki/second_brain_summaries.md")
+    if not summaries_file.exists():
+        raise HTTPException(status_code=404, detail="Summaries index not compiled yet. Call POST /api/db/second-brain/compress first.")
+        
+    try:
+        content = summaries_file.read_text(encoding="utf-8")
+        return {
+            "filename": "second_brain_summaries.md",
+            "content": content
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Could not read summaries file: {exc}")
+
