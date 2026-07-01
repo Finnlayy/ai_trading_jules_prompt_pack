@@ -60,6 +60,25 @@ def test_backtest_strategy_selector_is_wired_to_backend_strategy_contract():
     assert 'onChange={e => update("strategy_id", e.target.value)}' in html
 
 
+def test_ppo_academy_backtesting_controls_are_wired_to_api_contract():
+    html = _frontend_source()
+
+    assert "PPO Academy Backtesting" in html
+    assert 'data-testid="ppo-academy-backtesting-panel"' in html
+    assert 'name="ppo_backend"' in html
+    assert 'name="ppo_target_scout_index"' in html
+    assert 'name="ppo_min_reward"' in html
+    assert 'name="ppo_min_accuracy"' in html
+    assert 'name="ppo_initial_cash"' in html
+    assert 'name="ppo_records_json"' in html
+    assert '"/academy/policy/backtesting/run"' in html
+    assert '"/academy/policy/backtesting/optimize"' in html
+    assert '"/academy/policy/backtesting/report"' in html
+    assert "runPpoAction(\"run\")" in html
+    assert "runPpoAction(\"optimize\")" in html
+    assert "runPpoAction(\"report\")" in html
+
+
 def test_ctrader_refresh_button_uses_component_callback_prop():
     html = _frontend_source()
 
