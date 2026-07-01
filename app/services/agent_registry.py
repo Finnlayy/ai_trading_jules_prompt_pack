@@ -1,3 +1,4 @@
+from app.core.utils import write_json_async
 import json
 import os
 import asyncio
@@ -5,7 +6,7 @@ from typing import List, Dict, Optional
 from pathlib import Path
 from datetime import datetime
 
-from app.schemas.academy import ScoutIdentity, CareerEntry, Badge, AgentLeaderboardEntry
+from app.schemas.academy import ScoutIdentity, CareerEntry, Badge
 from app.services.ai.gem_agents import DEFAULT_AGENT_DEFINITIONS
 
 DATA_DIR = Path("data")
@@ -186,6 +187,11 @@ class AgentRegistryService:
 
             if save_registry:
                 self.save_registry()
+                try:
+                    from app.services.wiki_service import update_second_brain
+                    update_second_brain()
+                except Exception:
+                    pass
 
         if not write_log:
             return
@@ -242,6 +248,9 @@ class AgentRegistryService:
             with open(CAREER_LOG_FILE, "r") as f:
                 for line in f:
                     if line.strip():
+                        # ⚡ Bolt Optimization: Fast string match to skip JSON parsing for irrelevant lines
+                        if f'"scout_name":"{scout_name}"' not in line and f'"scout_name": "{scout_name}"' not in line:
+                            continue
                         data = json.loads(line)
                         if data.get("scout_name") == scout_name:
                             entries.append(CareerEntry(**data))
@@ -263,6 +272,9 @@ class AgentRegistryService:
             with open(CAREER_LOG_FILE, "r", encoding="utf-8") as f:
                 lines = [line for line in f if line.strip()]
             for line in reversed(lines):
+                # ⚡ Bolt Optimization: Fast string match to skip JSON parsing for irrelevant lines
+                if event_type and f'"event_type":"{event_type}"' not in line and f'"event_type": "{event_type}"' not in line:
+                    continue
                 data = json.loads(line)
                 if event_type and data.get("event_type") != event_type:
                     continue

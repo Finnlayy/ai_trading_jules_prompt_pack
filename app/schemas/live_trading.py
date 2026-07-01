@@ -100,3 +100,12 @@ class SSEEventSchema(BaseModel):
     event_type: Literal["trade", "position", "metrics", "alert", "heartbeat"]
     payload: dict[str, Any]
     timestamp: datetime
+
+class UnifiedBrokerState(BaseModel):
+    broker_name: str
+    broker_mode: str
+    live_ready: bool
+    balance: float
+    equity: float
+    positions: list[dict]
+    orders: list[dict]

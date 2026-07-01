@@ -101,3 +101,92 @@ async def test_ai_gems_review_prompt_only_routes_pionex_and_redacts_secrets():
     assert data["selected_gems"] == ["pine_core", "payload_qa"]
     assert data["backend_context"]["input"]["api_key"] == "[REDACTED]"
     assert set(data["generated_prompts"].keys()) == {"pine_core", "payload_qa"}
+
+
+@pytest.mark.asyncio
+async def test_ai_chat_actions_and_context(monkeypatch):
+    # Test context enrichment includes system_state
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        response = await ac.post(
+            "/ai/chat",
+            json={
+                "message": "check balance",
+                "return_prompt_only": True,
+            },
+        )
+    assert response.status_code == 200
+    data = response.json()
+    generated_prompt = json.loads(data["generated_prompt"])
+    assert "system_state" in generated_prompt
+    assert "active_strategy_id" in generated_prompt["system_state"]
+    assert "paper_balance" in generated_prompt["system_state"]
+
+    # Test set_strategy action triggers successfully
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        response = await ac.post(
+            "/ai/chat",
+            json={
+                "message": "change strategy to pattern_enhanced",
+            },
+        )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["recommended_action"]["action"] == "set_strategy"
+    assert data["recommended_action"]["params"]["strategy_id"] == "pattern_enhanced"
+    assert "Active strategy changed to 'pattern_enhanced'" in data["reply"]
+
+    # Test open_trade action triggers successfully
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        response = await ac.post(
+            "/ai/chat",
+            json={
+                "message": "open long HYPEUSDT 2.5 qty",
+            },
+        )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["recommended_action"]["action"] == "open_trade"
+    assert data["recommended_action"]["params"]["symbol"] == "HYPEUSDT"
+    assert data["recommended_action"]["params"]["direction"] == "LONG"
+    assert data["recommended_action"]["params"]["quantity"] == 2.5
+    assert "Placed manual LONG order for HYPEUSDT" in data["reply"]
+
+    # Test close_trade action triggers successfully
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        response = await ac.post(
+            "/ai/chat",
+            json={
+                "message": "close trade for HYPEUSDT",
+            },
+        )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["recommended_action"]["action"] == "close_trade"
+    assert data["recommended_action"]["params"]["symbol"] == "HYPEUSDT"
+    assert "Closed" in data["reply"]
+
+    # Test add_strategy action triggers successfully
+    pine_code = '//@version=5\nstrategy("MySuperStrategy")\nplot(close)'
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        response = await ac.post(
+            "/ai/chat",
+            json={
+                "message": f"add strategy MySuperStrategy:\n{pine_code}",
+            },
+        )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["recommended_action"]["action"] == "add_strategy"
+    assert data["recommended_action"]["params"]["name"] == "MySuperStrategy"
+    assert "Saved and registered strategy" in data["reply"]
+
+    # Check that it is registered in strategy_registry
+    from app.services.strategy_engine import strategy_registry
+    assert "MySuperStrategy" in strategy_registry.list_strategies()
+
+    # Clean up file and registry entry to avoid side effects
+    from pathlib import Path
+    temp_file = Path(__file__).resolve().parents[2] / "app" / "scripts" / "generated_pines" / "MySuperStrategy.pine"
+    if temp_file.exists():
+        temp_file.unlink()
+    strategy_registry.unregister("MySuperStrategy")
