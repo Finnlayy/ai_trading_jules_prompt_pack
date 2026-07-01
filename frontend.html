@@ -1016,6 +1016,7 @@
         .pill.ok { background: var(--mint); color: #155932; }
         .pill.warn { background: var(--butter); color: #795404; }
         .pill.bad { background: var(--peach); color: #88361f; }
+        .pill.risk-reject { background: #b84d4d; color: #ffffff; }
         .pill.error { background: var(--peach); color: #88361f; }
         .pill.ai { background: var(--lilac); color: #493c78; }
         .pill.info { background: var(--sky); color: #1e3a8a; }
@@ -1659,7 +1660,7 @@
 
         function statusPill(value) {
             if (String(value || "").includes("EXECUTED") || String(value || "").includes("ok")) return "pill ok";
-            if (String(value || "").includes("REJECT")) return "pill" + " " + "bad" + " " + "danger-flag";
+            if (String(value || "").includes("REJECT")) return "pill bad risk-reject";
             return "pill warn";
         }
 
@@ -1810,6 +1811,10 @@
   activeConnections: true,
   unifiedBroker: true,
   swarmWarRoom: true,
+  panels: {
+    sidebar: true,
+    logs: true
+  }
 };
 
         function mergeLayoutConfig(saved) {
@@ -2718,7 +2723,7 @@
                         </section>)}
 
                         <section className={tab === "Orders" ? "" : "hidden"}>
-                            <Orders orders={filteredOrders} />
+                            <Orders orders={filteredOrders} setTab={setTab} />
                         </section>
 
                         <section className={tab === "Backtest" ? "" : "hidden"}>
@@ -2751,7 +2756,7 @@
                         </section>
 
                         <section className={tab === "Live Paper" ? "" : "hidden"}>
-                            <LivePaperPanel request={request} addLog={addLog} setLoadingKey={setLoadingKey} fetchStrategyHealth={fetchStrategyHealth} fetchCTraderStatus={fetchCTraderStatus} fetchCTraderBalance={fetchCTraderBalance} fetchCTraderSymbols={fetchCTraderSymbols} />
+                            <LivePaperPanel request={request} addLog={addLog} setTab={setTab} setLoadingKey={setLoadingKey} fetchStrategyHealth={fetchStrategyHealth} fetchCTraderStatus={fetchCTraderStatus} fetchCTraderBalance={fetchCTraderBalance} fetchCTraderSymbols={fetchCTraderSymbols} />
                         </section>
 
                         <section className={tab === "Kraken Paper" ? "" : "hidden"}>
@@ -2961,7 +2966,7 @@
                                     <div style={{ fontSize: 22, fontWeight: 600 }}>{report.total_trades}</div>
                                 </div>
                                 <div style={{ textAlign: "center" }}>
-                                    <div style={{ fontSize: 11, color: "var(--muted)" }}>Profit Factor</div>
+                                    <div style={{ fontSize: 11, color: "var(--muted)" }}>Simulated Profit Factor</div>
                                     <div style={{ fontSize: 22, fontWeight: 600, color: (report.profit_factor || 0) >= 1 ? "var(--ok)" : "var(--danger)" }}>{report.profit_factor || "—"}</div>
                                 </div>
                             </div>
@@ -5280,7 +5285,21 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                                     <tr key={row.candidate_id} title={row.confidence_context || ""}>
                                         <td><b>{row.symbol}</b></td>
                                         <td>{row.timeframe}</td>
-                                        <td><span className={`pill ${row.status === "paper_closed" ? "ok" : row.status === "risk_rejected" ? "error" : "warn"}`}>{row.status}</span></td>
+                                        <td>
+                                            <span
+                                                className={`pill ${row.status === "paper_closed" ? "ok" : row.status === "risk_rejected" ? "error" : "warn"}`}
+                                                style={{ cursor: row.status === "risk_rejected" ? "pointer" : "default" }}
+                                                onClick={(e) => {
+                                                    if (row.status === "risk_rejected") {
+                                                        e.preventDefault();
+                                                        const btn = document.querySelector('button[data-label="Shadow Queue"]');
+                                                        if (btn) btn.click();
+                                                    }
+                                                }}
+                                            >
+                                                {row.status}
+                                            </span>
+                                        </td>
                                         <td>{row.risk_decision ? <span className={`pill ${row.risk_decision === 'PROCEED_TO_SIMULATION' ? 'ok' : 'error'}`}>{shortId(row.risk_decision)}</span> : "-"}</td>
                                         <td>{shortId(row.reject_reason) || "-"}</td>
                                         <td>{row.weighted_scout_vote !== undefined && row.weighted_scout_vote !== null ? formatNumber(row.weighted_scout_vote, 2) : "-"}</td>
@@ -5567,7 +5586,7 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
             );
         }
 
-        function Orders({ orders }) {
+        function Orders({ orders, setTab }) {
             const [showSim, setShowSim] = React.useState(false);
             const filtered = showSim ? orders.filter(o => (o.execution_mode || "simulation") !== "live") : orders;
             const wins = filtered.filter(o => (o.pnl || 0) > 0).length;
@@ -5589,7 +5608,7 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                                 </div>
                             </div>
                         </div>
-                        <OrderTable orders={filtered} />
+                        <OrderTable orders={filtered} setTab={setTab} />
                     </div>
                 </div>
             );
@@ -5654,7 +5673,7 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
             );
         }
 
-        function OrderTable({ orders, compact = false }) {
+        function OrderTable({ orders, setTab, compact = false }) {
             if (!orders.length) return <div className="kpi-caption">No matching orders yet.</div>;
             return (
                 <div className="table-wrap">
@@ -5669,6 +5688,7 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                                 {!compact && <th>Mode</th>}
                                 {!compact && <th>Client Order ID</th>}
                                 <th>Price</th>
+                                <th>Target/Stop</th>
                                 {!compact && <th>Size</th>}
                                 <th>Status</th>
                             </tr>
@@ -5679,15 +5699,36 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                                     <td className="mono">{new Date(order.at).toLocaleString()}</td>
                                     <td>{order.symbol}</td>
                                     <td>{order.direction}</td>
-                                    <td>{order.intent}</td>
+                                    <td>
+                                        <span
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                const btn = document.querySelector('button[data-label="Wiki & 2ndBrain"]');
+                                                if (btn) btn.click();
+                                            }}
+                                            style={{ cursor: "pointer", textDecoration: "underline" }}
+                                        >
+                                            {order.intent}
+                                        </span>
+                                    </td>
                                     <td><span className={statusPill(order.final_decision)}>{order.final_decision || "UNKNOWN"}</span></td>
+                                    <td>{order.intent}</td>
+                                    <td>
+                                        <span className={statusPill(order.final_decision)} title={String(order.final_decision || "").includes("REJECT") ? "See Second Brain for rules" : undefined} style={String(order.final_decision || "").includes("REJECT") ? { backgroundColor: "#b84d4d", color: "#fff", border: "none" } : undefined}>{order.final_decision || "UNKNOWN"}</span>
+                                        {String(order.final_decision || "").includes("REJECT") && setTab && (
+                                            <button className="small" onClick={() => setTab("Wiki & 2ndBrain")} style={{ marginLeft: 8, padding: "2px 6px", fontSize: 10 }} title="Check Second Brain Context">🧠</button>
+                                        )}
+                                    </td>
                                     {!compact && <td><span className={`pill ${order.execution_mode === "live" ? "error" : "ok"}`}>{order.execution_mode || "simulation"}</span></td>}
                                     {!compact && <td className="mono">{order.client_order_id || "-"}</td>}
                                     <td>{order.entry_price}</td>
+                                    <td>{order.target_price || "-"} / {order.stop_price || "-"}</td>
                                     {!compact && <td>{order.size_base || "-"}</td>}
                                     <td>
                                         {order.reject_reason || order.broker_status || order.source}
-                                        {order.strategy_id && <span style={{marginLeft: 8, cursor: "help"}} title={`Strategy: ${order.strategy_id} - Look up in Second Brain`}>🧠</span>}
+                                        {String(order.reject_reason || "").includes("correlation") && (
+                                            <div style={{ fontSize: 10, color: "var(--warn)", marginTop: 4 }}>* Prevented by Correlation Risk Cap (Second Brain Memory)</div>
+                                        )}
                                     </td>
                                 </tr>
                             ))}
@@ -5998,7 +6039,7 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
             );
         }
 
-        const LivePaperPanel = ({ request, addLog, setLoadingKey, fetchStrategyHealth, fetchCTraderStatus, fetchCTraderBalance, fetchCTraderSymbols }) => {
+        const LivePaperPanel = ({ request, addLog, setTab, setLoadingKey, fetchStrategyHealth, fetchCTraderStatus, fetchCTraderBalance, fetchCTraderSymbols }) => {
             const [loopStatus, setLoopStatus] = useState(null);
             const [watchlist, setWatchlist] = useState([]);
             const [positions, setPositions] = useState([]);
@@ -6182,14 +6223,27 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                             <span className="pill info">{sseConnected ? "SSE Connected" : "SSE Disconnected"}</span>
                         </div>
                         {loopStatus && (
-                            <div style={{ marginTop: 12, fontSize: 13, color: "var(--muted)" }}>
-                                Strategy: <b>{loopStatus.current_strategy_id}</b> ·
-                                Poll: <b>{loopStatus.poll_interval_seconds}s</b> ·
-                                Cycles: <b>{loopStatus.loop_stats?.cycles_completed || 0}</b> ·
-                                Signals: <b>{loopStatus.loop_stats?.signals_generated || 0}</b> ·
-                                Trades: <b>{loopStatus.loop_stats?.trades_executed || 0}</b> ·
-                                Errors (5m): <b>{loopStatus.loop_stats?.errors_last_5min || 0}</b>
-                            </div>
+                            <>
+                                <div style={{ marginTop: 12, fontSize: 13, color: "var(--muted)" }}>
+                                    Strategy: <b>{loopStatus.current_strategy_id}</b> ·
+                                    Poll: <b>{loopStatus.poll_interval_seconds}s</b> ·
+                                    Cycles: <b>{loopStatus.loop_stats?.cycles_completed || 0}</b> ·
+                                    Errors (5m): <b>{loopStatus.loop_stats?.errors_last_5min || 0}</b>
+                                    <div style={{ marginTop: 12, padding: 8, background: "rgba(0,0,0,0.2)", borderRadius: 4, border: "1px solid var(--line)" }}>
+                                        <div style={{ fontWeight: 600, marginBottom: 4 }}>Signal Funnel</div>
+                                        <div style={{ display: "flex", gap: 16 }}>
+                                            <div>Signals Generated: <b>{loopStatus.loop_stats?.signals_generated || 0}</b></div>
+                                            <div style={{ color: "var(--ok)" }}>Executed Live: <b>{loopStatus.loop_stats?.trades_executed || 0}</b></div>
+                                            <div style={{ color: "var(--warn)" }}>Routed to Shadow Queue: <b>{(loopStatus.loop_stats?.signals_generated || 0) - (loopStatus.loop_stats?.trades_executed || 0)}</b></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style={{ marginTop: 8 }}>
+                                    <button className="small secondary" onClick={() => {
+                                        if (setTab) setTab("Shadow Queue");
+                                    }}>View Shadow Queue (Rejected Signals)</button>
+                                </div>
+                            </>
                         )}
                     </div>
 
@@ -6248,6 +6302,7 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                                 <Kpi title="Total Trades" value={performance.total_trades || 0} caption="Completed" tone="ok" />
                                 <Kpi title="Simulated Hit Rate" value={`${(performance.winrate_pct || 0).toFixed(1)}%`} caption={`${performance.winning_trades || 0}W / ${performance.losing_trades || 0}L`} tone={performance.winrate_pct >= 50 ? "ok" : "warn"} />
                                 <Kpi title="Simulated PnL" value={`${(performance.total_pnl || 0).toFixed(2)}`} caption="Quote currency" tone={performance.total_pnl >= 0 ? "ok" : "warn"} />
+                                <Kpi title="Simulated Profit Factor" value={`${(performance.profit_factor || 0).toFixed(2)}`} caption="Gross win / gross loss" tone={performance.profit_factor >= 1.5 ? "ok" : "warn"} />
                                 <Kpi title="Profit Factor" value={`${(performance.profit_factor || 0).toFixed(2)}`} caption="Gross win / gross loss" tone={performance.profit_factor >= 1.5 ? "ok" : "warn"} />
                                 <Kpi title="Sharpe" value={`${(performance.sharpe_ratio || 0).toFixed(2)}`} caption="Risk-adjusted" tone={performance.sharpe_ratio >= 1 ? "ok" : "warn"} />
                                 <Kpi title="Max DD" value={`${(performance.max_drawdown_pct || 0).toFixed(2)}%`} caption="Peak to trough" tone="warn" />
