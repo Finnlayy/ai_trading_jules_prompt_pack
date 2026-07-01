@@ -489,6 +489,28 @@ class PionexDirectBroker(BaseBroker):
         self.journal.append(entry)
         return entry
 
+    def _build_reject_entry(
+        self,
+        payload: M8Payload,
+        reason: str,
+        ai_decision: AIDecisionEnum,
+        trade_id: Optional[str] = None,
+        symbol: Optional[str] = None,
+        decision: DecisionEnum = DecisionEnum.PROCEED_TO_SIMULATION,
+    ) -> TradeJournalEntry:
+        trade_id = trade_id or f"pionex-direct-{payload.signal_id}"
+        sym = symbol or payload.symbol
+        self.notifier.send_reject(sym, reason, trade_id, payload.intent)
+        return self._build_entry(
+            payload=payload,
+            decision=decision,
+            reject_reason=reason,
+            ai_decision=ai_decision,
+            final_decision=FinalDecisionEnum.REJECTED,
+            simulated_fill={},
+            result={"status": "REJECTED", "reject_reason": reason},
+        )
+
     def execute_trade(
         self,
         payload: M8Payload,
@@ -497,16 +519,7 @@ class PionexDirectBroker(BaseBroker):
         ai_decision: AIDecisionEnum = AIDecisionEnum.PROCEED_TO_SIMULATION,
     ) -> TradeJournalEntry:
         if decision != DecisionEnum.PROCEED_TO_SIMULATION:
-            self.notifier.send_reject(payload.symbol, reject_reason or "REJECTED", f"pionex-direct-{payload.signal_id}", payload.intent)
-            return self._build_entry(
-                payload=payload,
-                decision=decision,
-                reject_reason=reject_reason,
-                ai_decision=ai_decision,
-                final_decision=FinalDecisionEnum.REJECTED,
-                simulated_fill={},
-                result={"status": "REJECTED", "reject_reason": reject_reason},
-            )
+            return self._build_reject_entry(payload, reject_reason or "REJECTED", ai_decision, decision=decision)
 
         if not self.config.enabled:
             return self._build_entry(
@@ -521,30 +534,11 @@ class PionexDirectBroker(BaseBroker):
 
         account_mode = self._normalized_account_mode(payload)
         if account_mode == "FUTURES" and not self.config.futures_enabled:
-            self.notifier.send_reject(payload.symbol, "FUTURES_DISABLED", f"pionex-direct-{payload.signal_id}", payload.intent)
-            return self._build_entry(
-                payload=payload,
-                decision=decision,
-                reject_reason="FUTURES_DISABLED",
-                ai_decision=ai_decision,
-                final_decision=FinalDecisionEnum.REJECTED,
-                simulated_fill={},
-                result={"status": "REJECTED", "reject_reason": "FUTURES_DISABLED"},
-            )
+            return self._build_reject_entry(payload, "FUTURES_DISABLED", ai_decision, decision=decision)
 
         symbol = self._normalized_symbol(payload.symbol, account_mode)
         if not self._symbol_allowed(symbol):
-            reason = f"SYMBOL_NOT_ALLOWED:{symbol}"
-            self.notifier.send_reject(symbol, reason, f"pionex-direct-{payload.signal_id}", payload.intent)
-            return self._build_entry(
-                payload=payload,
-                decision=decision,
-                reject_reason=reason,
-                ai_decision=ai_decision,
-                final_decision=FinalDecisionEnum.REJECTED,
-                simulated_fill={},
-                result={"status": "REJECTED", "reject_reason": reason},
-            )
+            return self._build_reject_entry(payload, f"SYMBOL_NOT_ALLOWED:{symbol}", ai_decision, symbol=symbol, decision=decision)
 
         if payload.intent == "CLOSE":
             return self._close_position(payload, symbol, account_mode, ai_decision)
@@ -553,33 +547,12 @@ class PionexDirectBroker(BaseBroker):
     def _open_position(self, payload: M8Payload, symbol: str, account_mode: str, ai_decision: AIDecisionEnum) -> TradeJournalEntry:
         war_room = classify_order(payload)
         if war_room.reject_reason:
-            self.notifier.send_reject(symbol, war_room.reject_reason, f"pionex-direct-{payload.signal_id}", payload.intent)
-            return self._build_entry(
-                payload=payload,
-                decision=DecisionEnum.PROCEED_TO_SIMULATION,
-                reject_reason=war_room.reject_reason,
-                ai_decision=ai_decision,
-                final_decision=FinalDecisionEnum.REJECTED,
-                simulated_fill={},
-                result={
-                    "status": "REJECTED",
-                    "reject_reason": war_room.reject_reason,
-                    "war_room": war_room.to_dict(),
-                },
-            )
+            entry = self._build_reject_entry(payload, war_room.reject_reason, ai_decision, symbol=symbol)
+            entry.result["war_room"] = war_room.to_dict()
+            return entry
 
         if account_mode == "SPOT" and payload.direction == "SHORT":
-            reason = "SPOT_SHORT_NOT_SUPPORTED"
-            self.notifier.send_reject(symbol, reason, f"pionex-direct-{payload.signal_id}", payload.intent)
-            return self._build_entry(
-                payload=payload,
-                decision=DecisionEnum.PROCEED_TO_SIMULATION,
-                reject_reason=reason,
-                ai_decision=ai_decision,
-                final_decision=FinalDecisionEnum.REJECTED,
-                simulated_fill={},
-                result={"status": "REJECTED", "reject_reason": reason},
-            )
+            return self._build_reject_entry(payload, "SPOT_SHORT_NOT_SUPPORTED", ai_decision, symbol=symbol)
 
         if self.client is None:
             balance = 0.0
@@ -730,17 +703,7 @@ class PionexDirectBroker(BaseBroker):
         trade_id = f"pionex-direct-{payload.signal_id}"
         position = self.ledger.get(symbol=symbol, account_mode=account_mode)
         if not position:
-            reason = "NO_OPEN_POSITION"
-            self.notifier.send_reject(symbol, reason, trade_id, payload.intent)
-            return self._build_entry(
-                payload=payload,
-                decision=DecisionEnum.PROCEED_TO_SIMULATION,
-                reject_reason=reason,
-                ai_decision=ai_decision,
-                final_decision=FinalDecisionEnum.REJECTED,
-                simulated_fill={},
-                result={"status": "REJECTED", "reject_reason": reason},
-            )
+            return self._build_reject_entry(payload, "NO_OPEN_POSITION", ai_decision, trade_id=trade_id, symbol=symbol)
 
         close_size = payload.execution_quantity if payload.execution_quantity and payload.execution_quantity > 0 else None
         close_info = self.ledger.apply_close(symbol=symbol, account_mode=account_mode, close_size_base=close_size)
@@ -750,17 +713,7 @@ class PionexDirectBroker(BaseBroker):
         direction = str(close_info["direction"])
 
         if closed_size_base <= 0:
-            reason = "ZERO_CLOSE_SIZE"
-            self.notifier.send_reject(symbol, reason, trade_id, payload.intent)
-            return self._build_entry(
-                payload=payload,
-                decision=DecisionEnum.PROCEED_TO_SIMULATION,
-                reject_reason=reason,
-                ai_decision=ai_decision,
-                final_decision=FinalDecisionEnum.REJECTED,
-                simulated_fill={},
-                result={"status": "REJECTED", "reject_reason": reason},
-            )
+            return self._build_reject_entry(payload, "ZERO_CLOSE_SIZE", ai_decision, trade_id=trade_id, symbol=symbol)
 
         if direction == "LONG":
             realized_pnl = (payload.entry_price - entry_price) * closed_size_base
