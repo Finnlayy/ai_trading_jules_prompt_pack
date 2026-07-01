@@ -178,6 +178,7 @@ async def get_strategies_health():
     Return a health dashboard for every registered strategy.
     Aggregates per-strategy metrics from the SQL database (outcomes and candidates).
     """
+    from sqlalchemy import func
     from app.db import SessionLocal
     from app.db.models import PaperOutcome, SignalCandidate
     
@@ -189,30 +190,46 @@ async def get_strategies_health():
     items: list[StrategyHealthItem] = []
     
     with SessionLocal() as db:
+        # 1. Fetch all outcomes grouped by strategy_id
+        all_outcomes = db.query(PaperOutcome).all()
+        outcomes_by_strat = {}
+        for o in all_outcomes:
+            outcomes_by_strat.setdefault(o.strategy_id, []).append(o)
+
+        # 2. Bulk fetch signal counts
+        signal_counts = db.query(
+            SignalCandidate.strategy_id,
+            func.count(SignalCandidate.id).label('total')
+        ).group_by(SignalCandidate.strategy_id).all()
+        total_signals_map = {row.strategy_id: row.total for row in signal_counts}
+
+        # 3. Bulk fetch 24h signal counts
+        signal_counts_24h = db.query(
+            SignalCandidate.strategy_id,
+            func.count(SignalCandidate.id).label('total')
+        ).filter(SignalCandidate.created_at >= cutoff).group_by(SignalCandidate.strategy_id).all()
+        signals_24h_map = {row.strategy_id: row.total for row in signal_counts_24h}
+
+        # 4. Bulk fetch last signal timestamps
+        last_candidates = db.query(
+            SignalCandidate.strategy_id,
+            func.max(SignalCandidate.created_at).label('last_time')
+        ).group_by(SignalCandidate.strategy_id).all()
+        last_candidate_map = {row.strategy_id: row.last_time for row in last_candidates}
+
+        # 5. Bulk fetch last outcome timestamps
+        last_outcomes = db.query(
+            PaperOutcome.strategy_id,
+            func.max(PaperOutcome.created_at).label('last_time')
+        ).group_by(PaperOutcome.strategy_id).all()
+        last_outcome_map = {row.strategy_id: row.last_time for row in last_outcomes}
+
         for meta in all_strategies:
             last_switch = strategy_registry.last_switch if meta.strategy_id == active_id else None
             
-            # Fetch all closed outcomes for this strategy
-            outcomes = (
-                db.query(PaperOutcome)
-                .filter(PaperOutcome.strategy_id == meta.strategy_id)
-                .all()
-            )
-            
-            # Total signals count from SignalCandidate
-            total_signals = (
-                db.query(SignalCandidate)
-                .filter(SignalCandidate.strategy_id == meta.strategy_id)
-                .count()
-            )
-            
-            # 24h signal count
-            signal_count_24h = (
-                db.query(SignalCandidate)
-                .filter(SignalCandidate.strategy_id == meta.strategy_id)
-                .filter(SignalCandidate.created_at >= cutoff)
-                .count()
-            )
+            outcomes = outcomes_by_strat.get(meta.strategy_id, [])
+            total_signals = total_signals_map.get(meta.strategy_id, 0)
+            signal_count_24h = signals_24h_map.get(meta.strategy_id, 0)
             
             # Calculate win rate, profit factor, avg pnl pct
             total_trades = len(outcomes)
@@ -240,27 +257,15 @@ async def get_strategies_health():
             max_drawdown_pct = max_dd
             
             # Last signal/trade age
-            last_candidate = (
-                db.query(SignalCandidate)
-                .filter(SignalCandidate.strategy_id == meta.strategy_id)
-                .order_by(SignalCandidate.created_at.desc())
-                .first()
-            )
-            last_outcome = (
-                db.query(PaperOutcome)
-                .filter(PaperOutcome.strategy_id == meta.strategy_id)
-                .order_by(PaperOutcome.created_at.desc())
-                .first()
-            )
+            c_ts = last_candidate_map.get(meta.strategy_id)
+            o_ts = last_outcome_map.get(meta.strategy_id)
             
             last_ts = None
-            if last_candidate and last_candidate.created_at:
-                c_ts = last_candidate.created_at
+            if c_ts:
                 if c_ts.tzinfo is None:
                     c_ts = c_ts.replace(tzinfo=timezone.utc)
                 last_ts = c_ts
-            if last_outcome and last_outcome.created_at:
-                o_ts = last_outcome.created_at
+            if o_ts:
                 if o_ts.tzinfo is None:
                     o_ts = o_ts.replace(tzinfo=timezone.utc)
                 if last_ts is None or o_ts > last_ts:

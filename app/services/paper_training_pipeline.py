@@ -1,5 +1,4 @@
 """Closed-loop paper-training pipeline for autonomous candidates."""
-
 from __future__ import annotations
 
 import asyncio
@@ -13,8 +12,8 @@ from app.schemas.m8_payload import M8Payload
 from app.core.config import BROKER_MODE, PAPER_TRADING_RELAX_RISK
 from app.services.ai_factory import ai_review_instance
 from app.services.kraken_paper_broker import KrakenPaperBroker
+from app.core.utils import json_dumps as _json_dumps
 from app.services.lifecycle_recorder import (
-    _json_dumps,
     candidate_id_for_signal,
     lifecycle_recorder,
     LifecycleRecorder,

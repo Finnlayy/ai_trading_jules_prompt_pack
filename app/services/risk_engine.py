@@ -1,3 +1,6 @@
+from app.schemas.trading_plan import TradingPlan
+from app.schemas.risk_result import RiskValidationResult
+import polars as pl
 from app.schemas.m8_payload import M8Payload
 from app.schemas.ai_review import SignalReview, DecisionEnum as AIDecisionEnum
 from app.schemas.journal import DecisionEnum, FinalDecisionEnum
@@ -199,6 +202,20 @@ class RiskEngine:
         if not result["allowed"]:
             raise RiskGateException(result["reason"], "CORRELATION_RISK_LIMIT")
 
+        # Volume scaling based on correlation caps
+        if hasattr(payload, 'volume') and payload.volume is not None:
+            if result["current_count"] > 0:
+                # Scale volume inversely proportional to current correlation count
+                scale_factor = 1.0 - (result["current_count"] / correlation_checker.max_per_sector)
+                # Ensure it doesn't go below 0
+                scale_factor = max(0.1, scale_factor)
+                payload.volume = payload.volume * scale_factor
+        elif hasattr(payload, 'execution_quantity') and payload.execution_quantity is not None:
+            if result["current_count"] > 0:
+                scale_factor = 1.0 - (result["current_count"] / correlation_checker.max_per_sector)
+                scale_factor = max(0.1, scale_factor)
+                payload.execution_quantity = payload.execution_quantity * scale_factor
+
 
     def _gate_paper_training_calibration(self, payload: M8Payload, weighted_scout_vote: Optional[float]):
         if self._should_relax():
@@ -236,6 +253,45 @@ class RiskEngine:
         except (TypeError, ValueError):
             return None
 
+
+# Global instance for FastAPI usage
+
+    def validate_trading_plan(self, plan: TradingPlan) -> RiskValidationResult:
+        """
+        Gate 2.0: Validates an agent-generated TradingPlan deterministically.
+        """
+        violations = []
+
+        # 1. Setup must be complete
+        if not plan.setup.market_conditions or not plan.setup.regime:
+            violations.append("SETUP_INCOMPLETE")
+
+        # 2. Trigger must be testable
+        if not plan.trigger.entry_condition or plan.trigger.price_zone_min >= plan.trigger.price_zone_max:
+            violations.append("TRIGGER_INVALID")
+
+        # 3. Invalidation is mandatory
+        if not plan.invalidation.hard_stop_price:
+            violations.append("NO_HARD_STOP")
+
+        if plan.invalidation.max_loss_pct > 25.0:
+            violations.append("MAX_LOSS_EXCEEDED")
+
+        # 4. R/R Validation
+        if plan.risk_intent.risk_reward_ratio < 0.5:
+            violations.append("RR_TOO_LOW")
+
+        decision = "PROCEED_TO_SIMULATION" if not violations else "REJECT"
+        reject_reason = violations[0] if violations else None
+
+        return RiskValidationResult(
+            decision=decision,
+            reject_reason=reject_reason,
+            risk_score=90.0 if not violations else 10.0,
+            violated_rules=violations,
+            allowed_size=plan.risk_intent.target_size_usd if not violations else 0.0,
+            risk_adjusted_plan=plan.dict() if not violations else None
+        )
 
 # Global instance for FastAPI usage
 risk_engine_instance = RiskEngine()

@@ -22,8 +22,6 @@ from app.core.config import (
     GLINT_LIVE_TRADING_ENABLED,
     GLINT_TELEGRAM_CHAT_ID,
     GLINT_BOT_USERNAME,
-    PIONEX_DIRECT_MIN_ORDER_USDT,
-    PIONEX_DIRECT_MAX_ORDER_USDT,
 )
 from app.schemas.ai_review import DecisionEnum as AIDecisionEnum
 from app.schemas.journal import DecisionEnum, FinalDecisionEnum, TradeJournalEntry, DirectionEnum

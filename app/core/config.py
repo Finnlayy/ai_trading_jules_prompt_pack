@@ -153,7 +153,6 @@ KELLY_PAYOFF_BUFFER = _as_float(os.getenv("KELLY_PAYOFF_BUFFER"), 0.0)
 
 # Direct execution order size guards
 PIONEX_DIRECT_MAX_ORDER_USDT = _as_float(os.getenv("PIONEX_DIRECT_MAX_ORDER_USDT"), 200.0)
-PIONEX_DIRECT_MIN_ORDER_USDT = _as_float(os.getenv("PIONEX_DIRECT_MIN_ORDER_USDT"), 5.0)
 PIONEX_DIRECT_MAX_BASE_SIZE = _as_float(os.getenv("PIONEX_DIRECT_MAX_BASE_SIZE"), 10.0)
 PIONEX_DIRECT_MIN_BASE_SIZE = _as_float(os.getenv("PIONEX_DIRECT_MIN_BASE_SIZE"), 0.0001)
 
@@ -176,7 +175,6 @@ WAR_ROOM_VIP_MAX_CRISIS_SCORE = _as_float(os.getenv("WAR_ROOM_VIP_MAX_CRISIS_SCO
 WAR_ROOM_VIP_MAX_MC_DISPERSION = _as_float(os.getenv("WAR_ROOM_VIP_MAX_MC_DISPERSION"), 2.5)
 
 # Webhook authentication
-WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "")
 
 # Offline/backtest signal generator controls
 SIGNAL_MIN_CONFLUENCE_OVERRIDE = _as_optional_float(os.getenv("SIGNAL_MIN_CONFLUENCE_OVERRIDE"))
@@ -198,7 +196,6 @@ MANUS_TELEGRAM_CHAT_ID = os.getenv("MANUS_TELEGRAM_CHAT_ID", TELEGRAM_CHAT_ID)
 MANUS_BOT_USERNAME = os.getenv("MANUS_BOT_USERNAME", "")
 
 # Autonomous Loop configuration
-AUTONOMOUS_LOOP_ENABLED = _as_bool(os.getenv("AUTONOMOUS_LOOP_ENABLED"), False)
 AUTONOMOUS_LOOP_AUTO_START = _as_bool(os.getenv("AUTONOMOUS_LOOP_AUTO_START"), False)
 AUTONOMOUS_LOOP_POLL_INTERVAL_SECONDS = _as_float(os.getenv("AUTONOMOUS_LOOP_POLL_INTERVAL_SECONDS"), 60.0)
 AUTONOMOUS_LOOP_MAX_ERRORS_5MIN = _as_int(os.getenv("AUTONOMOUS_LOOP_MAX_ERRORS_5MIN"), 20)
@@ -218,8 +215,24 @@ TRAINING_LOOP_DRILLS_PER_HOUR = _as_float(os.getenv("TRAINING_LOOP_DRILLS_PER_HO
 PRICE_POLLER_INTERVAL_SECONDS = _as_float(os.getenv("PRICE_POLLER_INTERVAL_SECONDS"), 10.0)
 POSITION_MAX_HOLD_MINUTES = _as_float(os.getenv("POSITION_MAX_HOLD_MINUTES"), 240.0)
 
+
+# Auth / Security configuration
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "fallback_secret_key_change_in_production")
+JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
+ACCESS_TOKEN_EXPIRE_MINUTES = _as_int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES"), 120)
+
 # Database configuration
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///app/data/trading.db")
+DB_HOST = os.getenv("DB_HOST", "localhost")
+DB_PORT = os.getenv("DB_PORT", "5432")
+DB_NAME = os.getenv("DB_NAME", "metricflow")
+DB_USER = os.getenv("DB_USER", "postgres")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "postgres")
+
+# Construct PostgreSQL URL if DATABASE_URL is not directly provided
+default_db_url = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+DATABASE_URL = os.getenv("DATABASE_URL", default_db_url)
+
 
 # News Impact configuration
 NEWS_IMPACT_ENABLED = _as_bool(os.getenv("NEWS_IMPACT_ENABLED"), True)
@@ -346,7 +359,7 @@ WAR_ROOM_VIP_MAX_CRISIS_SCORE = _as_float(os.getenv("WAR_ROOM_VIP_MAX_CRISIS_SCO
 WAR_ROOM_VIP_MAX_MC_DISPERSION = _as_float(os.getenv("WAR_ROOM_VIP_MAX_MC_DISPERSION"), 2.5)
 
 # Webhook authentication
-WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "")
+WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "test_secret")
 
 # Offline/backtest signal generator controls
 SIGNAL_MIN_CONFLUENCE_OVERRIDE = _as_optional_float(os.getenv("SIGNAL_MIN_CONFLUENCE_OVERRIDE"))
@@ -402,8 +415,6 @@ ACADEMY_POLICY_MIN_EVAL_LIFT = _as_float(os.getenv("ACADEMY_POLICY_MIN_EVAL_LIFT
 PRICE_POLLER_INTERVAL_SECONDS = _as_float(os.getenv("PRICE_POLLER_INTERVAL_SECONDS"), 10.0)
 POSITION_MAX_HOLD_MINUTES = _as_float(os.getenv("POSITION_MAX_HOLD_MINUTES"), 240.0)
 
-# Database configuration
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///app/data/trading.db")
 
 # News Impact configuration
 NEWS_IMPACT_ENABLED = _as_bool(os.getenv("NEWS_IMPACT_ENABLED"), True)

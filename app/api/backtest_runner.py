@@ -59,8 +59,8 @@ async def _execute_payloads(payloads: List):
             "reject_reason": result.get("reject_reason"),
             "ai_trace": result.get("ai_trace"),
             "asset_class": result.get("asset_class"),
-            "entry": entry,
-            "exit": exit_coord,
+            "entry": {"price": payload.entry_price, "time": payload.timestamp},
+            "exit": {"price": payload.target_price if payload.direction == "LONG" else payload.stop_price, "time": payload.timestamp},
         })
         if result["final_decision"] == "EXECUTED_SIM":
             executed_payloads.append((payload, result))

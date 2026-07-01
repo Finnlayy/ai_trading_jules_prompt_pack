@@ -1,9 +1,5 @@
-feat(ai): Implement gem10_native mode with 10 native gems
+feat: Implement Swarm War Room & Unified Broker Command Center
 
-- Introduces AI_REVIEW_ENGINE config to switch between legacy6 and gem10_native.
-- Implements GemNativeReviewService utilizing 10 new distinct gems:
-  macro_sentinel, market_dna, structural_architect, harmony_coordinator,
-  indicator_fusion, risk_kernel, pine_core, payload_qa, execution_watchdog,
-  evolution_optimizer.
-- Updates agent and confidence registries to recognize the new gem names.
-- Adds mock tests and updates E2E/integration tests to accommodate the factory pattern.
+- Goal 1: Added backend endpoints `/agentic/swarm-state/{run_id}` and `/agentic/runs/latest`. Implemented helper `_generate_swarm_commentary` to produce esports narrative. Updated UI `frontend.html` with Swarm War Room SVG Graph visualization and Commentary Ticker.
+- Goal 2: Added `UnifiedBrokerState` schema and endpoint `/broker/unified-state` to standardize account and position data. Implemented UI `Command Center` replacing existing disparate broker panels. Added kill switch, strategy rotations, and manual veto functionality.
+- Added corresponding unit and mocked e2e placeholder tests. Fixed test suite conflicts.

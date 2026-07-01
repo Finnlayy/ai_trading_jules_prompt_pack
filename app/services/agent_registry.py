@@ -1,3 +1,4 @@
+from app.core.utils import write_json_async
 import json
 import os
 import asyncio
@@ -5,7 +6,7 @@ from typing import List, Dict, Optional
 from pathlib import Path
 from datetime import datetime
 
-from app.schemas.academy import ScoutIdentity, CareerEntry, Badge, AgentLeaderboardEntry
+from app.schemas.academy import ScoutIdentity, CareerEntry, Badge
 from app.services.ai.gem_agents import DEFAULT_AGENT_DEFINITIONS
 
 DATA_DIR = Path("data")
