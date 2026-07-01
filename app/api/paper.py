@@ -9,6 +9,7 @@ from fastapi import APIRouter, HTTPException
 
 from app.api.orchestrator import _get_broker
 from app.core.config import BROKER_MODE
+from app.schemas.paper import PaperReplayRequest, PaperSessionStartRequest
 from app.services.shadow_paper_engine import shadow_paper_engine
 
 router = APIRouter()
@@ -98,7 +99,9 @@ class PaperSessionStore:
                     seen.add(signal_id)
                     fresh.append(row)
                 session["results"] = [*fresh, *session["results"]][:250]
-                session["last_replay"] = {key: value for key, value in replay.items() if key != "results"}
+                session["last_replay"] = {
+                    key: value for key, value in replay.items() if key != "results"
+                }
                 session["updated_at"] = datetime.now(timezone.utc).isoformat()
                 session["error"] = None
                 if session["run_once"]:
@@ -123,7 +126,9 @@ def _pionex_context() -> dict[str, Any]:
     broker = _get_broker()
     context: dict[str, Any] = {
         "broker_mode": BROKER_MODE,
-        "broker_type": getattr(broker, "get_broker_type", lambda: type(broker).__name__)(),
+        "broker_type": getattr(
+            broker, "get_broker_type", lambda: type(broker).__name__
+        )(),
         "display_mode": getattr(broker, "get_broker_mode", lambda: "unknown")(),
         "connected": getattr(broker, "is_ready", lambda: False)(),
         "live_capable": getattr(broker, "is_live_capable", lambda: False)(),
@@ -146,24 +151,16 @@ def _pionex_context() -> dict[str, Any]:
 
 
 @router.post("/replay")
-async def replay_paper(
-    symbol: str = "HYPEUSDT",
-    timeframe: str = "1m",
-    bars: int = 500,
-    max_signals: Optional[int] = 20,
-    min_confluence: Optional[float] = None,
-    max_holding_bars: int = 50,
-    use_ai: bool = True,
-) -> dict[str, Any]:
+async def replay_paper(req: PaperReplayRequest) -> dict[str, Any]:
     try:
         replay = await shadow_paper_engine.replay(
-            symbol=symbol,
-            timeframe=timeframe,
-            bars=bars,
-            max_signals=max_signals,
-            min_confluence=min_confluence,
-            max_holding_bars=max_holding_bars,
-            use_ai=use_ai,
+            symbol=req.symbol,
+            timeframe=req.timeframe,
+            bars=req.bars,
+            max_signals=req.max_signals,
+            min_confluence=req.min_confluence,
+            max_holding_bars=req.max_holding_bars,
+            use_ai=req.use_ai,
         )
         replay["pionex_context"] = _pionex_context()
         return replay
@@ -172,29 +169,21 @@ async def replay_paper(
 
 
 @router.post("/session/start")
-async def start_paper_session(
-    symbol: str = "HYPEUSDT",
-    timeframe: str = "1m",
-    bars: int = 500,
-    max_signals: Optional[int] = 20,
-    min_confluence: Optional[float] = None,
-    max_holding_bars: int = 50,
-    use_ai: bool = True,
-    poll_interval_seconds: float = 60.0,
-    run_once: bool = True,
-) -> dict[str, Any]:
-    if poll_interval_seconds < 5:
-        raise HTTPException(status_code=422, detail="poll_interval_seconds must be >= 5")
+async def start_paper_session(req: PaperSessionStartRequest) -> dict[str, Any]:
+    if req.poll_interval_seconds < 5:
+        raise HTTPException(
+            status_code=422, detail="poll_interval_seconds must be >= 5"
+        )
     return await paper_sessions.start(
-        symbol=symbol,
-        timeframe=timeframe,
-        bars=bars,
-        max_signals=max_signals,
-        min_confluence=min_confluence,
-        max_holding_bars=max_holding_bars,
-        use_ai=use_ai,
-        poll_interval_seconds=poll_interval_seconds,
-        run_once=run_once,
+        symbol=req.symbol,
+        timeframe=req.timeframe,
+        bars=req.bars,
+        max_signals=req.max_signals,
+        min_confluence=req.min_confluence,
+        max_holding_bars=req.max_holding_bars,
+        use_ai=req.use_ai,
+        poll_interval_seconds=req.poll_interval_seconds,
+        run_once=req.run_once,
     )
 
 
