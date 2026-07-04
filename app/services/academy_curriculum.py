@@ -39,7 +39,7 @@ class AcademyCurriculumService:
         except Exception as e:
             print(f"Error saving curriculum progress: {e}")
 
-    def get_progress(self, scout_name: str, level: str = "Beginner") -> CurriculumProgress:
+    def get_progress(self, scout_name: str, level: str = "Beginner", *, save_new: bool = True) -> CurriculumProgress:
         key = f"{scout_name}_{level}"
         if key not in self._progress:
             req_drills = {"Beginner": 10, "Intermediate": 25, "Advanced": 50, "Master": 100}.get(level, 10)
@@ -49,18 +49,28 @@ class AcademyCurriculumService:
                 required_drills=req_drills
             )
             self._progress[key] = cp
-            self.save_progress()
+            if save_new:
+                self.save_progress()
         return self._progress[key]
 
-    def record_drill_result(self, scout_name: str, level: str, is_correct: bool, confidence: float):
-        cp = self.get_progress(scout_name, level)
+    def record_drill_result(
+        self,
+        scout_name: str,
+        level: str,
+        is_correct: bool,
+        confidence: float,
+        *,
+        save: bool = True,
+    ):
+        cp = self.get_progress(scout_name, level, save_new=save)
         cp.completed_drills += 1
         if is_correct:
             cp.passed_drills += 1
 
         # Cumulative moving average for confidence
         cp.average_confidence = cp.average_confidence + ((confidence - cp.average_confidence) / cp.completed_drills)
-        self.save_progress()
+        if save:
+            self.save_progress()
 
     def get_all_for_scout(self, scout_name: str) -> List[CurriculumProgress]:
         return [cp for cp in self._progress.values() if cp.scout_name == scout_name]
