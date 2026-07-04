@@ -1,18 +1,12 @@
 {
-  "active_strategy_id": "default",
-  "last_switch": null,
-  "available": [
-    "default",
-    "pattern_enhanced"
   "active_strategy_id": "generator_default",
-  "last_switch": "2026-06-06T15:50:11.566000+00:00",
-  "last_switch": "2026-06-18T04:29:45.188802+00:00",
-  "last_switch": "2026-06-25T04:57:36.288780+00:00",
+  "last_switch": "2026-07-04T00:58:14.890434+00:00",
   "available": [
     "default",
     "pattern_enhanced",
     "Top2_HYPEUSDT_GA_CrossAlgo_Optimized",
     "Top1_HYPEUSDT_GA_CrossAlgo_Optimized",
-    "Top3_HYPEUSDT_GA_CrossAlgo_Optimized"
+    "Top3_HYPEUSDT_GA_CrossAlgo_Optimized",
+    "generator_default"
   ]
 }

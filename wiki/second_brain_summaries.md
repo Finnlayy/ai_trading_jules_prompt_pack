@@ -1,6 +1,6 @@
 # 🧠 Second Brain Summaries & Index
 
-*Last Compiled: 2026-06-21T04:46:11.960190+00:00*
+*Last Compiled: 2026-07-04T00:28:39.042866+00:00*
 
 This consolidated index serves as a fast-browse layer for the Swarm Intelligence AI.
 By reading this index, the AI can scan the high-level summaries. If more details are required for a matching topic, it can access the linked raw data.
@@ -10,7 +10,7 @@ By reading this index, the AI can scan the high-level summaries. If more details
 ## 📋 Project Plans Summaries
 
 ### [01_jules_masterprompt.md](file:///app/wiki/raw/plans/01_jules_masterprompt.md)
-- **Last Modified**: `2026-06-21T04:26:50.933360+00:00`
+- **Last Modified**: `2026-07-04T00:15:20.110934+00:00`
 - **Summary**: [View Full Summary](file:///app/wiki/summaries/plans/01_jules_masterprompt_summary.md)
 
 ### [Mock Summary] 01_jules_masterprompt.md
@@ -23,7 +23,7 @@ By reading this index, the AI can scan the high-level summaries. If more details
 ---
 
 ### [01_jules_masterprompt_ui_redesign.md](file:///app/wiki/raw/plans/01_jules_masterprompt_ui_redesign.md)
-- **Last Modified**: `2026-06-21T04:26:50.933360+00:00`
+- **Last Modified**: `2026-07-04T00:15:20.110934+00:00`
 - **Summary**: [View Full Summary](file:///app/wiki/summaries/plans/01_jules_masterprompt_ui_redesign_summary.md)
 
 ### [Mock Summary] 01_jules_masterprompt_ui_redesign.md
@@ -36,7 +36,7 @@ By reading this index, the AI can scan the high-level summaries. If more details
 ---
 
 ### [AGENTS.md](file:///app/wiki/raw/plans/AGENTS.md)
-- **Last Modified**: `2026-06-21T04:26:50.949360+00:00`
+- **Last Modified**: `2026-07-04T00:15:20.114934+00:00`
 - **Summary**: [View Full Summary](file:///app/wiki/summaries/plans/AGENTS_summary.md)
 
 ### [Mock Summary] AGENTS.md
@@ -49,7 +49,7 @@ By reading this index, the AI can scan the high-level summaries. If more details
 ---
 
 ### [JULES_24H_SCHEDULE.md](file:///app/wiki/raw/plans/JULES_24H_SCHEDULE.md)
-- **Last Modified**: `2026-06-21T04:26:50.953360+00:00`
+- **Last Modified**: `2026-07-04T00:15:20.114934+00:00`
 - **Summary**: [View Full Summary](file:///app/wiki/summaries/plans/JULES_24H_SCHEDULE_summary.md)
 
 ### [Mock Summary] JULES_24H_SCHEDULE.md
@@ -62,7 +62,7 @@ By reading this index, the AI can scan the high-level summaries. If more details
 ---
 
 ### [README.md](file:///app/wiki/raw/plans/README.md)
-- **Last Modified**: `2026-06-21T04:26:50.953360+00:00`
+- **Last Modified**: `2026-07-04T00:15:20.114934+00:00`
 - **Summary**: [View Full Summary](file:///app/wiki/summaries/plans/README_summary.md)
 
 ### [Mock Summary] README.md
@@ -75,7 +75,7 @@ By reading this index, the AI can scan the high-level summaries. If more details
 ---
 
 ### [ai_academy_plan.md](file:///app/wiki/raw/plans/ai_academy_plan.md)
-- **Last Modified**: `2026-06-21T04:26:50.953360+00:00`
+- **Last Modified**: `2026-07-04T00:15:20.114934+00:00`
 - **Summary**: [View Full Summary](file:///app/wiki/summaries/plans/ai_academy_plan_summary.md)
 
 ### [Mock Summary] ai_academy_plan.md
@@ -88,7 +88,7 @@ By reading this index, the AI can scan the high-level summaries. If more details
 ---
 
 ### [file_plan.md](file:///app/wiki/raw/plans/file_plan.md)
-- **Last Modified**: `2026-06-21T04:26:51.309360+00:00`
+- **Last Modified**: `2026-07-04T00:15:20.290934+00:00`
 - **Summary**: [View Full Summary](file:///app/wiki/summaries/plans/file_plan_summary.md)
 
 ### [Mock Summary] file_plan.md
@@ -101,7 +101,7 @@ By reading this index, the AI can scan the high-level summaries. If more details
 ---
 
 ### [plan.md](file:///app/wiki/raw/plans/plan.md)
-- **Last Modified**: `2026-06-21T04:26:51.325360+00:00`
+- **Last Modified**: `2026-07-04T00:15:20.306934+00:00`
 - **Summary**: [View Full Summary](file:///app/wiki/summaries/plans/plan_summary.md)
 
 ### [Mock Summary] plan.md
@@ -114,7 +114,7 @@ By reading this index, the AI can scan the high-level summaries. If more details
 ---
 
 ### [plan_step_01_strategy_engine_pattern_recognition.md](file:///app/wiki/raw/plans/plan_step_01_strategy_engine_pattern_recognition.md)
-- **Last Modified**: `2026-06-21T04:26:51.325360+00:00`
+- **Last Modified**: `2026-07-04T00:15:20.306934+00:00`
 - **Summary**: [View Full Summary](file:///app/wiki/summaries/plans/plan_step_01_strategy_engine_pattern_recognition_summary.md)
 
 ### [Mock Summary] plan_step_01_strategy_engine_pattern_recognition.md
@@ -127,7 +127,7 @@ By reading this index, the AI can scan the high-level summaries. If more details
 ---
 
 ### [plan_step_02_news_aware_ai_layer.md](file:///app/wiki/raw/plans/plan_step_02_news_aware_ai_layer.md)
-- **Last Modified**: `2026-06-21T04:26:51.325360+00:00`
+- **Last Modified**: `2026-07-04T00:15:20.306934+00:00`
 - **Summary**: [View Full Summary](file:///app/wiki/summaries/plans/plan_step_02_news_aware_ai_layer_summary.md)
 
 ### [Mock Summary] plan_step_02_news_aware_ai_layer.md
@@ -140,7 +140,7 @@ By reading this index, the AI can scan the high-level summaries. If more details
 ---
 
 ### [plan_step_03_autonomous_trading_loop.md](file:///app/wiki/raw/plans/plan_step_03_autonomous_trading_loop.md)
-- **Last Modified**: `2026-06-21T04:26:51.325360+00:00`
+- **Last Modified**: `2026-07-04T00:15:20.306934+00:00`
 - **Summary**: [View Full Summary](file:///app/wiki/summaries/plans/plan_step_03_autonomous_trading_loop_summary.md)
 
 ### [Mock Summary] plan_step_03_autonomous_trading_loop.md
@@ -153,7 +153,7 @@ By reading this index, the AI can scan the high-level summaries. If more details
 ---
 
 ### [plan_step_04_live_paper_trading_integration.md](file:///app/wiki/raw/plans/plan_step_04_live_paper_trading_integration.md)
-- **Last Modified**: `2026-06-21T04:26:51.325360+00:00`
+- **Last Modified**: `2026-07-04T00:15:20.306934+00:00`
 - **Summary**: [View Full Summary](file:///app/wiki/summaries/plans/plan_step_04_live_paper_trading_integration_summary.md)
 
 ### [Mock Summary] plan_step_04_live_paper_trading_integration.md
@@ -166,7 +166,7 @@ By reading this index, the AI can scan the high-level summaries. If more details
 ---
 
 ### [project_plan.md](file:///app/wiki/raw/plans/project_plan.md)
-- **Last Modified**: `2026-06-21T04:26:51.325360+00:00`
+- **Last Modified**: `2026-07-04T00:15:20.310934+00:00`
 - **Summary**: [View Full Summary](file:///app/wiki/summaries/plans/project_plan_summary.md)
 
 ### [Mock Summary] project_plan.md
