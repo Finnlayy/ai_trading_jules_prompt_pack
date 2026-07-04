@@ -11,6 +11,10 @@ from app.main import app
 
 client = TestClient(app)
 
+from app.api.auth import get_current_user
+app.dependency_overrides[get_current_user] = lambda: {"email": "test@example.com"}
+
+
 
 @pytest.fixture(autouse=True)
 def reset_lifecycle_tables():

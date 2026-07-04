@@ -128,7 +128,7 @@ class PerformanceCalculator:
             return float(entry.result["pnl"])
         if entry.simulated_fill and "pnl" in entry.simulated_fill:
             return float(entry.simulated_fill["pnl"])
-        if entry.entry_price and entry.exit_price:
+        if getattr(entry, 'entry_price', None) and getattr(entry, 'exit_price', None):
             return None
         return None
 

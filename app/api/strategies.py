@@ -178,7 +178,7 @@ async def get_strategies_health():
     Return a health dashboard for every registered strategy.
     Aggregates per-strategy metrics from the SQL database (outcomes and candidates).
     """
-    from sqlalchemy import func
+    from sqlalchemy import func, case
     from app.db import SessionLocal
     from app.db.models import PaperOutcome, SignalCandidate
     
@@ -190,11 +190,48 @@ async def get_strategies_health():
     items: list[StrategyHealthItem] = []
     
     with SessionLocal() as db:
-        # 1. Fetch all outcomes grouped by strategy_id
-        all_outcomes = db.query(PaperOutcome).all()
-        outcomes_by_strat = {}
-        for o in all_outcomes:
-            outcomes_by_strat.setdefault(o.strategy_id, []).append(o)
+        # 1. Fetch outcome metrics grouped by strategy_id
+        stats = db.query(
+            PaperOutcome.strategy_id,
+            func.count(PaperOutcome.id).label('total_trades'),
+            func.sum(case((PaperOutcome.win == True, 1), else_=0)).label('total_wins'),
+            func.sum(case((PaperOutcome.win == True, PaperOutcome.pnl), else_=0)).label('gross_profit'),
+            func.sum(case((PaperOutcome.win == False, func.abs(PaperOutcome.pnl)), else_=0)).label('gross_loss'),
+            func.sum(PaperOutcome.pnl_pct).label('sum_pnl_pct')
+        ).group_by(PaperOutcome.strategy_id).all()
+
+        stats_map = {s.strategy_id: s for s in stats}
+
+        # Pre-calculate max drawdown efficiently without full ORM hydration
+        dd_outcomes = db.query(
+            PaperOutcome.strategy_id,
+            PaperOutcome.pnl_pct
+        ).order_by(PaperOutcome.strategy_id, PaperOutcome.created_at).all()
+
+        dd_by_strat = {}
+        current_strat = None
+        cum_pnl = 0.0
+        peak = 0.0
+        max_dd = 0.0
+
+        for strategy_id, pnl_pct in dd_outcomes:
+            if current_strat != strategy_id:
+                if current_strat is not None:
+                    dd_by_strat[current_strat] = max_dd
+                current_strat = strategy_id
+                cum_pnl = 0.0
+                peak = 0.0
+                max_dd = 0.0
+
+            cum_pnl += (pnl_pct or 0.0)
+            if cum_pnl > peak:
+                peak = cum_pnl
+            dd = peak - cum_pnl
+            if dd > max_dd:
+                max_dd = dd
+
+        if current_strat is not None:
+            dd_by_strat[current_strat] = max_dd
 
         # 2. Bulk fetch signal counts
         signal_counts = db.query(
@@ -227,34 +264,30 @@ async def get_strategies_health():
         for meta in all_strategies:
             last_switch = strategy_registry.last_switch if meta.strategy_id == active_id else None
             
-            outcomes = outcomes_by_strat.get(meta.strategy_id, [])
             total_signals = total_signals_map.get(meta.strategy_id, 0)
             signal_count_24h = signals_24h_map.get(meta.strategy_id, 0)
             
-            # Calculate win rate, profit factor, avg pnl pct
-            total_trades = len(outcomes)
-            total_wins = sum(1 for o in outcomes if o.win)
+            # Retrieve metrics from stats_map
+            strat_stats = stats_map.get(meta.strategy_id)
+            if strat_stats:
+                total_trades = strat_stats.total_trades or 0
+                total_wins = strat_stats.total_wins or 0
+                gross_profit = strat_stats.gross_profit or 0.0
+                gross_loss = strat_stats.gross_loss or 0.0
+                sum_pnl_pct = strat_stats.sum_pnl_pct or 0.0
+            else:
+                total_trades = 0
+                total_wins = 0
+                gross_profit = 0.0
+                gross_loss = 0.0
+                sum_pnl_pct = 0.0
+
             win_rate = total_wins / total_trades if total_trades > 0 else 0.0
-            
-            gross_profit = sum(o.pnl for o in outcomes if o.win and o.pnl is not None)
-            gross_loss = sum(abs(o.pnl) for o in outcomes if not o.win and o.pnl is not None)
             profit_factor = gross_profit / gross_loss if gross_loss > 0 else (gross_profit if gross_profit > 0 else 0.0)
-            
-            avg_pnl_pct = sum(o.pnl_pct for o in outcomes if o.pnl_pct is not None) / total_trades if total_trades > 0 else 0.0
+            avg_pnl_pct = sum_pnl_pct / total_trades if total_trades > 0 else 0.0
             
             # Max drawdown calculation
-            sorted_outcomes = sorted(outcomes, key=lambda x: x.created_at or datetime.min)
-            cum_pnl = 0.0
-            peak = 0.0
-            max_dd = 0.0
-            for o in sorted_outcomes:
-                cum_pnl += o.pnl_pct or 0.0
-                if cum_pnl > peak:
-                    peak = cum_pnl
-                dd = peak - cum_pnl
-                if dd > max_dd:
-                    max_dd = dd
-            max_drawdown_pct = max_dd
+            max_drawdown_pct = dd_by_strat.get(meta.strategy_id, 0.0)
             
             # Last signal/trade age
             c_ts = last_candidate_map.get(meta.strategy_id)

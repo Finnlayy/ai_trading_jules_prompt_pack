@@ -1,9 +1,20 @@
+import logging
+
+logger = logging.getLogger(__name__)
+
 import asyncio
+import logging
 from datetime import datetime, timezone
+
+logger = logging.getLogger(__name__)
 from pathlib import Path
 
+from fastapi import FastAPI, Depends
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse, Response
+from fastapi.middleware.cors import CORSMiddleware
+from app.core.config import CORS_ORIGINS
+from fastapi.responses import FileResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from app.api.auth import router as auth_router, get_current_user
 from fastapi import Depends
@@ -41,6 +52,14 @@ app = FastAPI(
     title="Agent-Reflex Hybrid Trader API",
     description="Simulation-first trading API. Open this UI to inspect health, backtest, and M8 webhook routes.",
 )
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 app.mount("/static", StaticFiles(directory=ROOT_DIR / "app" / "static"), name="static")
@@ -88,14 +107,15 @@ except ImportError:
     pass
 
 
-app.mount("/", StaticFiles(directory=ROOT_DIR / "frontend" / "dist", html=True), name="vite_spa")
 
 @app.get("/favicon.ico", include_in_schema=False)
 def favicon():
     return Response(status_code=204)
 
+from app.api.auth import get_api_key
+
 @app.get("/health")
-def health_check():
+def health_check(api_key: str | None = Depends(get_api_key)):
     return {"status": "ok"}
 
 
@@ -127,7 +147,7 @@ async def _heartbeat_loop():
                     circuit,
                 )
         except Exception:
-            pass
+            logger.exception("Error in heartbeat loop")
         await asyncio.sleep(3600)  # every hour
 
 
@@ -236,3 +256,5 @@ def shutdown_event():
         _training_autostart_task.cancel()
     if _shadow_queue_task:
         _shadow_queue_task.cancel()
+
+app.mount("/", StaticFiles(directory=ROOT_DIR / "frontend" / "dist", html=True), name="vite_spa")
