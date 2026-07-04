@@ -11,6 +11,9 @@
 ## 2024-05-29 - Inefficient Statistical Baseline Recalculation inside Tight Loops
 **Learning:** The Ljung-Box test function (`ljung_box`) inside `app/services/statistical_battery.py` repeatedly called `_autocorr`, which recalculated the array's mean and variance (`c0`) for every single lag (e.g. 20 times for 20 lags).
 **Action:** Inline the autocorrelation logic inside `ljung_box` to compute the mean, centered array, and variance once outside the loop. Then iteratively compute only the specific lag's covariance inside the loop, effectively halving the computation time (~0.20s down to ~0.10s for 100 runs). This avoids redundant O(N) operations inside loops.
+## 2024-05-30 - Inefficient Statistical Baseline Recalculation inside Tight Loops
+**Learning:** List comprehensions and generator expressions incur overhead due to memory allocation and iteration costs, which become bottlenecks in performance hot paths when processing large datasets (like calculating Sharpe or Sortino ratios on tick/candle data).
+**Action:** Replace generators and comprehensions with explicitly unrolled `for` loops and direct mathematical reductions to calculate sums and squares in a single pass, bypassing generator overhead and minimizing memory allocations.
 ## 2024-06-25 - Python memory allocations in high-frequency calculations
 **Learning:** For performance-critical arrays (like calculating metric indicators on millions of tick/candle returns), native python `sum()` over unrolled arrays or explicit tracking counters can be ~4x faster than list comprehensions because it avoids creating intermediate large list objects and overhead associated with Python generators.
 **Action:** When working on backends analyzing large series or arrays of returns in Python where external dependencies like numpy aren't immediately available, prefer explicitly unrolled loop structures and native mathematical reductions over memory-intensive generator comprehensions.
@@ -28,3 +31,35 @@
 ## 2024-05-31 - Fast API Sync I/O blocking Async endpoints in orchestration
 **Learning:** The `journal_logger_instance.log()` function, which performs synchronous file I/O (and DB commits), was called synchronously within `process_signal` and `process_manual_signal` in `app/api/orchestrator.py`. This blocks the main asyncio event loop, causing severe latency on concurrent traffic.
 **Action:** Wrapped the `journal_logger_instance.log(journal_entry)` call with `await asyncio.to_thread(journal_logger_instance.log, journal_entry)` to offload the I/O blocking execution to a worker thread pool. Keep the main loop unblocked.
+## 2024-06-26 - Avoid Eager JSON Parsing in Position Ledger History Lookups
+**Learning:** `restore_from_journal` in `app/services/pionex_position_ledger.py` was previously calling `json.loads` for every line when reloading history, even when most lines do not contain a "ledger_delta". This created slow loading and a performance bottleneck.
+**Action:** By adding a fast string substring filter `if "ledger_delta" not in raw_line: continue` before trying to strip or load JSON, execution time improved by roughly 85% in benchmarking, saving memory and CPU by avoiding eagerly creating dict objects.
+## 2024-06-27 - Optimizing Python Generator overhead in array calculations
+**Learning:** Functions like `sum()`, `max()`, `min()` with generator expressions (e.g., `max(x.h for x in rows)`) and list slicing for finding min/max (e.g., `min(lows[left:right + 1])`) are highly inefficient inside hot loop paths in Python.
+**Action:** Unroll loops directly maintaining state inline instead of using generator expressions inside hot loops. Use explicit inline loops to check for min/max conditions and break early where possible. This improves speed significantly and avoids generator overhead.
+
+## 2024-06-28 - Fast API Sync I/O blocking Async endpoints
+**Learning:** Calling synchronous networking or disk functions (like file writing or SQLite commits) directly inside `async def` route handlers in FastAPI blocks the asyncio event loop and starves all other concurrent requests, creating massive performance degradation under load.
+**Action:** When a sync method is required within a FastAPI route, wrap the call with `await asyncio.to_thread(sync_function, args...)` to offload to a worker thread pool, keeping the main loop unblocked.
+## 2024-05-31 - Optimized generator expressions inside repetitive summary methods
+**Learning:** Multiple O(N) generator expressions iterating over the same list (like `sum(1 for row in results if ...)`) for calculating metrics causes unnecessary overhead. Additionally, repeated `sum()` calls on static lists in the return statement calculates the same value multiple times.
+**Action:** Consolidate multiple list iteration operations into a single explicit unrolled `for` loop, and assign list sums to variables when they are referenced multiple times. This transforms O(M*N) down to O(N) execution and avoids Python generator overhead, significantly speeding up metric calculations on large logs.
+
+## 2024-06-29 - Inefficient JSONL parsing in Agent Registry
+**Learning:** `get_career_log` and `get_recent_career_events` were eagerly parsing every line of `agent_careers.jsonl` using `json.loads` before filtering by `scout_name` or `event_type`. This caused high CPU overhead and slow reads.
+**Action:** Implemented a fast substring check (e.g., `if f'"scout_name":"{scout_name}"' not in line and f'"scout_name": "{scout_name}"' not in line: continue`) before `json.loads` to skip irrelevant lines. This provides a massive speedup when filtering large JSONL files and avoids eager memory allocation.
+
+## 2024-07-02 - Avoid Eager JSON Parsing in Brain Compressor Transcript Lookups
+**Learning:** `parse_transcript_to_markdown` in `app/services/brain_compressor.py` was previously calling `json.loads` eagerly for every line in the `transcript.jsonl` files (often very large files from agent sessions), only to discard lines that weren't `USER_INPUT`, `PLANNER_RESPONSE`, or `MODEL_RESPONSE`.
+**Action:** By adding a fast string substring filter `if "USER_INPUT" not in line_str...` before attempting to parse JSON, we avoid allocating thousands of dicts for irrelevant tool calls and thoughts, significantly reducing CPU and memory overhead during second brain compression.
+
+## 2025-02-27 - Bounded Deques with Post-Filtering Cause Truncation
+**Learning:** Using a bounded `deque(maxlen=limit)` to pre-buffer lines before parsing and filtering (like in `JournalLogger.get_entries()`) can cause the final result set to be smaller than the `limit` if some lines fail validation (e.g., invalid JSON), because the false-positive lines consumed the limited capacity of the deque.
+**Action:** When retrieving the last N valid items from a sequential file, use an unbounded list to collect all lines, iterate backwards using `reversed()`, apply the parsing/validation, break when `len(results) == limit`, and finally reverse the results back to chronological order.
+
+## 2025-07-04 - Optimize Strategy Health Dashboard Outcome Aggregation
+**Learning:** Looping through all DB objects in Python memory (`db.query(PaperOutcome).all()`) to calculate aggregated stats (count, sum, avg) causes significant memory overhead and slow calculation speed. SQL-native aggregation `func.count()`, `func.sum()`, etc., handles this far faster and scales much better. For calculations that strictly require ordered traversal (like max drawdown), querying only the specific columns needed (`PaperOutcome.strategy_id`, `PaperOutcome.pnl_pct`) avoids heavy ORM instantiation.
+**Action:** When calculating aggregate metrics on outcomes (or similar items) in bulk, prefer SQL `func.*` and group by over fetching all rows into memory and using python generators/list comprehensions. Use selective column querying (`db.query(Model.col1, Model.col2)`) when a python loop is strictly necessary.
+## 2025-02-28 - Optimizing multiple list iteration generator expressions
+**Learning:** Multiple O(N) generator expressions iterating over the same list (like summing `(t.pnl or 0) > 0` and `(t.pnl or 0) < 0` for calculating metric aggregations) causes unnecessary overhead and slows down endpoint responses.
+**Action:** Consolidate multiple list iteration operations (like calculating wins, losses, gross profit, and gross loss) into a single explicit unrolled `for` loop. This avoids Python generator overhead and repeated array traversal, significantly speeding up metric calculations on large datasets like backtest results.

@@ -4,14 +4,14 @@ from datetime import datetime, timezone
 
 from app.schemas.m8_payload import M8Payload
 from app.services.risk_engine import risk_engine_instance
-from app.services.ai_kimi import ai_review_instance
+from app.services.ai_factory import ai_review_instance
 from app.services.broker_factory import BrokerFactory
 from app.services.journal_logger import journal_logger_instance
 from app.services.regime_engine import regime_engine_instance
 from app.services.signal_generator import BybitDataFeed
 from app.schemas.journal import DecisionEnum, FinalDecisionEnum
 from app.schemas.ai_review import SignalReview
-from app.core.config import AI_FAILURE_POLICY, BROKER_MODE
+from app.core.config import AI_FAILURE_POLICY, BROKER_MODE, PAPER_TRADING_RELAX_RISK
 
 
 def _build_broker():
@@ -224,7 +224,9 @@ async def process_signal(payload: M8Payload):
         decision_result = risk_engine_instance.evaluate(payload, ai_review)
 
     # Override if regime blocks trading (only for ENTRY, not CLOSE)
-    if payload.intent != "CLOSE" and not regime_result.get("trade_allowed", True):
+    is_paper_mode = BROKER_MODE in {"simulation", "sim", "paper", "kraken_paper", "krakenpaper"}
+    should_relax = is_paper_mode and PAPER_TRADING_RELAX_RISK
+    if payload.intent != "CLOSE" and not regime_result.get("trade_allowed", True) and not should_relax:
         decision_result = {
             "decision": DecisionEnum.REJECT,
             "reject_reason": f"REGIME_HALT: {regime_result.get('reason', 'Market regime unsuitable')}",
@@ -248,11 +250,14 @@ async def process_signal(payload: M8Payload):
     )
     
     # 5. Journaling
+    # ⚡ Bolt Optimization: Offload synchronous I/O to worker thread pool
+    # Impact: Prevents blocking the async event loop, reducing execution latency significantly under load.
     await asyncio.to_thread(journal_logger_instance.log, journal_entry)
 
     # 6. Record fill if trade executed
     # We only record an entry fill for ENTRY intents. (For CLOSE intents, this should be handled separately).
-    _record_trade_fill(payload, decision_result, journal_entry)
+    # ⚡ Bolt Optimization: Offload synchronous DB commit to worker thread
+    await asyncio.to_thread(_record_trade_fill, payload, decision_result, journal_entry)
 
     # Update Risk Engine state if trade executed
     _update_risk_engine_post_trade(decision_result)
@@ -342,7 +347,9 @@ async def process_manual_signal(payload: M8Payload):
     decision_result = risk_engine_instance.evaluate(payload, ai_review)
 
     # Override if regime blocks trading (only for ENTRY, not CLOSE)
-    if payload.intent != "CLOSE" and not regime_result.get("trade_allowed", True):
+    is_paper_mode = BROKER_MODE in {"simulation", "sim", "paper", "kraken_paper", "krakenpaper"}
+    should_relax = is_paper_mode and PAPER_TRADING_RELAX_RISK
+    if payload.intent != "CLOSE" and not regime_result.get("trade_allowed", True) and not should_relax:
         decision_result = {
             "decision": DecisionEnum.REJECT,
             "reject_reason": f"REGIME_HALT: {regime_result.get('reason', 'Market regime unsuitable')}",
@@ -366,10 +373,13 @@ async def process_manual_signal(payload: M8Payload):
     )
 
     # 5. Journaling
+    # ⚡ Bolt Optimization: Offload synchronous I/O to worker thread pool
+    # Impact: Prevents blocking the async event loop, reducing execution latency significantly under load.
     await asyncio.to_thread(journal_logger_instance.log, journal_entry)
 
     # 6. Record fill if trade executed
-    _record_trade_fill(payload, decision_result, journal_entry)
+    # ⚡ Bolt Optimization: Offload synchronous DB commit to worker thread
+    await asyncio.to_thread(_record_trade_fill, payload, decision_result, journal_entry)
 
     # Update Risk Engine state if trade executed
     _update_risk_engine_post_trade(decision_result)

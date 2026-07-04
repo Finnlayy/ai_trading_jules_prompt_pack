@@ -263,6 +263,7 @@ position_monitor = PositionMonitor()
 from app.db import SessionLocal
 from app.db.models import PaperPosition
 from app.services.kraken_paper_broker import KrakenPaperBroker
+from app.services.lifecycle_recorder import lifecycle_recorder
 
 
 class PaperPositionMonitor:
@@ -292,51 +293,127 @@ class PaperPositionMonitor:
         """Main loop: check all open positions every N seconds."""
         while self.is_running:
             try:
-                self._check_positions()
+                await asyncio.to_thread(self._check_positions)
             except Exception as exc:
                 logger.error("PaperPositionMonitor error: %s", exc)
             await asyncio.sleep(self.check_interval_seconds)
 
     def _check_positions(self) -> None:
         """Check each open position against current live price."""
+        open_positions_data = []
         with SessionLocal() as db:
             positions = (
                 db.query(PaperPosition)
                 .filter(PaperPosition.status == "open")
                 .all()
             )
-
             for pos in positions:
-                try:
-                    bid, ask = self.broker._get_live_price(pos.symbol)
-                    current = ask if pos.direction == "LONG" else bid
+                open_positions_data.append({
+                    "id": pos.id,
+                    "symbol": pos.symbol,
+                    "direction": pos.direction,
+                    "volume": pos.volume,
+                    "stop_loss": pos.stop_loss,
+                    "take_profit": pos.take_profit,
+                    "candidate_id": pos.candidate_id,
+                    "signal_id": pos.signal_id,
+                    "strategy_id": pos.strategy_id,
+                    "timeframe": pos.timeframe,
+                    "avg_entry_price": pos.avg_entry_price,
+                    "created_at": pos.created_at,
+                })
 
-                    sl_hit = pos.stop_loss is not None and (
-                        (pos.direction == "LONG" and current <= pos.stop_loss) or
-                        (pos.direction == "SHORT" and current >= pos.stop_loss)
+        for pos_data in open_positions_data:
+            try:
+                bid, ask = self.broker._get_live_price(pos_data["symbol"])
+                current = ask if pos_data["direction"] == "LONG" else bid
+
+                sl_hit = pos_data["stop_loss"] is not None and (
+                    (pos_data["direction"] == "LONG" and current <= pos_data["stop_loss"]) or
+                    (pos_data["direction"] == "SHORT" and current >= pos_data["stop_loss"])
+                )
+
+                tp_hit = pos_data["take_profit"] is not None and (
+                    (pos_data["direction"] == "LONG" and current >= pos_data["take_profit"]) or
+                    (pos_data["direction"] == "SHORT" and current <= pos_data["take_profit"])
+                )
+
+                if sl_hit:
+                    logger.info(
+                        "SL hit for %s: current=%.4f, sl=%.4f",
+                        pos_data["symbol"], current, pos_data["stop_loss"]
+                    )
+                    snapshot = {
+                        "candidate_id": pos_data["candidate_id"],
+                        "signal_id": pos_data["signal_id"],
+                        "symbol": pos_data["symbol"],
+                        "direction": pos_data["direction"],
+                        "strategy_id": pos_data["strategy_id"],
+                        "timeframe": pos_data["timeframe"],
+                        "volume": pos_data["volume"],
+                        "avg_entry_price": pos_data["avg_entry_price"],
+                        "stop_loss": pos_data["stop_loss"],
+                        "take_profit": pos_data["take_profit"],
+                        "created_at": pos_data["created_at"],
+                    }
+                    result = self.broker.close_paper_position(
+                        pos_data["symbol"],
+                        pos_data["volume"],
+                        close_reason="STOP_LOSS",
+                    )
+                    lifecycle_recorder.record_paper_outcome(
+                        position_snapshot=snapshot,
+                        close_result=result,
+                        close_reason="STOP_LOSS",
                     )
 
-                    tp_hit = pos.take_profit is not None and (
-                        (pos.direction == "LONG" and current >= pos.take_profit) or
-                        (pos.direction == "SHORT" and current <= pos.take_profit)
+                elif tp_hit:
+                    logger.info(
+                        "TP hit for %s: current=%.4f, tp=%.4f",
+                        pos_data["symbol"], current, pos_data["take_profit"]
+                    )
+                    snapshot = {
+                        "candidate_id": pos_data["candidate_id"],
+                        "signal_id": pos_data["signal_id"],
+                        "symbol": pos_data["symbol"],
+                        "direction": pos_data["direction"],
+                        "strategy_id": pos_data["strategy_id"],
+                        "timeframe": pos_data["timeframe"],
+                        "volume": pos_data["volume"],
+                        "avg_entry_price": pos_data["avg_entry_price"],
+                        "stop_loss": pos_data["stop_loss"],
+                        "take_profit": pos_data["take_profit"],
+                        "created_at": pos_data["created_at"],
+                    }
+                    result = self.broker.close_paper_position(
+                        pos_data["symbol"],
+                        pos_data["volume"],
+                        close_reason="TAKE_PROFIT",
+                    )
+                    lifecycle_recorder.record_paper_outcome(
+                        position_snapshot=snapshot,
+                        close_result=result,
+                        close_reason="TAKE_PROFIT",
                     )
 
-                    if sl_hit:
-                        logger.info(
-                            "SL hit for %s: current=%.4f, sl=%.4f",
-                            pos.symbol, current, pos.stop_loss
-                        )
-                        self.broker.close_paper_position(pos.symbol, pos.volume)
+            except Exception as exc:
+                logger.warning("Could not check SL/TP for %s: %s", pos_data["symbol"], exc)
 
-                    elif tp_hit:
-                        logger.info(
-                            "TP hit for %s: current=%.4f, tp=%.4f",
-                            pos.symbol, current, pos.take_profit
-                        )
-                        self.broker.close_paper_position(pos.symbol, pos.volume)
-
-                except Exception as exc:
-                    logger.warning("Could not check SL/TP for %s: %s", pos.symbol, exc)
+    @staticmethod
+    def _position_snapshot(pos: PaperPosition) -> dict:
+        return {
+            "candidate_id": pos.candidate_id,
+            "signal_id": pos.signal_id,
+            "symbol": pos.symbol,
+            "direction": pos.direction,
+            "strategy_id": pos.strategy_id,
+            "timeframe": pos.timeframe,
+            "volume": pos.volume,
+            "avg_entry_price": pos.avg_entry_price,
+            "stop_loss": pos.stop_loss,
+            "take_profit": pos.take_profit,
+            "created_at": pos.created_at,
+        }
 
 
 # Singleton instance for paper trading

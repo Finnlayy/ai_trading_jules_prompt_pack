@@ -205,6 +205,8 @@ async def get_trades(limit: int = 50, offset: int = 0):
     def _fmt_ts(ts: str) -> str:
         """Format ISO timestamp to dd:mm:yy : hh:mm"""
         try:
+            if not ts:
+                return ts
             dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
             return dt.strftime("%d:%m:%y : %H:%M")
         except Exception:

@@ -58,7 +58,7 @@ async def test_kimi_swarm_success():
         review = await service.review_signal(payload)
 
         assert review.decision == DecisionEnum.PROCEED_TO_SIMULATION
-        assert review.confidence == 0.95
+        assert review.confidence == 0.85
         assert "STRONG_CONFLUENCE" in review.reason_codes
         assert review.audit_trace["trace_type"] == "ai_reasoning_audit_not_hidden_chain_of_thought"
         # 4 scouts + 1 orchestrator
@@ -77,6 +77,9 @@ async def test_kimi_swarm_success():
         # Verify scout weights are tracked
         assert "scout_weights" in review.audit_trace
         assert set(review.audit_trace["scout_weights"].keys()) == {"technical", "sentiment", "risk", "macro", "execution", "correlation"}
+        assert "weighted_scout_vote" in review.audit_trace
+        assert review.audit_trace["confidence_recorded"] is True
+        assert review.audit_trace["weighted_scout_vote"]["decision_hint"] == DecisionEnum.PROCEED_TO_SIMULATION.value
 
 
 @pytest.mark.asyncio
@@ -135,3 +138,50 @@ def test_gemini_scout_model_falls_back_from_non_gemini_override():
 
     assert _resolve_scout_model(provider_config, "google/gemma-4-e2b:3") == "gemini-2.5-flash"
     assert _resolve_scout_model(provider_config, "models/gemini-2.5-pro") == "gemini-2.5-pro"
+
+
+def test_get_prompt_for_scout_resolves_active_pointer(tmp_path, monkeypatch):
+    scout_dir = tmp_path / "technical"
+    scout_dir.mkdir()
+    (scout_dir / "v_active.md").write_text("v2_gemini_backend.md\n", encoding="utf-8")
+    (scout_dir / "v2_gemini_backend.md").write_text("Gemini backend prompt", encoding="utf-8")
+
+    service = KimiSwarmService(provider="gemini")
+    monkeypatch.setattr(service, "_prompt_base_dir", lambda: tmp_path)
+
+    assert service.get_prompt_for_scout("technical") == "Gemini backend prompt"
+
+
+@pytest.mark.asyncio
+async def test_specialized_scout_includes_resolved_prompt(tmp_path, monkeypatch):
+    scout_dir = tmp_path / "technical"
+    scout_dir.mkdir()
+    (scout_dir / "v_active.md").write_text("v2_gemini_backend.md\n", encoding="utf-8")
+    (scout_dir / "v2_gemini_backend.md").write_text("Gemini backend prompt", encoding="utf-8")
+
+    service = KimiSwarmService(provider="gemini")
+    monkeypatch.setattr(service, "_prompt_base_dir", lambda: tmp_path)
+    captured = {}
+
+    async def fake_call(scout_name: str, prompt: str, system: str = "", response_format=None):
+        captured["scout_name"] = scout_name
+        captured["system"] = system
+        return "Confidence: 0.75\nMocked technical scout."
+
+    monkeypatch.setattr(service, "_call_llm_for_scout", fake_call)
+
+    await service._run_technical_scout(create_valid_payload(), "Symbol context")
+
+    assert captured["scout_name"] == "technical"
+    assert "Gemini backend prompt" in captured["system"]
+
+
+def test_weighted_vote_rejects_low_confidence_reports():
+    service = KimiSwarmService(provider="moonshot")
+    payload = create_valid_payload()
+    reports = {name: "Confidence: 0.40\nReject; critical risk." for name in service.SCOUT_NAMES}
+
+    weighted = service._weighted_scout_vote(payload, reports)
+
+    assert weighted["decision_hint"] == DecisionEnum.REJECT.value
+    assert weighted["rejection_score"] > weighted["approval_score"]

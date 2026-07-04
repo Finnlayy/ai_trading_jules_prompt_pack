@@ -22,3 +22,4 @@ playwright.config.js
 app/data/trading.db
 data/*.json
 data/*.jsonl
+data/runtime_archive/

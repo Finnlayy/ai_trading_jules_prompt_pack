@@ -21,6 +21,7 @@ def reset_tdd_state(tmp_path, monkeypatch):
     from app.services.watchlist_manager import watchlist_manager
     from app.services.shadow_queue import shadow_queue
     from app.services.risk_engine import risk_engine_instance
+    from app.services.last_processed_bar_store import LastProcessedBarStore
     from app.api.orchestrator import reset_broker
     from app.services.portfolio_circuit_breaker import circuit_breaker_instance
 
@@ -36,6 +37,7 @@ def reset_tdd_state(tmp_path, monkeypatch):
     autonomous_loop_instance._health.stats.errors_last_5min = 0
     autonomous_loop_instance._health.stats.error_history.clear()
     autonomous_loop_instance._last_poll_times.clear()
+    autonomous_loop_instance._processed_bars = LastProcessedBarStore(str(tmp_path / "last_processed_bars.json"))
 
     # Reset watchlist
     watchlist_manager.reset()
@@ -97,6 +99,7 @@ async def test_multi_agent_deployment_prompt_injection_and_training(monkeypatch)
     from app.services.watchlist_manager import WatchlistItem, watchlist_manager
     from app.services.ai_kimi import ai_review_instance
     from app.services.training_drills import training_drills
+    from app.services.paper_training_pipeline import paper_training_pipeline
     from app.schemas.m8_payload import M8Payload
     from app.schemas.ai_review import SignalReview, DecisionEnum
 
@@ -105,28 +108,35 @@ async def test_multi_agent_deployment_prompt_injection_and_training(monkeypatch)
     for sym in symbols:
         watchlist_manager.add(WatchlistItem(symbol=sym, timeframes=["1h"], active=True))
 
-    # Mock signal generator to emit one payload per symbol (no network calls)
-    def mock_generate_payloads(symbol, timeframe, bars, min_confluence):
-        return [
-            M8Payload(
-                signal_id=f"gen-{symbol}-001",
-                symbol=symbol,
-                timeframe=timeframe,
-                direction="LONG",
-                timestamp="2026-05-20T10:00:00Z",
-                entry_price=50000.0,
-                stop_price=48000.0,
-                target_price=54000.0,
-                confluence_score=80.0,
-                crisis_score=15.0,
-                mc_dispersion=2.0,
-                spread=5.0,
-            )
-        ]
+    # Mock latest-candidate generation (no network calls, no historical replay)
+    def mock_generate_latest_candidate(symbol, timeframe, bars, min_confluence, last_processed_ts=None):
+        autonomous_loop_instance._generator.last_generation_summary = {
+            "mode": "latest_candidate",
+            "last_closed_bar_ts": 1_700_000_000_000 + len(symbol),
+            "candidate_generated": True,
+        }
+        return M8Payload(
+            signal_id=f"live-{symbol}-{timeframe}-test-001",
+            symbol=symbol,
+            timeframe=timeframe,
+            direction="LONG",
+            timestamp="2026-05-20T10:00:00Z",
+            entry_price=50000.0,
+            stop_price=48000.0,
+            target_price=54000.0,
+            confluence_score=80.0,
+            crisis_score=15.0,
+            mc_dispersion=2.0,
+            spread=5.0,
+        )
+
+    async def fake_regime(_payload):
+        return {"trade_allowed": True, "regime": "TEST", "reason": "ok"}
 
     monkeypatch.setattr(
-        autonomous_loop_instance._generator, "generate_payloads", mock_generate_payloads
+        autonomous_loop_instance._generator, "generate_latest_candidate", mock_generate_latest_candidate
     )
+    monkeypatch.setattr(paper_training_pipeline, "_check_regime", fake_regime)
 
     # Track AI reviews per symbol and inject audit trace evidence
     review_calls = []

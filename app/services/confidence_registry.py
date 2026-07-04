@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from dataclasses import dataclass, field, asdict
 from typing import Any
 from app.schemas.academy import CareerEntry
+from app.services.ai.gem_agents import DEFAULT_AGENT_NAMES
 from app.services.agent_registry import agent_registry
 import asyncio
 
@@ -138,7 +139,7 @@ class ConfidenceRegistry:
     File: logs/confidence_registry.json
     """
 
-    SCOUT_NAMES = ["technical", "sentiment", "risk", "macro", "execution", "correlation"]
+    SCOUT_NAMES = list(DEFAULT_AGENT_NAMES)
 
     def __init__(self, filepath: str = "logs/confidence_registry.json") -> None:
         self.filepath = Path(filepath)
@@ -251,6 +252,7 @@ class ConfidenceRegistry:
         symbol: str,
         scout_names: list[str],
         was_correct: bool,
+        details: dict[str, Any] | None = None,
     ) -> None:
         """
         Mark already-recorded scout calls as correct after a paper/live outcome is known.
@@ -280,6 +282,7 @@ class ConfidenceRegistry:
                 scout_name=scout_name,
                 event_type="prediction_result",
                 details={
+                    **(details or {}),
                     "symbol": symbol,
                     "is_correct": was_correct,
                     "accuracy": sstats.accuracy,
@@ -312,7 +315,7 @@ class ConfidenceRegistry:
                 f"({d.wins}W/{d.losses}L), avg RR: {d.avg_rr:.2f}, avg PnL: {d.avg_pnl_pct:+.2f}%"
             )
 
-        for scout_name in self.SCOUT_NAMES:
+        for scout_name in self._context_scout_names(stats):
             sstats = stats.scout_stats.get(scout_name)
             if sstats and sstats.calls > 0:
                 spec_label = ""
@@ -337,6 +340,13 @@ class ConfidenceRegistry:
             )
 
         return "\n".join(lines)
+
+    def _context_scout_names(self, stats: SymbolStats) -> list[str]:
+        names = list(self.SCOUT_NAMES)
+        for scout_name in stats.scout_stats:
+            if scout_name not in names:
+                names.append(scout_name)
+        return names
 
     def get_scout_weight(self, symbol: str, scout_name: str) -> float:
         """

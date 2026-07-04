@@ -18,8 +18,9 @@ from typing import Any, Optional
 
 from sqlalchemy.orm import Session
 
-from app.db import SessionLocal
+from app.db import Base, SessionLocal, engine
 from app.db.models import PaperBalance, PaperPosition, PaperTrade
+from app.schemas.journal import DecisionEnum, DirectionEnum, FinalDecisionEnum, TradeJournalEntry
 from app.services.broker_interface import BaseBroker
 from app.services.kraken_broker import KrakenBroker
 
@@ -62,6 +63,7 @@ class KrakenPaperBroker(BaseBroker):
 
     def _init_balance(self) -> None:
         """Seed the paper balance if none exists."""
+        Base.metadata.create_all(bind=engine)
         with self._db() as db:
             bal = db.query(PaperBalance).filter(PaperBalance.currency == "USD").first()
             if bal is None:
@@ -85,16 +87,22 @@ class KrakenPaperBroker(BaseBroker):
             db.commit()
         return bal
 
-    def _get_live_price(self, pair: str) -> tuple[float, float]:
+    def _get_live_price(self, pair: str, fallback_price: Optional[float] = None) -> tuple[float, float]:
         """Return (bid, ask) for a Kraken pair using public API."""
-        normalized = self._kraken.normalize_pair(pair)
-        result = self._kraken.get_ticker(normalized)
-        # Kraken returns keyed by actual pair name
-        key = list(result.keys())[0]
-        ticker = result[key]
-        bid = float(ticker["b"][0])
-        ask = float(ticker["a"][0])
-        return bid, ask
+        try:
+            normalized = self._kraken.normalize_pair(pair)
+            result = self._kraken.get_ticker(normalized)
+            # Kraken returns keyed by actual pair name
+            key = list(result.keys())[0]
+            ticker = result[key]
+            bid = float(ticker["b"][0])
+            ask = float(ticker["a"][0])
+            return bid, ask
+        except Exception as exc:
+            if fallback_price is not None and fallback_price > 0:
+                logger.info("Failed to get live price for %s, using fallback %s: %s", pair, fallback_price, exc)
+                return fallback_price, fallback_price
+            raise
 
     def _calculate_fee(self, notional: float) -> float:
         """Calculate taker fee for a given notional value."""
@@ -128,17 +136,14 @@ class KrakenPaperBroker(BaseBroker):
             # Compute expected balance from initial balance and trade history
             expected = self.config.initial_balance_usd
             for t in trades:
-                if t.status == "open" and t.direction == "LONG":
-                    expected -= (t.entry_price * t.volume + t.fee)
-                elif t.status == "closed":
+                if t.status == "open":
                     if t.direction == "LONG":
-                        expected -= t.fee
-                        if t.pnl:
-                            expected += t.pnl
+                        expected -= (t.entry_price * t.volume + t.fee)
                     elif t.direction == "SHORT":
-                        expected -= t.fee
-                        if t.pnl:
-                            expected += t.pnl
+                        expected += (t.entry_price * t.volume - t.fee)
+                elif t.status == "closed":
+                    if t.pnl is not None:
+                        expected += (t.pnl - t.fee)
 
             drift = round(bal.balance - expected, 8)
             drift_detected = abs(drift) > 0.0001
@@ -172,6 +177,96 @@ class KrakenPaperBroker(BaseBroker):
         """
         raise NotImplementedError("Use place_paper_order() for paper trading")
 
+    def execute_trade(self, payload, decision, reject_reason=None, ai_decision=None):
+        """Execute an M8 payload as a Kraken paper trade."""
+        now = datetime.now(timezone.utc)
+        if payload.direction == "LONG":
+            risk = payload.entry_price - payload.stop_price
+            reward = payload.target_price - payload.entry_price
+        else:
+            risk = payload.stop_price - payload.entry_price
+            reward = payload.entry_price - payload.target_price
+        rr_ratio = reward / risk if risk > 0 else 0.0
+
+        try:
+            journal_ai_decision = DecisionEnum(getattr(ai_decision, "value", ai_decision))
+        except Exception:
+            journal_ai_decision = DecisionEnum.PROCEED_TO_SIMULATION
+
+        entry = TradeJournalEntry(
+            trade_id=f"kraken-paper-{payload.signal_id}",
+            timestamp=now.isoformat(),
+            symbol=payload.symbol,
+            timeframe=payload.timeframe,
+            direction=DirectionEnum(payload.direction),
+            entry_price=payload.entry_price,
+            stop_price=payload.stop_price,
+            target_price=payload.target_price,
+            risk_reward=rr_ratio,
+            m8_score=payload.confluence_score,
+            ai_decision=journal_ai_decision,
+            final_decision=FinalDecisionEnum.SKIPPED,
+            simulated_fill={},
+            result={"status": "PENDING"},
+        )
+
+        if reject_reason or decision != DecisionEnum.PROCEED_TO_SIMULATION:
+            entry.final_decision = FinalDecisionEnum.REJECTED
+            entry.result = {
+                "status": "REJECTED",
+                "reject_reason": reject_reason or "RISK_ENGINE_REJECTED",
+                "mode": "paper",
+            }
+            return entry
+
+        volume = payload.execution_quantity
+        if volume is None:
+            reference_price = payload.entry_price if payload.entry_price > 0 else 1.0
+            order_usd = min(max(self.config.min_order_usd, 10.0), self.config.max_order_usd)
+            volume = round(order_usd / reference_price, 8)
+
+        if payload.intent == "CLOSE":
+            result = self.close_paper_position(
+                symbol=payload.symbol,
+                volume=volume,
+                order_type="market",
+                close_reason=f"signal:{payload.signal_id}",
+            )
+        else:
+            result = self.place_paper_order(
+                symbol=payload.symbol,
+                direction=payload.direction,
+                volume=volume,
+                order_type="market",
+                price=payload.entry_price,
+                stop_loss=payload.stop_price,
+                take_profit=payload.target_price,
+                signal_id=payload.signal_id,
+                strategy_id=payload.strategy_id,
+                timeframe=payload.timeframe,
+                risk_decision=str(decision.value if hasattr(decision, "value") else decision),
+                risk_reason=reject_reason,
+                opened_by_loop=True,
+            )
+
+        entry.result = result
+        if result.get("status") == "ok":
+            entry.trade_id = result.get("trade_id", entry.trade_id)
+            entry.final_decision = FinalDecisionEnum.EXECUTED_SIM
+            fill_price = float(result.get("fill_price", payload.entry_price))
+            entry.simulated_fill = {
+                "fill_price": fill_price,
+                "fee": float(result.get("fee", 0.0)),
+                "slippage": abs(fill_price - payload.entry_price),
+                "size_base": float(volume),
+                "mode": "PAPER",
+            }
+        else:
+            entry.final_decision = FinalDecisionEnum.REJECTED
+            entry.simulated_fill = {}
+
+        return entry
+
     def get_positions(self) -> dict[str, Any]:
         """Return all open paper positions."""
         with self._db() as db:
@@ -184,7 +279,7 @@ class KrakenPaperBroker(BaseBroker):
             result = []
             for pos in positions:
                 try:
-                    bid, ask = self._get_live_price(pos.symbol)
+                    bid, ask = self._get_live_price(pos.symbol, fallback_price=pos.avg_entry_price)
                     current = ask if pos.direction == "LONG" else bid
                     if pos.direction == "LONG":
                         pos.unrealized_pnl = round(
@@ -230,7 +325,7 @@ class KrakenPaperBroker(BaseBroker):
             total_unrealized = 0.0
             for pos in open_positions:
                 try:
-                    bid, ask = self._get_live_price(pos.symbol)
+                    bid, ask = self._get_live_price(pos.symbol, fallback_price=pos.avg_entry_price)
                     current = ask if pos.direction == "LONG" else bid
                     if pos.direction == "LONG":
                         total_unrealized += (current - pos.avg_entry_price) * pos.volume
@@ -268,6 +363,15 @@ class KrakenPaperBroker(BaseBroker):
         price: Optional[float] = None,
         stop_loss: Optional[float] = None,
         take_profit: Optional[float] = None,
+        candidate_id: Optional[str] = None,
+        signal_id: Optional[str] = None,
+        strategy_id: Optional[str] = None,
+        timeframe: Optional[str] = None,
+        ai_trace_json: Optional[str] = None,
+        risk_decision: Optional[str] = None,
+        risk_reason: Optional[str] = None,
+        opened_by_loop: bool = False,
+        outcome_source: str = "live_paper",
     ) -> dict[str, Any]:
         """Place a paper order and simulate immediate fill at live price.
 
@@ -292,9 +396,8 @@ class KrakenPaperBroker(BaseBroker):
         dir_norm = "LONG" if direction.upper() in {"BUY", "LONG"} else "SHORT"
         pair = self._kraken.normalize_pair(symbol)
 
-        # Get live price
         try:
-            bid, ask = self._get_live_price(pair)
+            bid, ask = self._get_live_price(pair, fallback_price=price)
         except Exception as exc:
             return {"status": "error", "error": f"Could not fetch live price: {exc}"}
 
@@ -338,19 +441,8 @@ class KrakenPaperBroker(BaseBroker):
                         "error": f"Insufficient {pair} to sell: {pos.volume:.6f} < {volume:.6f}",
                     }
 
-            # Create trade record
+            # Generate default trade_id
             trade_id = f"paper_{uuid.uuid4().hex[:12]}"
-            trade = PaperTrade(
-                trade_id=trade_id,
-                symbol=pair,
-                direction=dir_norm,
-                order_type=order_type.lower(),
-                volume=volume,
-                entry_price=fill_price,
-                fee=fee,
-                status="open",
-            )
-            db.add(trade)
 
             # Update balance
             if dir_norm == "LONG":
@@ -371,16 +463,44 @@ class KrakenPaperBroker(BaseBroker):
 
             if position is None:
                 position = PaperPosition(
+                    candidate_id=candidate_id,
+                    signal_id=signal_id,
                     symbol=pair,
                     direction=dir_norm,
+                    strategy_id=strategy_id,
+                    timeframe=timeframe,
                     volume=volume,
                     avg_entry_price=fill_price,
                     fee_paid=fee,
                     stop_loss=stop_loss,
                     take_profit=take_profit,
+                    ai_trace_json=ai_trace_json,
+                    risk_decision=risk_decision,
+                    opened_by_loop=opened_by_loop,
                     status="open",
                 )
                 db.add(position)
+
+                # Create the open trade record
+                trade = PaperTrade(
+                    trade_id=trade_id,
+                    candidate_id=candidate_id,
+                    signal_id=signal_id,
+                    symbol=pair,
+                    direction=dir_norm,
+                    strategy_id=strategy_id,
+                    timeframe=timeframe,
+                    order_type=order_type.lower(),
+                    volume=volume,
+                    entry_price=fill_price,
+                    fee=fee,
+                    ai_trace_json=ai_trace_json,
+                    risk_decision=risk_decision,
+                    risk_reason=risk_reason,
+                    outcome_source=outcome_source,
+                    status="open",
+                )
+                db.add(trade)
             else:
                 if position.direction == dir_norm:
                     # Adding to existing position
@@ -392,90 +512,177 @@ class KrakenPaperBroker(BaseBroker):
                     )
                     position.volume = total_vol
                     position.fee_paid += fee
+                    position.candidate_id = candidate_id or position.candidate_id
+                    position.signal_id = signal_id or position.signal_id
+                    position.strategy_id = strategy_id or position.strategy_id
+                    position.timeframe = timeframe or position.timeframe
+                    position.stop_loss = stop_loss if stop_loss is not None else position.stop_loss
+                    position.take_profit = take_profit if take_profit is not None else position.take_profit
+                    position.ai_trace_json = ai_trace_json or position.ai_trace_json
+                    position.risk_decision = risk_decision or position.risk_decision
+                    position.opened_by_loop = opened_by_loop or position.opened_by_loop
+
+                    # Create a new open trade record for the added portion
+                    trade = PaperTrade(
+                        trade_id=trade_id,
+                        candidate_id=candidate_id,
+                        signal_id=signal_id,
+                        symbol=pair,
+                        direction=dir_norm,
+                        strategy_id=strategy_id,
+                        timeframe=timeframe,
+                        order_type=order_type.lower(),
+                        volume=volume,
+                        entry_price=fill_price,
+                        fee=fee,
+                        ai_trace_json=ai_trace_json,
+                        risk_decision=risk_decision,
+                        risk_reason=risk_reason,
+                        outcome_source=outcome_source,
+                        status="open",
+                    )
+                    db.add(trade)
                 else:
                     # Reducing / closing / flipping
+                    open_trades = (
+                        db.query(PaperTrade)
+                        .filter(PaperTrade.symbol == pair, PaperTrade.status == "open")
+                        .order_by(PaperTrade.created_at.asc())
+                        .all()
+                    )
+
+                    volume_to_close = volume
+                    close_pnl = 0.0
+                    now_utc = datetime.now(timezone.utc)
+                    close_fee_per_unit = fee / volume if volume > 0 else 0.0
+
+                    for t in open_trades:
+                        if volume_to_close <= 0:
+                            break
+
+                        if volume_to_close >= t.volume:
+                            t_pnl = (
+                                (fill_price - t.entry_price) * t.volume
+                                if t.direction == "LONG"
+                                else (t.entry_price - fill_price) * t.volume
+                            )
+                            t.pnl = t_pnl
+                            t.exit_price = fill_price
+                            t.fee += close_fee_per_unit * t.volume
+                            t.status = "closed"
+                            t.closed_at = now_utc
+
+                            close_pnl += t_pnl
+                            volume_to_close -= t.volume
+                            trade_id = t.trade_id
+                        else:
+                            t_pnl = (
+                                (fill_price - t.entry_price) * volume_to_close
+                                if t.direction == "LONG"
+                                else (t.entry_price - fill_price) * volume_to_close
+                            )
+
+                            part_fee = t.fee * (volume_to_close / t.volume) + (close_fee_per_unit * volume_to_close)
+                            split_trade_id = f"paper_{uuid.uuid4().hex[:12]}"
+                            closed_part = PaperTrade(
+                                trade_id=split_trade_id,
+                                candidate_id=candidate_id or t.candidate_id,
+                                signal_id=signal_id or t.signal_id,
+                                symbol=pair,
+                                direction=t.direction,
+                                strategy_id=strategy_id or t.strategy_id,
+                                timeframe=timeframe or t.timeframe,
+                                order_type=t.order_type,
+                                volume=volume_to_close,
+                                entry_price=t.entry_price,
+                                exit_price=fill_price,
+                                fee=part_fee,
+                                pnl=t_pnl,
+                                ai_trace_json=ai_trace_json or t.ai_trace_json,
+                                risk_decision=risk_decision or t.risk_decision,
+                                risk_reason=risk_reason or t.risk_reason,
+                                outcome_source=outcome_source,
+                                status="closed",
+                                created_at=t.created_at,
+                                closed_at=now_utc,
+                            )
+                            db.add(closed_part)
+
+                            t.fee -= t.fee * (volume_to_close / t.volume)
+                            t.volume -= volume_to_close
+
+                            close_pnl += t_pnl
+                            volume_to_close = 0.0
+                            trade_id = split_trade_id
+
                     if volume < position.volume:
                         # Partial close
-                        pnl = (
-                            (fill_price - position.avg_entry_price) * volume
-                            if dir_norm == "SHORT"  # closing long
-                            else (position.avg_entry_price - fill_price) * volume
-                        )
                         position.volume -= volume
-                        position.realized_pnl += pnl
+                        position.realized_pnl += close_pnl
                         position.fee_paid += fee
-                        bal.total_pnl += pnl
-
-                        trade.pnl = pnl
-                        trade.status = "closed"
-                        trade.exit_price = fill_price
-                        trade.closed_at = datetime.now(timezone.utc)
+                        bal.total_pnl += close_pnl
                     elif volume == position.volume:
                         # Full close
-                        pnl = (
-                            (fill_price - position.avg_entry_price) * position.volume
-                            if dir_norm == "SHORT"
-                            else (position.avg_entry_price - fill_price) * position.volume
-                        )
-                        position.realized_pnl += pnl
+                        position.realized_pnl += close_pnl
                         position.fee_paid += fee
                         position.volume = 0.0
                         position.status = "closed"
-                        position.closed_at = datetime.now(timezone.utc)
-                        bal.total_pnl += pnl
-
-                        trade.pnl = pnl
-                        trade.status = "closed"
-                        trade.exit_price = fill_price
-                        trade.closed_at = datetime.now(timezone.utc)
+                        position.closed_at = now_utc
+                        bal.total_pnl += close_pnl
                     else:
                         # Flip direction
-                        close_pnl = (
-                            (fill_price - position.avg_entry_price) * position.volume
-                            if dir_norm == "SHORT"
-                            else (position.avg_entry_price - fill_price) * position.volume
-                        )
                         remaining = volume - position.volume
                         position.realized_pnl += close_pnl
                         position.fee_paid += fee
                         bal.total_pnl += close_pnl
 
                         # Close old position
-                        old_dir = position.direction
                         position.volume = 0.0
                         position.status = "closed"
-                        position.closed_at = datetime.now(timezone.utc)
+                        position.closed_at = now_utc
 
                         # Open new position in opposite direction
                         new_pos = PaperPosition(
+                            candidate_id=candidate_id,
+                            signal_id=signal_id,
                             symbol=pair,
                             direction=dir_norm,
+                            strategy_id=strategy_id,
+                            timeframe=timeframe,
                             volume=remaining,
                             avg_entry_price=fill_price,
-                            fee_paid=fee,
+                            fee_paid=fee * (remaining / volume),
                             stop_loss=stop_loss,
                             take_profit=take_profit,
+                            ai_trace_json=ai_trace_json,
+                            risk_decision=risk_decision,
+                            opened_by_loop=opened_by_loop,
                             status="open",
                         )
                         db.add(new_pos)
 
-                        trade.pnl = close_pnl
-                        trade.status = "closed"
-                        trade.exit_price = fill_price
-                        trade.closed_at = datetime.now(timezone.utc)
-
-                        # Create a new trade for the flipped portion
+                        # Create a new open trade for the flipped portion
+                        flip_trade_id = f"paper_{uuid.uuid4().hex[:12]}"
                         new_trade = PaperTrade(
-                            trade_id=f"paper_{uuid.uuid4().hex[:12]}",
+                            trade_id=flip_trade_id,
+                            candidate_id=candidate_id,
+                            signal_id=signal_id,
                             symbol=pair,
                             direction=dir_norm,
+                            strategy_id=strategy_id,
+                            timeframe=timeframe,
                             order_type=order_type.lower(),
                             volume=remaining,
                             entry_price=fill_price,
-                            fee=0.0,
+                            fee=fee * (remaining / volume),
+                            ai_trace_json=ai_trace_json,
+                            risk_decision=risk_decision,
+                            risk_reason=risk_reason,
+                            outcome_source=outcome_source,
                             status="open",
                         )
                         db.add(new_trade)
+                        trade_id = flip_trade_id
 
             db.commit()
 
@@ -500,6 +707,7 @@ class KrakenPaperBroker(BaseBroker):
         symbol: str,
         volume: Optional[float] = None,
         order_type: str = "market",
+        close_reason: Optional[str] = None,
     ) -> dict[str, Any]:
         """Close (part of) an open paper position.
 
@@ -525,7 +733,7 @@ class KrakenPaperBroker(BaseBroker):
 
             # Get live price
             try:
-                bid, ask = self._get_live_price(pair)
+                bid, ask = self._get_live_price(pair, fallback_price=position.avg_entry_price)
             except Exception as exc:
                 return {"status": "error", "error": f"Could not fetch live price: {exc}"}
 
@@ -563,31 +771,96 @@ class KrakenPaperBroker(BaseBroker):
                 position.status = "closed"
                 position.closed_at = datetime.now(timezone.utc)
 
-            # Create closing trade
-            trade = PaperTrade(
-                trade_id=f"paper_{uuid.uuid4().hex[:12]}",
-                symbol=pair,
-                direction=close_dir,
-                order_type=order_type.lower(),
-                volume=close_vol,
-                entry_price=fill_price,
-                exit_price=fill_price,
-                fee=fee,
-                pnl=pnl,
-                status="closed",
-                closed_at=datetime.now(timezone.utc),
+            # Find open trades for this symbol and close/split them
+            open_trades = (
+                db.query(PaperTrade)
+                .filter(PaperTrade.symbol == pair, PaperTrade.status == "open")
+                .order_by(PaperTrade.created_at.asc())
+                .all()
             )
-            db.add(trade)
+
+            volume_to_close = close_vol
+            close_trade_id = None
+            now_utc = datetime.now(timezone.utc)
+            close_fee_per_unit = fee / close_vol if close_vol > 0 else 0.0
+
+            for t in open_trades:
+                if volume_to_close <= 0:
+                    break
+
+                if volume_to_close >= t.volume:
+                    t_pnl = (
+                        (fill_price - t.entry_price) * t.volume
+                        if t.direction == "LONG"
+                        else (t.entry_price - fill_price) * t.volume
+                    )
+                    t.pnl = t_pnl
+                    t.exit_price = fill_price
+                    t.fee += close_fee_per_unit * t.volume
+                    t.status = "closed"
+                    t.closed_at = now_utc
+                    t.close_reason = close_reason
+
+                    if close_trade_id is None:
+                        close_trade_id = t.trade_id
+                    volume_to_close -= t.volume
+                else:
+                    t_pnl = (
+                        (fill_price - t.entry_price) * volume_to_close
+                        if t.direction == "LONG"
+                        else (t.entry_price - fill_price) * volume_to_close
+                    )
+
+                    part_fee = t.fee * (volume_to_close / t.volume) + (close_fee_per_unit * volume_to_close)
+                    split_trade_id = f"paper_{uuid.uuid4().hex[:12]}"
+                    closed_part = PaperTrade(
+                        trade_id=split_trade_id,
+                        candidate_id=position.candidate_id or t.candidate_id,
+                        signal_id=position.signal_id or t.signal_id,
+                        symbol=pair,
+                        direction=t.direction,
+                        strategy_id=position.strategy_id or t.strategy_id,
+                        timeframe=position.timeframe or t.timeframe,
+                        order_type=order_type.lower(),
+                        volume=volume_to_close,
+                        entry_price=t.entry_price,
+                        exit_price=fill_price,
+                        fee=part_fee,
+                        pnl=t_pnl,
+                        ai_trace_json=position.ai_trace_json or t.ai_trace_json,
+                        risk_decision=position.risk_decision or t.risk_decision,
+                        close_reason=close_reason,
+                        outcome_source="live_paper",
+                        status="closed",
+                        created_at=t.created_at,
+                        closed_at=now_utc,
+                    )
+                    db.add(closed_part)
+
+                    t.fee -= t.fee * (volume_to_close / t.volume)
+                    t.volume -= volume_to_close
+
+                    if close_trade_id is None:
+                        close_trade_id = split_trade_id
+                    volume_to_close = 0.0
+
+            if close_trade_id is None:
+                close_trade_id = f"paper_{uuid.uuid4().hex[:12]}"
+
             db.commit()
 
             return {
                 "status": "ok",
+                "trade_id": close_trade_id,
+                "candidate_id": position.candidate_id,
+                "signal_id": position.signal_id,
                 "symbol": pair,
                 "direction": close_dir,
                 "volume": close_vol,
                 "fill_price": fill_price,
                 "pnl": round(pnl, 8),
                 "fee": fee,
+                "close_reason": close_reason,
                 "balance_after": round(bal.balance, 8),
                 "position_remaining": position.volume if position.status == "open" else 0.0,
                 "mode": "paper",
