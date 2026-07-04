@@ -1,36 +1,34 @@
 {
-  "positions": [],
-  "intents": [],
-  "updated_at": "2026-06-21T04:46:10.941630+00:00"
   "positions": [
     {
-      "trade_id": "sim-test_ui_1",
-      "symbol": "ETH_USDT",
+      "trade_id": "sim-bt-1",
+      "symbol": "BTCUSDT",
       "direction": "LONG",
-      "entry_price": 3500.7,
-      "current_price": 3500.7,
-      "size": 0.002857142857142857,
+      "entry_price": 50010.0,
+      "current_price": 50010.0,
+      "size": 0.0002,
       "unrealized_pnl": 0.0,
       "realized_pnl": 0.0,
-      "open_time": "2026-06-18T04:29:46.033553+00:00",
+      "open_time": "2026-07-04T02:31:02.040516+00:00",
       "strategy_id": null,
-      "stop_price": 3400.0,
-      "target_price": 3800.0
+      "stop_price": 48000.0,
+      "target_price": 54000.0
     }
   ],
   "intents": [
     {
-      "trade_id": "sim-test_ui_1",
-      "symbol": "ETH_USDT",
+      "trade_id": "sim-bt-1",
+      "symbol": "BTCUSDT",
       "direction": "LONG",
-      "entry_price": 3500.0,
-      "stop_price": 3400.0,
-      "target_price": 3800.0,
+      "entry_price": 50000.0,
+      "stop_price": 48000.0,
+      "target_price": 54000.0,
       "size": null,
       "strategy_id": null,
       "decision": "PROCEED_TO_SIMULATION",
       "ai_trace": {
         "trace_type": "ai_reasoning_audit_not_hidden_chain_of_thought",
+        "provider": "moonshot",
         "provider": "mock",
         "behavior_profile": {
           "trading_style": "balanced",
@@ -45,7 +43,7 @@
             "Do not request live execution directly.",
             "Prefer human review when confidence is low or preferences conflict."
           ],
-          "updated_at": "2026-06-18T04:29:45.199457+00:00"
+          "updated_at": "2026-07-04T02:30:58.791247+00:00"
         },
         "scouts": {
           "macro_sentinel": {
@@ -53,19 +51,19 @@
             "decision": "PROCEED_TO_SIMULATION"
           },
           "market_dna": {
-            "report": "Confidence: 1.00\nTechnical setup quality: excellent. Confluence 95.0/100. Spread 0.1bps. No major structural concerns.",
+            "report": "Confidence: 0.95\nTechnical setup quality: excellent. Confluence 85.0/100. Spread 2.0bps. No major structural concerns.",
             "decision": "PROCEED_TO_SIMULATION"
           },
           "structural_architect": {
-            "report": "Confidence: 1.00\nTechnical setup quality: excellent. Confluence 95.0/100. Spread 0.1bps. No major structural concerns.",
+            "report": "Confidence: 0.95\nTechnical setup quality: excellent. Confluence 85.0/100. Spread 2.0bps. No major structural concerns.",
             "decision": "PROCEED_TO_SIMULATION"
           },
           "harmony_coordinator": {
-            "report": "Confidence: 1.00\nTechnical setup quality: excellent. Confluence 95.0/100. Spread 0.1bps. No major structural concerns.",
+            "report": "Confidence: 0.95\nTechnical setup quality: excellent. Confluence 85.0/100. Spread 2.0bps. No major structural concerns.",
             "decision": "PROCEED_TO_SIMULATION"
           },
           "indicator_fusion": {
-            "report": "Confidence: 1.00\nTechnical setup quality: excellent. Confluence 95.0/100. Spread 0.1bps. No major structural concerns.",
+            "report": "Confidence: 0.95\nTechnical setup quality: excellent. Confluence 85.0/100. Spread 2.0bps. No major structural concerns.",
             "decision": "PROCEED_TO_SIMULATION"
           },
           "risk_kernel": {
@@ -73,15 +71,15 @@
             "decision": "PROCEED_TO_SIMULATION"
           },
           "pine_core": {
-            "report": "Confidence: 1.00\nTechnical setup quality: excellent. Confluence 95.0/100. Spread 0.1bps. No major structural concerns.",
+            "report": "Confidence: 0.95\nTechnical setup quality: excellent. Confluence 85.0/100. Spread 2.0bps. No major structural concerns.",
             "decision": "PROCEED_TO_SIMULATION"
           },
           "payload_qa": {
-            "report": "Confidence: 0.80\nExecution quality: acceptable. Spread 0.1bps.",
+            "report": "Confidence: 0.80\nExecution quality: acceptable. Spread 2.0bps.",
             "decision": "PROCEED_TO_SIMULATION"
           },
           "execution_watchdog": {
-            "report": "Confidence: 0.80\nExecution quality: acceptable. Spread 0.1bps.",
+            "report": "Confidence: 0.80\nExecution quality: acceptable. Spread 2.0bps.",
             "decision": "PROCEED_TO_SIMULATION"
           },
           "evolution_optimizer": {
@@ -89,92 +87,92 @@
             "decision": "PROCEED_TO_SIMULATION"
           }
         },
-        "symbol_context": "Symbol: ETH_USDT | Direction: LONG\nTotal signals reviewed: 2\n  Macro_Sentinel scout: 0% accuracy (0/2), exp: 2\n  Market_Dna scout: 0% accuracy (0/2), exp: 2\n  Structural_Architect scout: 0% accuracy (0/2), exp: 2\n  Harmony_Coordinator scout: 0% accuracy (0/2), exp: 2\n  Indicator_Fusion scout: 0% accuracy (0/2), exp: 2\n  Risk_Kernel scout: 0% accuracy (0/2), exp: 2\n  Pine_Core scout: 0% accuracy (0/2), exp: 2\n  Payload_Qa scout: 0% accuracy (0/2), exp: 2\n  Execution_Watchdog scout: 0% accuracy (0/2), exp: 2\n  Evolution_Optimizer scout: 0% accuracy (0/2), exp: 2\nHistorical avg confluence: 95.0, avg crisis: 5.0",
+        "symbol_context": "Symbol: BTCUSDT | Direction: LONG\nTotal signals reviewed: 8\n  Macro_Sentinel scout: 0% accuracy (0/8), exp: 8\n  Market_Dna scout: 0% accuracy (0/8), exp: 8\n  Structural_Architect scout: 0% accuracy (0/8), exp: 8\n  Harmony_Coordinator scout: 0% accuracy (0/8), exp: 8\n  Indicator_Fusion scout: 0% accuracy (0/8), exp: 8\n  Risk_Kernel scout: 0% accuracy (0/8), exp: 8\n  Pine_Core scout: 0% accuracy (0/8), exp: 8\n  Payload_Qa scout: 0% accuracy (0/8), exp: 8\n  Execution_Watchdog scout: 0% accuracy (0/8), exp: 8\n  Evolution_Optimizer scout: 0% accuracy (0/8), exp: 8\nHistorical avg confluence: 85.0, avg crisis: 5.0",
         "scout_weights": {
-          "macro_sentinel": 0.5,
-          "market_dna": 0.5,
-          "structural_architect": 0.5,
-          "harmony_coordinator": 0.5,
-          "indicator_fusion": 0.5,
-          "risk_kernel": 0.5,
-          "pine_core": 0.5,
-          "payload_qa": 0.5,
-          "execution_watchdog": 0.5,
-          "evolution_optimizer": 0.5
+          "macro_sentinel": 0.1,
+          "market_dna": 0.1,
+          "structural_architect": 0.1,
+          "harmony_coordinator": 0.1,
+          "indicator_fusion": 0.1,
+          "risk_kernel": 0.1,
+          "pine_core": 0.1,
+          "payload_qa": 0.1,
+          "execution_watchdog": 0.1,
+          "evolution_optimizer": 0.1
         },
         "weighted_scout_vote": {
-          "approval_score": 4.3,
+          "approval_score": 0.835,
           "rejection_score": 0.0,
           "approval_ratio": 1.0,
-          "weighted_confidence": 0.86,
+          "weighted_confidence": 0.835,
           "decision_hint": "PROCEED_TO_SIMULATION",
           "scouts": {
             "macro_sentinel": {
               "decision": "PROCEED_TO_SIMULATION",
               "confidence": 0.5,
-              "weight": 0.5,
-              "score": 0.25
+              "weight": 0.1,
+              "score": 0.05
             },
             "market_dna": {
               "decision": "PROCEED_TO_SIMULATION",
-              "confidence": 1.0,
-              "weight": 0.5,
-              "score": 0.5
+              "confidence": 0.95,
+              "weight": 0.1,
+              "score": 0.095
             },
             "structural_architect": {
               "decision": "PROCEED_TO_SIMULATION",
-              "confidence": 1.0,
-              "weight": 0.5,
-              "score": 0.5
+              "confidence": 0.95,
+              "weight": 0.1,
+              "score": 0.095
             },
             "harmony_coordinator": {
               "decision": "PROCEED_TO_SIMULATION",
-              "confidence": 1.0,
-              "weight": 0.5,
-              "score": 0.5
+              "confidence": 0.95,
+              "weight": 0.1,
+              "score": 0.095
             },
             "indicator_fusion": {
               "decision": "PROCEED_TO_SIMULATION",
-              "confidence": 1.0,
-              "weight": 0.5,
-              "score": 0.5
+              "confidence": 0.95,
+              "weight": 0.1,
+              "score": 0.095
             },
             "risk_kernel": {
               "decision": "PROCEED_TO_SIMULATION",
               "confidence": 0.8,
-              "weight": 0.5,
-              "score": 0.4
+              "weight": 0.1,
+              "score": 0.08
             },
             "pine_core": {
               "decision": "PROCEED_TO_SIMULATION",
-              "confidence": 1.0,
-              "weight": 0.5,
-              "score": 0.5
+              "confidence": 0.95,
+              "weight": 0.1,
+              "score": 0.095
             },
             "payload_qa": {
               "decision": "PROCEED_TO_SIMULATION",
               "confidence": 0.8,
-              "weight": 0.5,
-              "score": 0.4
+              "weight": 0.1,
+              "score": 0.08
             },
             "execution_watchdog": {
               "decision": "PROCEED_TO_SIMULATION",
               "confidence": 0.8,
-              "weight": 0.5,
-              "score": 0.4
+              "weight": 0.1,
+              "score": 0.08
             },
             "evolution_optimizer": {
               "decision": "PROCEED_TO_SIMULATION",
               "confidence": 0.7,
-              "weight": 0.5,
-              "score": 0.35
+              "weight": 0.1,
+              "score": 0.07
             }
           }
         },
         "confidence_recorded": true,
         "final_summary": {
           "decision": "PROCEED_TO_SIMULATION",
-          "confidence": 0.86,
+          "confidence": 0.835,
           "reason_codes": [
             "FAVORABLE_SETUP",
             "WEIGHTED_SCOUT_APPROVE"
@@ -182,17 +180,14 @@
           "risk_flags": [],
           "requires_human_review": false
         },
-        "fallback": true,
-        "error_type": "RuntimeError",
-        "original_provider": "moonshot",
         "regime": {
           "trade_allowed": true,
           "regime": "TEST",
           "reason": "Mocked for tests"
         }
       },
-      "timestamp": "2026-06-18T04:29:45.800693+00:00"
+      "timestamp": "2026-07-04T02:30:58.791827+00:00"
     }
   ],
-  "updated_at": "2026-06-18T04:29:46.033686+00:00"
+  "updated_at": "2026-07-04T02:31:02.040678+00:00"
 }

@@ -2,129 +2,129 @@
   {
     "scout_name": "technical",
     "curriculum_level": "Beginner",
-    "completed_drills": 320,
+    "completed_drills": 334,
     "required_drills": 10,
-    "passed_drills": 320,
-    "average_confidence": 0.7467278793516133
+    "passed_drills": 334,
+    "average_confidence": 0.7447851365578197
   },
   {
     "scout_name": "sentiment",
     "curriculum_level": "Beginner",
-    "completed_drills": 320,
+    "completed_drills": 334,
     "required_drills": 10,
-    "passed_drills": 5,
-    "average_confidence": 0.7563610685096073
+    "passed_drills": 16,
+    "average_confidence": 0.7562079351216776
   },
   {
     "scout_name": "risk",
     "curriculum_level": "Beginner",
-    "completed_drills": 320,
+    "completed_drills": 334,
     "required_drills": 10,
-    "passed_drills": 320,
-    "average_confidence": 0.7359665033485583
+    "passed_drills": 334,
+    "average_confidence": 0.7359329276422053
   },
   {
     "scout_name": "macro",
     "curriculum_level": "Beginner",
-    "completed_drills": 320,
+    "completed_drills": 334,
     "required_drills": 10,
-    "passed_drills": 320,
-    "average_confidence": 0.7554837028155698
+    "passed_drills": 327,
+    "average_confidence": 0.7568056030135538
   },
   {
     "scout_name": "execution",
     "curriculum_level": "Beginner",
-    "completed_drills": 320,
+    "completed_drills": 334,
     "required_drills": 10,
-    "passed_drills": 320,
-    "average_confidence": 0.7586542793455742
+    "passed_drills": 330,
+    "average_confidence": 0.7608589419275579
   },
   {
     "scout_name": "correlation",
     "curriculum_level": "Beginner",
-    "completed_drills": 320,
+    "completed_drills": 334,
     "required_drills": 10,
-    "passed_drills": 109,
-    "average_confidence": 0.7483800014475748
+    "passed_drills": 111,
+    "average_confidence": 0.7490008621565387
   },
   {
     "scout_name": "macro_sentinel",
     "curriculum_level": "Beginner",
-    "completed_drills": 266,
+    "completed_drills": 280,
     "required_drills": 10,
-    "passed_drills": 111,
-    "average_confidence": 0.7518186948905102
+    "passed_drills": 120,
+    "average_confidence": 0.7507765495947475
   },
   {
     "scout_name": "market_dna",
     "curriculum_level": "Beginner",
-    "completed_drills": 266,
+    "completed_drills": 280,
     "required_drills": 10,
-    "passed_drills": 69,
-    "average_confidence": 0.7425250938589817
+    "passed_drills": 72,
+    "average_confidence": 0.7405150262508484
   },
   {
     "scout_name": "structural_architect",
     "curriculum_level": "Beginner",
-    "completed_drills": 266,
+    "completed_drills": 280,
     "required_drills": 10,
-    "passed_drills": 128,
-    "average_confidence": 0.7505543911760195
+    "passed_drills": 133,
+    "average_confidence": 0.7485072235622587
   },
   {
     "scout_name": "harmony_coordinator",
     "curriculum_level": "Beginner",
-    "completed_drills": 266,
+    "completed_drills": 280,
     "required_drills": 10,
-    "passed_drills": 29,
-    "average_confidence": 0.748226783809192
+    "passed_drills": 32,
+    "average_confidence": 0.7477527683066321
   },
   {
     "scout_name": "indicator_fusion",
     "curriculum_level": "Beginner",
-    "completed_drills": 266,
+    "completed_drills": 280,
     "required_drills": 10,
-    "passed_drills": 21,
-    "average_confidence": 0.7445175125353398
+    "passed_drills": 35,
+    "average_confidence": 0.7463922549473107
   },
   {
     "scout_name": "risk_kernel",
     "curriculum_level": "Beginner",
-    "completed_drills": 266,
+    "completed_drills": 280,
     "required_drills": 10,
-    "passed_drills": 82,
-    "average_confidence": 0.7474691962112784
+    "passed_drills": 96,
+    "average_confidence": 0.7491550798615554
   },
   {
     "scout_name": "pine_core",
     "curriculum_level": "Beginner",
-    "completed_drills": 266,
+    "completed_drills": 280,
     "required_drills": 10,
-    "passed_drills": 58,
-    "average_confidence": 0.7546916440410963
+    "passed_drills": 68,
+    "average_confidence": 0.7537446834701436
   },
   {
     "scout_name": "payload_qa",
     "curriculum_level": "Beginner",
-    "completed_drills": 266,
+    "completed_drills": 280,
     "required_drills": 10,
-    "passed_drills": 50,
-    "average_confidence": 0.7399588114975333
+    "passed_drills": 54,
+    "average_confidence": 0.7396984667233394
   },
   {
     "scout_name": "execution_watchdog",
     "curriculum_level": "Beginner",
-    "completed_drills": 266,
+    "completed_drills": 280,
     "required_drills": 10,
-    "passed_drills": 236,
-    "average_confidence": 0.732511697638178
+    "passed_drills": 238,
+    "average_confidence": 0.7329207021239581
   },
   {
     "scout_name": "evolution_optimizer",
     "curriculum_level": "Beginner",
-    "completed_drills": 266,
+    "completed_drills": 280,
     "required_drills": 10,
-    "passed_drills": 93,
-    "average_confidence": 0.7331167597059457
+    "passed_drills": 107,
+    "average_confidence": 0.73259952768112
   }
 ]
