@@ -23,9 +23,9 @@ This file serves as the unified project memory for all 17 Scouts and Gems, recor
 ## 💼 Open Paper Positions
 | Symbol | Direction | Volume | Avg Entry | Stop Loss | Take Profit | Unrealized P&L |
 | --- | --- | --- | --- | --- | --- | --- |
-| `SOLUSD` | LONG | 0.2000 | 73.6400 | 0.0000 | 0.0000 | $0.0000 |
-| `XETHZUSD` | LONG | 0.0100 | 1735.3300 | 0.0000 | 0.0000 | $0.0000 |
-| `XRPUSD` | LONG | 5.0000 | 1.1486 | 0.0000 | 0.0000 | $0.0000 |
+| `SOLUSD` | LONG | 0.2000 | 82.3600 | 0.0000 | 0.0000 | $0.0000 |
+| `XETHZUSD` | LONG | 0.0100 | 1755.9000 | 0.0000 | 0.0000 | $0.0000 |
+| `XRPUSD` | LONG | 5.0000 | 1.1339 | 0.0000 | 0.0000 | $0.0000 |
 
 ---
 

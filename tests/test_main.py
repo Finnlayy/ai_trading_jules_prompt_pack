@@ -47,3 +47,15 @@ def test_lifecycle_events():
     assert main_module._news_poll_task.cancelled() or main_module._news_poll_task.done()
     assert main_module._autostart_task.cancelled() or main_module._autostart_task.done()
     assert main_module._shadow_queue_task.cancelled() or main_module._shadow_queue_task.done()
+
+def test_cors_middleware():
+    """Test that CORS middleware is applied and returns correct headers."""
+    from app.main import app
+    client = TestClient(app)
+    response = client.options("/health", headers={
+        "Origin": "http://localhost:3000",
+        "Access-Control-Request-Method": "GET"
+    })
+    assert response.status_code == 200
+    assert "access-control-allow-origin" in response.headers
+    assert response.headers["access-control-allow-origin"] == "http://localhost:3000" or response.headers["access-control-allow-origin"] == "*"

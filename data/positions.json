@@ -28,6 +28,7 @@
       "decision": "PROCEED_TO_SIMULATION",
       "ai_trace": {
         "trace_type": "ai_reasoning_audit_not_hidden_chain_of_thought",
+        "provider": "moonshot",
         "provider": "mock",
         "behavior_profile": {
           "trading_style": "balanced",

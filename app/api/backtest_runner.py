@@ -162,10 +162,22 @@ async def run_backtest(req: BacktestRunRequest):
                 res["exit"] = {"price": outcome.exit_price, "time": outcome.exit_time}
                 res["pnl_pct"] = outcome.pnl_pct
 
-        executed = sum(1 for r in results if r["final_decision"] == "EXECUTED_SIM")
-        rejected = sum(1 for r in results if r["final_decision"] == "REJECTED")
-        longs = sum(1 for r in results if r["direction"] == "LONG")
-        shorts = sum(1 for r in results if r["direction"] == "SHORT")
+        executed = 0
+        rejected = 0
+        longs = 0
+        shorts = 0
+        for r in results:
+            fd = r.get("final_decision")
+            d = r.get("direction")
+            if fd == "EXECUTED_SIM":
+                executed += 1
+            elif fd == "REJECTED":
+                rejected += 1
+
+            if d == "LONG":
+                longs += 1
+            elif d == "SHORT":
+                shorts += 1
 
         return {
             "status": "success",
@@ -436,24 +448,31 @@ async def backtest_report(symbol: str = "SOLUSD", days: int = 7):
             },
         }
 
-    wins = sum(1 for t in trades if (t.pnl or 0) > 0)
-    losses = sum(1 for t in trades if (t.pnl or 0) < 0)
-    winrate = (wins / total * 100) if total > 0 else 0.0
-
-    # Max drawdown from equity curve
+    wins = 0
+    losses = 0
+    gross_profit = 0.0
+    gross_loss = 0.0
     peak = 0.0
     max_dd = 0.0
     equity = 0.0
+
     for t in trades:
-        equity += (t.pnl or 0) - t.fee
+        pnl = t.pnl or 0.0
+        if pnl > 0:
+            wins += 1
+            gross_profit += pnl
+        elif pnl < 0:
+            losses += 1
+            gross_loss += abs(pnl)
+
+        equity += pnl - t.fee
         if equity > peak:
             peak = equity
         dd = peak - equity
         if dd > max_dd:
             max_dd = dd
 
-    gross_profit = sum((t.pnl or 0) for t in trades if (t.pnl or 0) > 0)
-    gross_loss = abs(sum((t.pnl or 0) for t in trades if (t.pnl or 0) < 0))
+    winrate = (wins / total * 100) if total > 0 else 0.0
     profit_factor = gross_profit / gross_loss if gross_loss > 0 else float("inf")
 
     # Avg slippage: simplified (no backtest reference, use 0 as placeholder)
