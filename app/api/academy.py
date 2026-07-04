@@ -542,8 +542,10 @@ def get_onnx_policy_details():
 @router.post("/policy/onnx/open-folder")
 def open_onnx_folder():
     """Open the directory containing compiled ONNX policy models in the system file explorer."""
+    import sys
     import os
     import subprocess
+    import shutil
     from pathlib import Path
     from app.core.config import ACADEMY_POLICY_MODEL_DIR
     
@@ -552,13 +554,14 @@ def open_onnx_folder():
     abs_path = model_dir.resolve()
     
     try:
-        if os.name == 'nt':
+        if sys.platform == 'win32':
             os.startfile(abs_path)
-        elif os.name == 'posix':
-            subprocess.run(['xdg-open', str(abs_path)], check=True)
+        elif sys.platform == 'darwin':
+            open_cmd = shutil.which('open') or '/usr/bin/open'
+            subprocess.run([open_cmd, str(abs_path)], check=True)  # nosec B603
         else:
-            # Fallback for MacOS
-            subprocess.run(['open', str(abs_path)], check=True)
+            xdg_open = shutil.which('xdg-open') or '/usr/bin/xdg-open'
+            subprocess.run([xdg_open, str(abs_path)], check=True)  # nosec B603
         return {"status": "success", "path": str(abs_path)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to open folder: {e}")
