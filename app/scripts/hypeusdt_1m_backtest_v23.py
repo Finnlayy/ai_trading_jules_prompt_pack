@@ -477,29 +477,61 @@ def backtest(candles: Sequence[Candle], p: Params) -> dict:
                     bear_fvg.pop(0)
 
         # touches
+        m = len(bull_ob)
         bull_ob_touch = False
-        for top, bot in bull_ob[-5:]:
-            if c.l <= top and c.h >= bot:
-                bull_ob_touch = True
-                break
+        if m >= 5:
+            if c.l <= bull_ob[-5][0] and c.h >= bull_ob[-5][1]: bull_ob_touch = True
+            elif c.l <= bull_ob[-4][0] and c.h >= bull_ob[-4][1]: bull_ob_touch = True
+            elif c.l <= bull_ob[-3][0] and c.h >= bull_ob[-3][1]: bull_ob_touch = True
+            elif c.l <= bull_ob[-2][0] and c.h >= bull_ob[-2][1]: bull_ob_touch = True
+            elif c.l <= bull_ob[-1][0] and c.h >= bull_ob[-1][1]: bull_ob_touch = True
+        elif m > 0:
+            for j in range(m, 0, -1):
+                if c.l <= bull_ob[-j][0] and c.h >= bull_ob[-j][1]:
+                    bull_ob_touch = True
+                    break
 
+        m = len(bear_ob)
         bear_ob_touch = False
-        for top, bot in bear_ob[-5:]:
-            if c.h >= bot and c.l <= top:
-                bear_ob_touch = True
-                break
+        if m >= 5:
+            if c.h >= bear_ob[-5][1] and c.l <= bear_ob[-5][0]: bear_ob_touch = True
+            elif c.h >= bear_ob[-4][1] and c.l <= bear_ob[-4][0]: bear_ob_touch = True
+            elif c.h >= bear_ob[-3][1] and c.l <= bear_ob[-3][0]: bear_ob_touch = True
+            elif c.h >= bear_ob[-2][1] and c.l <= bear_ob[-2][0]: bear_ob_touch = True
+            elif c.h >= bear_ob[-1][1] and c.l <= bear_ob[-1][0]: bear_ob_touch = True
+        elif m > 0:
+            for j in range(m, 0, -1):
+                if c.h >= bear_ob[-j][1] and c.l <= bear_ob[-j][0]:
+                    bear_ob_touch = True
+                    break
 
+        m = len(bull_fvg)
         bull_fvg_touch = False
-        for top, bot in bull_fvg[-5:]:
-            if c.l <= top and c.h >= bot:
-                bull_fvg_touch = True
-                break
+        if m >= 5:
+            if c.l <= bull_fvg[-5][0] and c.h >= bull_fvg[-5][1]: bull_fvg_touch = True
+            elif c.l <= bull_fvg[-4][0] and c.h >= bull_fvg[-4][1]: bull_fvg_touch = True
+            elif c.l <= bull_fvg[-3][0] and c.h >= bull_fvg[-3][1]: bull_fvg_touch = True
+            elif c.l <= bull_fvg[-2][0] and c.h >= bull_fvg[-2][1]: bull_fvg_touch = True
+            elif c.l <= bull_fvg[-1][0] and c.h >= bull_fvg[-1][1]: bull_fvg_touch = True
+        elif m > 0:
+            for j in range(m, 0, -1):
+                if c.l <= bull_fvg[-j][0] and c.h >= bull_fvg[-j][1]:
+                    bull_fvg_touch = True
+                    break
 
+        m = len(bear_fvg)
         bear_fvg_touch = False
-        for top, bot in bear_fvg[-5:]:
-            if c.h >= bot and c.l <= top:
-                bear_fvg_touch = True
-                break
+        if m >= 5:
+            if c.h >= bear_fvg[-5][1] and c.l <= bear_fvg[-5][0]: bear_fvg_touch = True
+            elif c.h >= bear_fvg[-4][1] and c.l <= bear_fvg[-4][0]: bear_fvg_touch = True
+            elif c.h >= bear_fvg[-3][1] and c.l <= bear_fvg[-3][0]: bear_fvg_touch = True
+            elif c.h >= bear_fvg[-2][1] and c.l <= bear_fvg[-2][0]: bear_fvg_touch = True
+            elif c.h >= bear_fvg[-1][1] and c.l <= bear_fvg[-1][0]: bear_fvg_touch = True
+        elif m > 0:
+            for j in range(m, 0, -1):
+                if c.h >= bear_fvg[-j][1] and c.l <= bear_fvg[-j][0]:
+                    bear_fvg_touch = True
+                    break
 
         # alignment
         sh4 = state_h4[c.ts] if p.en_h4 else 0

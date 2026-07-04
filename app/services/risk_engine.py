@@ -1,24 +1,35 @@
+from app.schemas.trading_plan import TradingPlan
+from app.schemas.risk_result import RiskValidationResult
+import polars as pl
 from app.schemas.m8_payload import M8Payload
 from app.schemas.ai_review import SignalReview, DecisionEnum as AIDecisionEnum
 from app.schemas.journal import DecisionEnum, FinalDecisionEnum
 from app.core.config import (
     MIN_RR_RATIO, MAX_SPREAD, MIN_CONFLUENCE_SCORE, MAX_CRISIS_SCORE,
     MAX_MC_DISPERSION, COOLDOWN_BARS, MAX_TRADES_PER_DAY,
-    NEWS_IMPACT_ENABLED,
+    NEWS_IMPACT_ENABLED, BROKER_MODE, PAPER_TRADING_RELAX_RISK,
 )
 from app.core.exceptions import RiskGateException
 from app.services.war_room_rules import ai_rule_violation, classify_order
 from app.services.portfolio_circuit_breaker import circuit_breaker_instance
 from app.services.correlation_risk import correlation_checker
+from app.services.confidence_registry import confidence_registry
 from typing import Optional, Dict, List
 
 class RiskEngine:
     def __init__(self):
-        # state for simulation tests
         self.trades_today = 0
         self.last_trade_bar = -1
         self.current_bar = 0
-        self.open_positions: List[dict] = []  # for correlation risk checks
+        self.open_positions: List[dict] = []
+
+    def _is_paper_mode(self) -> bool:
+        import app.core.config as config
+        return config.BROKER_MODE in {"simulation", "sim", "paper", "kraken_paper", "krakenpaper"}
+
+    def _should_relax(self) -> bool:
+        import app.core.config as config
+        return self._is_paper_mode() and config.PAPER_TRADING_RELAX_RISK
 
     def evaluate(self, payload: M8Payload, ai_review: Optional[SignalReview] = None) -> Dict:
         """
@@ -29,10 +40,11 @@ class RiskEngine:
         # Load news-based adjustments
         adjustments = self._get_news_adjustments(payload.symbol)
         if adjustments.human_review_required:
-            return {
-                "decision": DecisionEnum.HUMAN_REVIEW,
-                "reject_reason": "NEWS_IMPACT_MANDATES_HUMAN_REVIEW",
-            }
+            if not self._should_relax():
+                return {
+                    "decision": DecisionEnum.HUMAN_REVIEW,
+                    "reject_reason": "NEWS_IMPACT_MANDATES_HUMAN_REVIEW",
+                }
 
         try:
             self._gate_invalid_payload(payload)
@@ -51,17 +63,32 @@ class RiskEngine:
             self._gate_max_trades()
             self._gate_portfolio_drawdown()
             self._gate_correlation_risk(payload)
+            weighted_scout_vote = None
+            confidence_context = None
             if ai_review:
                 self._gate_ai_conflict(payload, ai_review)
+                if ai_review.audit_trace:
+                    weighted_scout_vote = self._extract_weighted_scout_vote(ai_review)
+                    confidence_context = ai_review.audit_trace.get('symbol_context')
+                self._gate_paper_training_calibration(payload, weighted_scout_vote)
 
             return {
                 "decision": DecisionEnum.PROCEED_TO_SIMULATION,
-                "reject_reason": None
+                "reject_reason": None,
+                "weighted_scout_vote": weighted_scout_vote,
+                "confidence_context": confidence_context
             }
         except RiskGateException as e:
+            weighted_scout_vote = None
+            confidence_context = None
+            if ai_review and ai_review.audit_trace:
+                weighted_scout_vote = self._extract_weighted_scout_vote(ai_review)
+                confidence_context = ai_review.audit_trace.get('symbol_context')
             return {
                 "decision": DecisionEnum.REJECT,
-                "reject_reason": e.reason_code
+                "reject_reason": e.reason_code,
+                "weighted_scout_vote": weighted_scout_vote,
+                "confidence_context": confidence_context
             }
 
     def _gate_invalid_payload(self, payload: M8Payload):
@@ -89,21 +116,32 @@ class RiskEngine:
             return RiskAdjustments()
 
     def _gate_m8_score(self, payload: M8Payload, adjustments=None):
-        effective = MIN_CONFLUENCE_SCORE + (adjustments.confluence_offset if adjustments else 0.0)
+        if self._should_relax():
+            effective = 0.0
+        else:
+            effective = MIN_CONFLUENCE_SCORE + (adjustments.confluence_offset if adjustments else 0.0)
         if payload.confluence_score < effective:
             raise RiskGateException(f"Confluence score below minimum ({effective})", "LOW_CONFLUENCE")
 
     def _gate_crisis_score(self, payload: M8Payload, adjustments=None):
-        effective = MAX_CRISIS_SCORE + (adjustments.crisis_offset if adjustments else 0.0)
+        if self._should_relax():
+            effective = 100.0
+        else:
+            effective = MAX_CRISIS_SCORE + (adjustments.crisis_offset if adjustments else 0.0)
         if payload.crisis_score > effective:
             raise RiskGateException(f"Crisis score too high ({effective})", "HIGH_CRISIS")
 
     def _gate_dispersion(self, payload: M8Payload):
+        if self._should_relax():
+            return
         if payload.mc_dispersion > MAX_MC_DISPERSION:
             raise RiskGateException("MC dispersion too high", "HIGH_DISPERSION")
 
     def _gate_spread(self, payload: M8Payload, adjustments=None):
-        effective = MAX_SPREAD * (adjustments.spread_multiplier if adjustments else 1.0)
+        if self._should_relax():
+            effective = 1000.0
+        else:
+            effective = MAX_SPREAD * (adjustments.spread_multiplier if adjustments else 1.0)
         if payload.spread > effective:
             raise RiskGateException(f"Spread exceeds maximum limit ({effective})", "WIDE_SPREAD")
 
@@ -119,19 +157,26 @@ class RiskEngine:
             raise RiskGateException("Invalid risk (stop loss above entry for LONG or below entry for SHORT)", "INVALID_RISK")
 
         rr = reward / risk
-        if rr < MIN_RR_RATIO:
+        effective_rr = 0.01 if self._should_relax() else MIN_RR_RATIO
+        if rr < effective_rr:
             raise RiskGateException("Reward/Risk ratio too low", "LOW_RR")
 
     def _gate_cooldown(self, adjustments=None):
+        if self._should_relax():
+            return
         effective = COOLDOWN_BARS + (adjustments.cooldown_bars_offset if adjustments else 0)
         if self.last_trade_bar != -1 and (self.current_bar - self.last_trade_bar) < effective:
             raise RiskGateException("Entry cooldown is active", "COOLDOWN_ACTIVE")
 
     def _gate_max_trades(self):
+        if self._should_relax():
+            return
         if self.trades_today >= MAX_TRADES_PER_DAY:
             raise RiskGateException("Maximum trades per day reached", "MAX_TRADES_REACHED")
 
     def _gate_ai_conflict(self, payload: M8Payload, ai_review: SignalReview):
+        if self._should_relax():
+            return
         war_room_ai_reason = ai_rule_violation(ai_review)
         if war_room_ai_reason:
             raise RiskGateException("AI review violated War Room rules", war_room_ai_reason)
@@ -141,6 +186,8 @@ class RiskEngine:
              raise RiskGateException("AI requires human review", "AI_HUMAN_REVIEW_REQUIRED")
 
     def _gate_portfolio_drawdown(self):
+        if self._should_relax():
+            return
         cb = circuit_breaker_instance.check_trade_allowed()
         if not cb["trade_allowed"]:
             raise RiskGateException(
@@ -149,10 +196,102 @@ class RiskEngine:
             )
 
     def _gate_correlation_risk(self, payload: M8Payload):
+        if self._should_relax():
+            return
         result = correlation_checker.check_new_entry(payload.symbol, self.open_positions)
         if not result["allowed"]:
             raise RiskGateException(result["reason"], "CORRELATION_RISK_LIMIT")
 
+        # Volume scaling based on correlation caps
+        if hasattr(payload, 'volume') and payload.volume is not None:
+            if result["current_count"] > 0:
+                # Scale volume inversely proportional to current correlation count
+                scale_factor = 1.0 - (result["current_count"] / correlation_checker.max_per_sector)
+                # Ensure it doesn't go below 0
+                scale_factor = max(0.1, scale_factor)
+                payload.volume = payload.volume * scale_factor
+        elif hasattr(payload, 'execution_quantity') and payload.execution_quantity is not None:
+            if result["current_count"] > 0:
+                scale_factor = 1.0 - (result["current_count"] / correlation_checker.max_per_sector)
+                scale_factor = max(0.1, scale_factor)
+                payload.execution_quantity = payload.execution_quantity * scale_factor
+
+
+    def _gate_paper_training_calibration(self, payload: M8Payload, weighted_scout_vote: Optional[float]):
+        if self._should_relax():
+            return
+        if weighted_scout_vote is not None and weighted_scout_vote < 0.5:
+            raise RiskGateException("Weak AI consensus", "WEAK_SCOUT_VOTE")
+
+        stats = confidence_registry.get_symbol_stats(payload.symbol)
+        direction_stats = stats.get_direction_stats(payload.direction)
+        if direction_stats.total >= 5 and direction_stats.win_rate < 0.3:
+            raise RiskGateException("Poor historical paper performance", "POOR_HISTORY")
+
+    @staticmethod
+    def _extract_weighted_scout_vote(ai_review: SignalReview) -> Optional[float]:
+        if not ai_review.audit_trace:
+            return None
+        raw_vote = ai_review.audit_trace.get("weighted_scout_vote")
+        if raw_vote is None:
+            return None
+        if isinstance(raw_vote, dict):
+            for key in ("weighted_confidence", "approval_ratio", "score"):
+                value = raw_vote.get(key)
+                if isinstance(value, (int, float)):
+                    return float(value)
+            decision_hint = str(raw_vote.get("decision_hint") or "").upper()
+            if decision_hint == AIDecisionEnum.PROCEED_TO_SIMULATION.value:
+                return 1.0
+            if decision_hint == AIDecisionEnum.REJECT.value:
+                return 0.0
+            return None
+        if isinstance(raw_vote, (int, float)):
+            return float(raw_vote)
+        try:
+            return float(raw_vote)
+        except (TypeError, ValueError):
+            return None
+
+
+# Global instance for FastAPI usage
+
+    def validate_trading_plan(self, plan: TradingPlan) -> RiskValidationResult:
+        """
+        Gate 2.0: Validates an agent-generated TradingPlan deterministically.
+        """
+        violations = []
+
+        # 1. Setup must be complete
+        if not plan.setup.market_conditions or not plan.setup.regime:
+            violations.append("SETUP_INCOMPLETE")
+
+        # 2. Trigger must be testable
+        if not plan.trigger.entry_condition or plan.trigger.price_zone_min >= plan.trigger.price_zone_max:
+            violations.append("TRIGGER_INVALID")
+
+        # 3. Invalidation is mandatory
+        if not plan.invalidation.hard_stop_price:
+            violations.append("NO_HARD_STOP")
+
+        if plan.invalidation.max_loss_pct > 25.0:
+            violations.append("MAX_LOSS_EXCEEDED")
+
+        # 4. R/R Validation
+        if plan.risk_intent.risk_reward_ratio < 0.5:
+            violations.append("RR_TOO_LOW")
+
+        decision = "PROCEED_TO_SIMULATION" if not violations else "REJECT"
+        reject_reason = violations[0] if violations else None
+
+        return RiskValidationResult(
+            decision=decision,
+            reject_reason=reject_reason,
+            risk_score=90.0 if not violations else 10.0,
+            violated_rules=violations,
+            allowed_size=plan.risk_intent.target_size_usd if not violations else 0.0,
+            risk_adjusted_plan=plan.dict() if not violations else None
+        )
 
 # Global instance for FastAPI usage
 risk_engine_instance = RiskEngine()
