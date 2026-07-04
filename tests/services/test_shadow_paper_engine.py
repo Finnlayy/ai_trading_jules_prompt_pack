@@ -91,7 +91,7 @@ async def test_shadow_paper_executes_live_rejected_candidate(monkeypatch):
         _bar(0, 100.0, 100.5, 99.8, 100.0),
         _bar(1, 100.0, 102.2, 99.5, 102.0),
     ]
-    payload = _payload()
+    payload = _payload(confluence_score=20.0, crisis_score=10.0)
 
     def fake_generate_payloads(**_kwargs):
         signal_generator_instance.last_raw_bars = bars
@@ -99,6 +99,7 @@ async def test_shadow_paper_executes_live_rejected_candidate(monkeypatch):
         return [payload]
 
     monkeypatch.setattr(signal_generator_instance, "generate_payloads", fake_generate_payloads)
+    monkeypatch.setattr("app.services.risk_engine.MIN_CONFLUENCE_SCORE", 70.0)
 
     replay = await engine.replay(
         symbol="BTCUSDT",

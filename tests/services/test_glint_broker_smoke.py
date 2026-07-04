@@ -272,3 +272,17 @@ class TestGlintBrokerHealth:
         assert health["mode"] == "dry-run"
         assert health["ready"] is True
         assert health["live_capable"] is False
+
+    def test_rejected_trade_records_reason(self, glint_broker_dry_run):
+        payload = _payload(symbol="ETHUSDT", direction="SHORT", intent="ENTRY")
+        entry = glint_broker_dry_run.execute_trade(
+            payload=payload,
+            decision=DecisionEnum.REJECT,
+            reject_reason="AI_CONFIDENCE_LOW",
+            ai_decision=AIDecisionEnum.REJECT,
+        )
+
+        assert entry.final_decision == FinalDecisionEnum.REJECTED
+        assert entry.result["status"] == "REJECTED"
+        assert "AI_CONFIDENCE_LOW" in entry.result["reject_reason"]
+        assert any("REJECT: ETHUSDT AI_CONFIDENCE_LOW" in msg for msg in glint_broker_dry_run.notifier.messages)

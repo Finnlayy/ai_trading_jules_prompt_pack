@@ -246,6 +246,28 @@ class PatternEnhancedStrategy(BaseStrategy):
         return meta
 
 
+class PineScriptPlaceholderStrategy(BaseStrategy):
+    """Placeholder strategy representing an uploaded TradingView/Pionex Pine Script."""
+
+    def __init__(self, strategy_id: str, name: str, description: str = "", code: str = "") -> None:
+        super().__init__(strategy_id, name, description)
+        self.code = code
+
+    def score_bars(self, bars: Sequence) -> list[StrategyScore]:
+        # Fallback to default CISD strategy scoring
+        from app.services.strategy_engine import CISDStrategy
+        fallback = CISDStrategy()
+        return fallback.score_bars(bars)
+
+    def required_timeframes(self) -> list[str]:
+        return ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
+
+    def get_metadata(self) -> StrategyMetadata:
+        meta = super().get_metadata()
+        meta.strategy_type = "pine_placeholder"
+        return meta
+
+
 # ---------------------------------------------------------------------------
 # Strategy Registry
 # ---------------------------------------------------------------------------
@@ -279,6 +301,25 @@ class StrategyRegistry:
         """Register built-in strategies."""
         self.register(CISDStrategy())
         self.register(PatternEnhancedStrategy())
+
+        # Scan and register uploaded pine strategies
+        try:
+            base = Path(__file__).resolve().parents[2] / "app" / "scripts" / "generated_pines"
+            if base.exists():
+                for f in base.glob("*.pine"):
+                    strategy_id = f.stem
+                    name = f.stem.replace("_", " ")
+                    code = f.read_text(encoding="utf-8")
+                    self.register(
+                        PineScriptPlaceholderStrategy(
+                            strategy_id,
+                            name,
+                            f"Uploaded Pine Script: {name}",
+                            code
+                        )
+                    )
+        except Exception:
+            pass
 
     def _load_persisted(self) -> None:
         """Load any custom strategy configs from disk."""
