@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime, timezone
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 import pytest
 
 from app.services.price_poller import PricePoller
@@ -70,12 +70,14 @@ class TestPricePollerLifecycle:
 
 
 class TestPriceFetching:
-    def test_fetch_prices_empty_symbols(self):
+    @pytest.mark.asyncio
+    async def test_fetch_prices_empty_symbols(self):
         poller = PricePoller()
-        prices = poller._fetch_prices([])
+        prices = await poller._fetch_prices([])
         assert prices == {}
 
-    def test_fetch_prices_returns_dict(self):
+    @pytest.mark.asyncio
+    async def test_fetch_prices_returns_dict(self):
         poller = PricePoller()
         # Mock the Bybit API response
         mock_resp = MagicMock()
@@ -87,11 +89,13 @@ class TestPriceFetching:
                 ]
             }
         }
-        with patch("requests.get", return_value=mock_resp):
-            prices = poller._fetch_prices(["BTCUSDT", "ETHUSDT"])
+        with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+            mock_get.return_value = mock_resp
+            prices = await poller._fetch_prices(["BTCUSDT", "ETHUSDT"])
         assert prices == {"BTCUSDT": 50000.0, "ETHUSDT": 3000.0}
 
-    def test_fetch_prices_uses_last_price_fallback(self):
+    @pytest.mark.asyncio
+    async def test_fetch_prices_uses_last_price_fallback(self):
         poller = PricePoller()
         mock_resp = MagicMock()
         mock_resp.json.return_value = {
@@ -101,14 +105,17 @@ class TestPriceFetching:
                 ]
             }
         }
-        with patch("requests.get", return_value=mock_resp):
-            prices = poller._fetch_prices(["BTCUSDT"])
+        with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+            mock_get.return_value = mock_resp
+            prices = await poller._fetch_prices(["BTCUSDT"])
         assert prices == {"BTCUSDT": 49999.0}
 
-    def test_fetch_prices_api_failure_graceful(self):
+    @pytest.mark.asyncio
+    async def test_fetch_prices_api_failure_graceful(self):
         poller = PricePoller()
-        with patch("requests.get", side_effect=Exception("network error")):
-            prices = poller._fetch_prices(["BTCUSDT"])
+        with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+            mock_get.side_effect = Exception("network error")
+            prices = await poller._fetch_prices(["BTCUSDT"])
         assert prices == {}
 
 
@@ -126,7 +133,8 @@ class TestPollingLoop:
             "result": {"list": [{"symbol": "BTCUSDT", "markPrice": "52100.0"}]}
         }
 
-        with patch("requests.get", return_value=mock_resp):
+        with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+            mock_get.return_value = mock_resp
             poller.start()
             # Wait for multiple poll cycles
             await asyncio.sleep(0.25)
