@@ -11,6 +11,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, Depends
 from fastapi import FastAPI
+from fastapi.responses import RedirectResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import CORS_ORIGINS
 from fastapi.responses import FileResponse, RedirectResponse, Response
