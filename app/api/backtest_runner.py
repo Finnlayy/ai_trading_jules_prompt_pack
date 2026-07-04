@@ -66,10 +66,11 @@ async def _execute_payloads(payloads: List):
             executed_payloads.append((payload, result))
     return results, executed_payloads
 
-def _record_historical_outcomes(executed_payloads: List):
+def _record_historical_outcomes(executed_payloads: List) -> dict:
     raw_bars = getattr(signal_generator_instance, "last_raw_bars", [])
+    outcomes = {}
     if not executed_payloads or not raw_bars:
-        return
+        return outcomes
     from app.services.shadow_paper_engine import ShadowPaperEngine
     engine = ShadowPaperEngine()
     for payload, result in executed_payloads:
@@ -79,6 +80,7 @@ def _record_historical_outcomes(executed_payloads: List):
         if entry_idx is not None and entry_idx < len(raw_bars) - 1:
             try:
                 outcome = engine.simulate_trade(payload, raw_bars, entry_idx, max_holding_bars=50)
+                outcomes[payload.signal_id] = outcome
                 win = outcome.win
                 pnl_pct = outcome.pnl_pct
                 rr = abs(outcome.r_multiple)
@@ -105,6 +107,7 @@ def _record_historical_outcomes(executed_payloads: List):
                     )
             except Exception:
                 pass
+    return outcomes
 class BacktestRunRequest(BaseModel):
     symbol: str = "HYPEUSDT"
     timeframe: str = "1m"
@@ -150,7 +153,14 @@ async def run_backtest(req: BacktestRunRequest):
             }
 
         results, executed_payloads = await _execute_payloads(payloads)
-        _record_historical_outcomes(executed_payloads)
+        outcomes = _record_historical_outcomes(executed_payloads)
+
+        for res in results:
+            if res["signal_id"] in outcomes:
+                outcome = outcomes[res["signal_id"]]
+                res["entry"] = {"price": outcome.entry_price, "time": outcome.entry_time}
+                res["exit"] = {"price": outcome.exit_price, "time": outcome.exit_time}
+                res["pnl_pct"] = outcome.pnl_pct
 
         executed = sum(1 for r in results if r["final_decision"] == "EXECUTED_SIM")
         rejected = sum(1 for r in results if r["final_decision"] == "REJECTED")
