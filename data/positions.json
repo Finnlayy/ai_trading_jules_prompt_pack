@@ -1,4 +1,32 @@
 {
+  "positions": [
+    {
+      "trade_id": "sim-sig-123",
+      "symbol": "BTCUSDT",
+      "direction": "LONG",
+      "entry_price": 50010.0,
+      "current_price": 50010.0,
+      "size": 0.0002,
+      "unrealized_pnl": 0.0,
+      "realized_pnl": 0.0,
+      "open_time": "2026-06-06T15:11:56.112943+00:00",
+      "strategy_id": null,
+      "stop_price": 48000.0,
+      "target_price": 54000.0
+    },
+    {
+      "trade_id": "sim-sig-auth",
+      "symbol": "BTCUSDT",
+      "direction": "LONG",
+      "entry_price": 50010.0,
+      "current_price": 50010.0,
+      "size": 0.0002,
+      "unrealized_pnl": 0.0,
+      "realized_pnl": 0.0,
+      "open_time": "2026-06-06T15:11:56.141636+00:00",
+      "strategy_id": null,
+      "stop_price": 48000.0,
+      "target_price": 54000.0
   "positions": [],
   "intents": [],
   "updated_at": "2026-06-21T04:46:10.941630+00:00"
@@ -20,6 +48,12 @@
   ],
   "intents": [
     {
+      "trade_id": "sim-sig-123",
+      "symbol": "BTCUSDT",
+      "direction": "LONG",
+      "entry_price": 50000.0,
+      "stop_price": 48000.0,
+      "target_price": 54000.0,
       "trade_id": "sim-test_ui_1",
       "symbol": "ETH_USDT",
       "direction": "LONG",
@@ -31,6 +65,7 @@
       "decision": "PROCEED_TO_SIMULATION",
       "ai_trace": {
         "trace_type": "ai_reasoning_audit_not_hidden_chain_of_thought",
+        "provider": "moonshot",
         "provider": "mock",
         "behavior_profile": {
           "trading_style": "balanced",
@@ -45,6 +80,104 @@
             "Do not request live execution directly.",
             "Prefer human review when confidence is low or preferences conflict."
           ],
+          "updated_at": "2026-06-06T15:11:56.084953+00:00"
+        },
+        "behavior_prompt": "User AI behavior profile for signal review only:\n- trading_style: balanced\n- risk_tolerance: moderate\n- preferred_symbols: none\n- blocked_symbols: none\n- max_risk_pct: unset\n- min_confluence_preference: unset\n- notes: none\n- guardrails: Do not bypass deterministic risk gates.; Do not request live execution directly.; Prefer human review when confidence is low or preferences conflict.\nThese preferences may influence AI review confidence, reason codes, and human-review flags, but they must never override deterministic risk gates or directly authorize execution.",
+        "scouts": {
+          "technical": "mocked scout response",
+          "sentiment": "mocked scout response",
+          "risk": "mocked scout response",
+          "macro": "mocked scout response",
+          "execution": "mocked scout response",
+          "correlation": "mocked scout response"
+        },
+        "symbol_context": "Symbol: BTCUSD | Direction: LONG\nTotal signals reviewed: 10\n  Technical scout: 0% accuracy (0/10), exp: 10\n  Sentiment scout: 0% accuracy (0/10), exp: 10\n  Risk scout: 0% accuracy (0/10), exp: 10\n  Macro scout: 0% accuracy (0/10), exp: 10\n  Execution scout: 0% accuracy (0/10), exp: 10\n  Correlation scout: 0% accuracy (0/10), exp: 10\nHistorical avg confluence: 85.5, avg crisis: 10.0",
+        "external_advisors": {
+          "auto_enabled": false,
+          "advisors": []
+        },
+        "scout_weights": {
+          "technical": 0.1,
+          "sentiment": 0.1,
+          "risk": 0.1,
+          "macro": 0.1,
+          "execution": 0.1,
+          "correlation": 0.1
+        },
+        "final_summary": {
+          "decision": "PROCEED_TO_SIMULATION",
+          "confidence": 0.95,
+          "reason_codes": [],
+          "risk_flags": [],
+          "requires_human_review": false,
+          "reject_reason": null
+        },
+        "regime": {
+          "trade_allowed": true,
+          "regime": "TEST",
+          "reason": "Mocked for tests"
+        }
+      },
+      "timestamp": "2026-06-06T15:11:56.091849+00:00"
+    },
+    {
+      "trade_id": "sim-sig-auth",
+      "symbol": "BTCUSDT",
+      "direction": "LONG",
+      "entry_price": 50000.0,
+      "stop_price": 48000.0,
+      "target_price": 54000.0,
+      "size": null,
+      "strategy_id": null,
+      "decision": "PROCEED_TO_SIMULATION",
+      "ai_trace": {
+        "trace_type": "ai_reasoning_audit_not_hidden_chain_of_thought",
+        "provider": "moonshot",
+        "behavior_profile": {
+          "trading_style": "balanced",
+          "risk_tolerance": "moderate",
+          "preferred_symbols": [],
+          "blocked_symbols": [],
+          "max_risk_pct": null,
+          "min_confluence_preference": null,
+          "notes": "",
+          "guardrails": [
+            "Do not bypass deterministic risk gates.",
+            "Do not request live execution directly.",
+            "Prefer human review when confidence is low or preferences conflict."
+          ],
+          "updated_at": "2026-06-06T15:11:56.084953+00:00"
+        },
+        "behavior_prompt": "User AI behavior profile for signal review only:\n- trading_style: balanced\n- risk_tolerance: moderate\n- preferred_symbols: none\n- blocked_symbols: none\n- max_risk_pct: unset\n- min_confluence_preference: unset\n- notes: none\n- guardrails: Do not bypass deterministic risk gates.; Do not request live execution directly.; Prefer human review when confidence is low or preferences conflict.\nThese preferences may influence AI review confidence, reason codes, and human-review flags, but they must never override deterministic risk gates or directly authorize execution.",
+        "scouts": {
+          "technical": "mocked scout response",
+          "sentiment": "mocked scout response",
+          "risk": "mocked scout response",
+          "macro": "mocked scout response",
+          "execution": "mocked scout response",
+          "correlation": "mocked scout response"
+        },
+        "symbol_context": "Symbol: BTCUSD | Direction: LONG\nTotal signals reviewed: 11\n  Technical scout: 0% accuracy (0/11), exp: 11\n  Sentiment scout: 0% accuracy (0/11), exp: 11\n  Risk scout: 0% accuracy (0/11), exp: 11\n  Macro scout: 0% accuracy (0/11), exp: 11\n  Execution scout: 0% accuracy (0/11), exp: 11\n  Correlation scout: 0% accuracy (0/11), exp: 11\nHistorical avg confluence: 85.5, avg crisis: 10.0",
+        "external_advisors": {
+          "auto_enabled": false,
+          "advisors": []
+        },
+        "scout_weights": {
+          "technical": 0.1,
+          "sentiment": 0.1,
+          "risk": 0.1,
+          "macro": 0.1,
+          "execution": 0.1,
+          "correlation": 0.1
+        },
+        "final_summary": {
+          "decision": "PROCEED_TO_SIMULATION",
+          "confidence": 0.95,
+          "reason_codes": [],
+          "risk_flags": [],
+          "requires_human_review": false,
+          "reject_reason": null
+        },
           "updated_at": "2026-06-18T04:29:45.199457+00:00"
         },
         "scouts": {
@@ -191,6 +324,10 @@
           "reason": "Mocked for tests"
         }
       },
+      "timestamp": "2026-06-06T15:11:56.138232+00:00"
+    }
+  ],
+  "updated_at": "2026-06-06T15:11:56.141783+00:00"
       "timestamp": "2026-06-18T04:29:45.800693+00:00"
     }
   ],

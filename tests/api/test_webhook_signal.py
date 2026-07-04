@@ -120,3 +120,13 @@ def test_webhook_signal_invalid_schema():
     }
     response = client.post("/api/webhook/signal", data=payload, headers=headers)
     assert response.status_code == 422
+
+def test_webhook_signal_malformed_json():
+    """POST with malformed/non-JSON payload returns 422."""
+    payload = "this is not a valid json string {"
+    headers = {
+        "X-Signature": _sign(payload),
+        "Content-Type": "application/json",
+    }
+    response = client.post("/api/webhook/signal", data=payload, headers=headers)
+    assert response.status_code == 422
