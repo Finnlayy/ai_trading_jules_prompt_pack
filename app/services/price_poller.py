@@ -16,7 +16,6 @@ from app.services.live_fill_tracker import live_fill_tracker
 from app.services.position_monitor import position_monitor
 from app.services.dashboard_sse import dashboard_sse_manager
 
-
 # ------------------------------------------------------------------
 # Symbol normalization helpers
 # ------------------------------------------------------------------
@@ -104,6 +103,9 @@ class PricePoller:
                 if positions:
                     # Normalize symbols for ticker lookup
                     normalized_symbols = list({normalize_symbol(p.symbol) for p in positions})
+                    normalized_symbols = list(
+                        {normalize_symbol(p.symbol) for p in positions}
+                    )
                     prices = await self._fetch_prices(normalized_symbols)
                     self._last_prices.update(prices)
 
@@ -115,7 +117,9 @@ class PricePoller:
 
                     # Check exits (build prices dict keyed by original position symbol)
                     position_prices = {
-                        pos.symbol: prices.get(normalize_symbol(pos.symbol), pos.current_price)
+                        pos.symbol: prices.get(
+                            normalize_symbol(pos.symbol), pos.current_price
+                        )
                         for pos in positions
                     }
                     exits = position_monitor.check_price_based_exits(position_prices)
@@ -155,6 +159,11 @@ class PricePoller:
                 resp = await client.get(
                     "https://api.bybit.com/v5/market/tickers",
                     params={"category": "linear"},
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(
+                    "https://api.bybit.com/v5/market/tickers",
+                    params={"category": "linear"},
+                    timeout=10,
                 )
                 resp.raise_for_status()
                 data = resp.json()

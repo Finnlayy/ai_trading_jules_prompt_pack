@@ -25,8 +25,15 @@ def reset_tracker_and_poller():
     poller.stop()
 
 
-def _create_position(trade_id: str, symbol: str, direction: str,
-                     entry: float, stop: float, target: float, size: float = 1.0):
+def _create_position(
+    trade_id: str,
+    symbol: str,
+    direction: str,
+    entry: float,
+    stop: float,
+    target: float,
+    size: float = 1.0,
+):
     live_fill_tracker.record_intent(
         trade_id=trade_id,
         symbol=symbol,
@@ -84,13 +91,18 @@ class TestPriceFetching:
         mock_resp.json.return_value = {
             "result": {
                 "list": [
-                    {"symbol": "BTCUSDT", "markPrice": "50000.0", "lastPrice": "49999.0"},
+                    {
+                        "symbol": "BTCUSDT",
+                        "markPrice": "50000.0",
+                        "lastPrice": "49999.0",
+                    },
                     {"symbol": "ETHUSDT", "markPrice": "3000.0", "lastPrice": "2999.0"},
                 ]
             }
         }
         with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
             mock_get.return_value = mock_resp
+        with patch("httpx.AsyncClient.get", return_value=mock_resp):
             prices = await poller._fetch_prices(["BTCUSDT", "ETHUSDT"])
         assert prices == {"BTCUSDT": 50000.0, "ETHUSDT": 3000.0}
 
@@ -107,6 +119,7 @@ class TestPriceFetching:
         }
         with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
             mock_get.return_value = mock_resp
+        with patch("httpx.AsyncClient.get", return_value=mock_resp):
             prices = await poller._fetch_prices(["BTCUSDT"])
         assert prices == {"BTCUSDT": 49999.0}
 
@@ -115,6 +128,7 @@ class TestPriceFetching:
         poller = PricePoller()
         with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
             mock_get.side_effect = Exception("network error")
+        with patch("httpx.AsyncClient.get", side_effect=Exception("network error")):
             prices = await poller._fetch_prices(["BTCUSDT"])
         assert prices == {}
 
@@ -122,7 +136,9 @@ class TestPriceFetching:
 class TestPollingLoop:
     @pytest.mark.asyncio
     async def test_poll_loop_updates_prices_and_exits(self):
-        _create_position("tp1", "BTCUSDT", "LONG", entry=50000, stop=49000, target=52000, size=1.0)
+        _create_position(
+            "tp1", "BTCUSDT", "LONG", entry=50000, stop=49000, target=52000, size=1.0
+        )
         poller = PricePoller()
         poller.stop()
         poller._task = None
@@ -135,6 +151,7 @@ class TestPollingLoop:
 
         with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
             mock_get.return_value = mock_resp
+        with patch("httpx.AsyncClient.get", return_value=mock_resp):
             poller.start()
             # Wait for multiple poll cycles
             await asyncio.sleep(0.25)
