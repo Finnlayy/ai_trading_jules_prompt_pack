@@ -53,3 +53,7 @@
 ## 2025-02-27 - Bounded Deques with Post-Filtering Cause Truncation
 **Learning:** Using a bounded `deque(maxlen=limit)` to pre-buffer lines before parsing and filtering (like in `JournalLogger.get_entries()`) can cause the final result set to be smaller than the `limit` if some lines fail validation (e.g., invalid JSON), because the false-positive lines consumed the limited capacity of the deque.
 **Action:** When retrieving the last N valid items from a sequential file, use an unbounded list to collect all lines, iterate backwards using `reversed()`, apply the parsing/validation, break when `len(results) == limit`, and finally reverse the results back to chronological order.
+
+## 2025-02-28 - Optimizing multiple list iteration generator expressions
+**Learning:** Multiple O(N) generator expressions iterating over the same list (like summing `(t.pnl or 0) > 0` and `(t.pnl or 0) < 0` for calculating metric aggregations) causes unnecessary overhead and slows down endpoint responses.
+**Action:** Consolidate multiple list iteration operations (like calculating wins, losses, gross profit, and gross loss) into a single explicit unrolled `for` loop. This avoids Python generator overhead and repeated array traversal, significantly speeding up metric calculations on large datasets like backtest results.
