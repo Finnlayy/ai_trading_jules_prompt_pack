@@ -138,3 +138,7 @@ async def test_news_aggregator_fetch_error_handling(monkeypatch):
 
     assert len(items) == 0
     await aggregator.close()
+from app.core.utils import strip_html as _strip_html
+
+def test_strip_html():
+    assert _strip_html("<b>bold</b> text") == "bold text"

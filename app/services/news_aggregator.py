@@ -4,6 +4,8 @@ Uses httpx + xml.etree.ElementTree to avoid feedparser dependency.
 """
 from __future__ import annotations
 
+from app.core.utils import strip_html, iso_from_pubdate
+
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -30,40 +32,6 @@ class NewsItem:
     fetched_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 
-def _iso_from_pubdate(text: str) -> str:
-    """Best-effort parse of RSS pubDate to ISO."""
-    t = text.strip()
-    # Handle GMT suffix by replacing with +0000
-    if t.endswith(" GMT"):
-        t = t[:-4] + " +0000"
-    # RSS pubDate format: Mon, 06 Sep 2009 16:20:00 +0000
-    try:
-        dt = datetime.strptime(t, "%a, %d %b %Y %H:%M:%S %z")
-        return dt.astimezone(timezone.utc).isoformat()
-    except ValueError:
-        pass
-    try:
-        dt = datetime.strptime(t[:19], "%Y-%m-%dT%H:%M:%S")
-        return dt.replace(tzinfo=timezone.utc).isoformat()
-    except ValueError:
-        pass
-    return text
-
-
-def _strip_html(text: str) -> str:
-    """Very basic HTML tag stripper."""
-    result = []
-    in_tag = False
-    for ch in text or "":
-        if ch == "<":
-            in_tag = True
-        elif ch == ">":
-            in_tag = False
-        elif not in_tag:
-            result.append(ch)
-    return "".join(result).strip()
-
-
 def _parse_rss(xml_bytes: bytes, source_label: str) -> List[NewsItem]:
     """Parse RSS/Atom XML into NewsItem list."""
     items: List[NewsItem] = []
@@ -86,8 +54,8 @@ def _parse_rss(xml_bytes: bytes, source_label: str) -> List[NewsItem]:
                         source=source_label,
                         title=title,
                         link=link,
-                        published=_iso_from_pubdate(pub),
-                        summary=_strip_html(desc)[:300],
+                        published=iso_from_pubdate(pub),
+                        summary=strip_html(desc)[:300],
                     )
                 )
         return items
@@ -110,8 +78,8 @@ def _parse_rss(xml_bytes: bytes, source_label: str) -> List[NewsItem]:
                     source=source_label,
                     title=title,
                     link=link,
-                    published=_iso_from_pubdate(pub),
-                    summary=_strip_html(desc)[:300],
+                    published=iso_from_pubdate(pub),
+                    summary=strip_html(desc)[:300],
                 )
             )
     return items
