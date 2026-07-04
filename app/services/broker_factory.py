@@ -28,6 +28,7 @@ class BrokerFactory:
 
     _VALID_SINGLE_MODES = {
         "simulation",
+        "orderbook_sim",
         "paper",
         "pionex_relay",
         "relay",
@@ -40,6 +41,8 @@ class BrokerFactory:
         "ctrader_direct",
         "ctrader_fix",
         "kraken",
+        "kraken_paper",
+        "krakenpaper",
     }
 
     @classmethod
@@ -52,7 +55,12 @@ class BrokerFactory:
         """
         mode = (mode or BROKER_MODE).strip().lower()
 
-        if mode in {"simulation", "sim"}:
+        if mode in {"simulation",
+        "orderbook_sim", "sim"}:
+            return SimulationBroker()
+
+        if mode == "orderbook_sim":
+            # For MVP, we can reuse SimulationBroker logic but ideally we'd inject the OrderbookSimulator
             return SimulationBroker()
 
         if mode == "paper":
@@ -99,6 +107,10 @@ class BrokerFactory:
             from app.services.kraken_broker import KrakenBroker, KrakenConfig
             return KrakenBroker(config=KrakenConfig(), journal_path=journal_path)
 
+        if mode in {"kraken_paper", "krakenpaper"}:
+            from app.services.kraken_paper_broker import KrakenPaperBroker, KrakenPaperConfig
+            return KrakenPaperBroker(config=KrakenPaperConfig())
+
         # Fallback
         return SimulationBroker()
 
@@ -114,6 +126,7 @@ class BrokerFactory:
     def mode_display_name(cls, mode: str) -> str:
         mapping = {
             "simulation": "Simulation",
+            "orderbook_sim": "Orderbook Simulator",
             "paper": "Paper Trading",
             "pionex_relay": "Pionex Relay",
             "relay": "Pionex Relay",
@@ -126,5 +139,7 @@ class BrokerFactory:
             "ctrader_direct": "cTrader Direct",
             "ctrader_fix": "cTrader FIX",
             "kraken": "Kraken",
+            "kraken_paper": "Kraken Paper",
+            "krakenpaper": "Kraken Paper",
         }
         return mapping.get(mode.strip().lower(), mode)

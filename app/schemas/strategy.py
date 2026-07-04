@@ -13,10 +13,10 @@ from pydantic import BaseModel, Field
 # ---------------------------------------------------------------------------
 
 class StrategyConfig(BaseModel):
-    strategy_id: str = Field(..., pattern=r"^[a-z0-9_-]+$")
+    strategy_id: str = Field(..., pattern=r"^[a-zA-Z0-9_-]+$")
     name: str
     description: str = ""
-    strategy_type: Literal["cisd", "pattern_enhanced", "custom"] = "cisd"
+    strategy_type: Literal["cisd", "pattern_enhanced", "custom", "pine_placeholder"] = "cisd"
     weights: dict[str, float] = Field(default_factory=dict)
     enabled: bool = True
     min_confluence: float = Field(default=6.0, ge=0, le=100)

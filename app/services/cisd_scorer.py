@@ -256,30 +256,58 @@ def compute_ob_fvg_touches(
         cl, ch = c.l, c.h
 
         # Bull OB
-        if bull_ob:
-            for top, bot in reversed(bull_ob[-5:]):
-                if cl <= top and ch >= bot:
+        m = len(bull_ob)
+        if m >= 5:
+            if cl <= bull_ob[-1][0] and ch >= bull_ob[-1][1]: bull_ob_touch[i] = True
+            elif cl <= bull_ob[-2][0] and ch >= bull_ob[-2][1]: bull_ob_touch[i] = True
+            elif cl <= bull_ob[-3][0] and ch >= bull_ob[-3][1]: bull_ob_touch[i] = True
+            elif cl <= bull_ob[-4][0] and ch >= bull_ob[-4][1]: bull_ob_touch[i] = True
+            elif cl <= bull_ob[-5][0] and ch >= bull_ob[-5][1]: bull_ob_touch[i] = True
+        elif m > 0:
+            for j in range(1, m + 1):
+                if cl <= bull_ob[-j][0] and ch >= bull_ob[-j][1]:
                     bull_ob_touch[i] = True
                     break
 
         # Bear OB
-        if bear_ob:
-            for top, bot in reversed(bear_ob[-5:]):
-                if ch >= bot and cl <= top:
+        m = len(bear_ob)
+        if m >= 5:
+            if ch >= bear_ob[-1][1] and cl <= bear_ob[-1][0]: bear_ob_touch[i] = True
+            elif ch >= bear_ob[-2][1] and cl <= bear_ob[-2][0]: bear_ob_touch[i] = True
+            elif ch >= bear_ob[-3][1] and cl <= bear_ob[-3][0]: bear_ob_touch[i] = True
+            elif ch >= bear_ob[-4][1] and cl <= bear_ob[-4][0]: bear_ob_touch[i] = True
+            elif ch >= bear_ob[-5][1] and cl <= bear_ob[-5][0]: bear_ob_touch[i] = True
+        elif m > 0:
+            for j in range(1, m + 1):
+                if ch >= bear_ob[-j][1] and cl <= bear_ob[-j][0]:
                     bear_ob_touch[i] = True
                     break
 
         # Bull FVG
-        if bull_fvg:
-            for top, bot in reversed(bull_fvg[-5:]):
-                if cl <= top and ch >= bot:
+        m = len(bull_fvg)
+        if m >= 5:
+            if cl <= bull_fvg[-1][0] and ch >= bull_fvg[-1][1]: bull_fvg_touch[i] = True
+            elif cl <= bull_fvg[-2][0] and ch >= bull_fvg[-2][1]: bull_fvg_touch[i] = True
+            elif cl <= bull_fvg[-3][0] and ch >= bull_fvg[-3][1]: bull_fvg_touch[i] = True
+            elif cl <= bull_fvg[-4][0] and ch >= bull_fvg[-4][1]: bull_fvg_touch[i] = True
+            elif cl <= bull_fvg[-5][0] and ch >= bull_fvg[-5][1]: bull_fvg_touch[i] = True
+        elif m > 0:
+            for j in range(1, m + 1):
+                if cl <= bull_fvg[-j][0] and ch >= bull_fvg[-j][1]:
                     bull_fvg_touch[i] = True
                     break
 
         # Bear FVG
-        if bear_fvg:
-            for top, bot in reversed(bear_fvg[-5:]):
-                if ch >= bot and cl <= top:
+        m = len(bear_fvg)
+        if m >= 5:
+            if ch >= bear_fvg[-1][1] and cl <= bear_fvg[-1][0]: bear_fvg_touch[i] = True
+            elif ch >= bear_fvg[-2][1] and cl <= bear_fvg[-2][0]: bear_fvg_touch[i] = True
+            elif ch >= bear_fvg[-3][1] and cl <= bear_fvg[-3][0]: bear_fvg_touch[i] = True
+            elif ch >= bear_fvg[-4][1] and cl <= bear_fvg[-4][0]: bear_fvg_touch[i] = True
+            elif ch >= bear_fvg[-5][1] and cl <= bear_fvg[-5][0]: bear_fvg_touch[i] = True
+        elif m > 0:
+            for j in range(1, m + 1):
+                if ch >= bear_fvg[-j][1] and cl <= bear_fvg[-j][0]:
                     bear_fvg_touch[i] = True
                     break
 

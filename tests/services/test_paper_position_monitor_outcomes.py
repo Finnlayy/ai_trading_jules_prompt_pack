@@ -49,7 +49,7 @@ def _payload() -> M8Payload:
 def test_paper_position_monitor_writes_outcome_and_learning_on_tp(monkeypatch):
     broker = KrakenPaperBroker()
     broker.reset_paper_account(new_balance=1000.0)
-    monkeypatch.setattr(broker, "_get_live_price", lambda _symbol: (100.0, 100.0))
+    monkeypatch.setattr(broker, "_get_live_price", lambda _symbol, *args, **kwargs: (100.0, 100.0))
 
     payload = _payload()
     candidate_id = candidate_id_for_signal(payload.signal_id)
@@ -100,7 +100,7 @@ def test_paper_position_monitor_writes_outcome_and_learning_on_tp(monkeypatch):
         opened_by_loop=True,
     )
     assert result["status"] == "ok"
-    monkeypatch.setattr(broker, "_get_live_price", lambda _symbol: (102.0, 102.0))
+    monkeypatch.setattr(broker, "_get_live_price", lambda _symbol, *args, **kwargs: (102.0, 102.0))
 
     monitor = PaperPositionMonitor(broker=broker)
     monitor._check_positions()

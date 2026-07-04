@@ -61,3 +61,11 @@ class LoopStatsResponse(BaseModel):
     error_history: list[dict[str, Any]]
     avg_cycle_time_ms: float
     generated_at: datetime
+
+class StrategyRotationResponse(BaseModel):
+    symbol: str
+    old_strategy: str
+    new_strategy: str
+    regime: str
+    reason: str
+    timestamp: str
