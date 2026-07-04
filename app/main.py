@@ -3,9 +3,13 @@ import logging
 logger = logging.getLogger(__name__)
 
 import asyncio
+import logging
 from datetime import datetime, timezone
+
+logger = logging.getLogger(__name__)
 from pathlib import Path
 
+from fastapi import FastAPI, Depends
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import CORS_ORIGINS
@@ -107,8 +111,10 @@ except ImportError:
 def favicon():
     return Response(status_code=204)
 
+from app.api.auth import get_api_key
+
 @app.get("/health")
-def health_check():
+def health_check(api_key: str | None = Depends(get_api_key)):
     return {"status": "ok"}
 
 
