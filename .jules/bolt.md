@@ -28,6 +28,9 @@
 ## 2024-06-25 - Avoid Eager JSON Parsing in Kelly Sizer History Lookups
 **Learning:** The Kelly Sizer was doing full `json.loads` on every line of the historical trade journal (`trade_journal.jsonl`) only to discard most lines that didn't match the `EXECUTED_SIM` + `CLOSED` criteria. This eagerly allocates many dictionaries, wasting memory and CPU cycles.
 **Action:** Use fast substring string checks (e.g. `if '"final_decision": "EXECUTED_SIM"' not in raw_line...`) to skip the expensive `json.loads` parsing step on irrelevant lines. This provides an easy >5x performance gain for historical metric aggregations across huge log files.
+## 2024-05-31 - Fast API Sync I/O blocking Async endpoints in orchestration
+**Learning:** The `journal_logger_instance.log()` function, which performs synchronous file I/O (and DB commits), was called synchronously within `process_signal` and `process_manual_signal` in `app/api/orchestrator.py`. This blocks the main asyncio event loop, causing severe latency on concurrent traffic.
+**Action:** Wrapped the `journal_logger_instance.log(journal_entry)` call with `await asyncio.to_thread(journal_logger_instance.log, journal_entry)` to offload the I/O blocking execution to a worker thread pool. Keep the main loop unblocked.
 ## 2024-06-26 - Avoid Eager JSON Parsing in Position Ledger History Lookups
 **Learning:** `restore_from_journal` in `app/services/pionex_position_ledger.py` was previously calling `json.loads` for every line when reloading history, even when most lines do not contain a "ledger_delta". This created slow loading and a performance bottleneck.
 **Action:** By adding a fast string substring filter `if "ledger_delta" not in raw_line: continue` before trying to strip or load JSON, execution time improved by roughly 85% in benchmarking, saving memory and CPU by avoiding eagerly creating dict objects.
