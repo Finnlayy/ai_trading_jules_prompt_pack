@@ -244,8 +244,10 @@ class AgentRegistryService:
             return entries
 
         try:
-            with open(CAREER_LOG_FILE, "r") as f:
+            with open(CAREER_LOG_FILE, "r", encoding="utf-8") as f:
                 for line in f:
+                    if scout_name not in line:
+                        continue
                     if line.strip():
                         # ⚡ Bolt Optimization: Fast string match to skip JSON parsing for irrelevant lines
                         if f'"scout_name":"{scout_name}"' not in line and f'"scout_name": "{scout_name}"' not in line:
@@ -263,12 +265,22 @@ class AgentRegistryService:
         limit: int = 50,
         event_type: str | None = None,
     ) -> List[CareerEntry]:
+        from collections import deque
         entries: List[CareerEntry] = []
         if not CAREER_LOG_FILE.exists():
             return entries
 
         try:
+            line_deque: deque[str] = deque(maxlen=limit)
             with open(CAREER_LOG_FILE, "r", encoding="utf-8") as f:
+                for line in f:
+                    if not line.strip():
+                        continue
+                    if event_type and event_type not in line:
+                        continue
+                    line_deque.append(line)
+
+            for line in reversed(line_deque):
                 lines = [line for line in f if line.strip()]
             for line in reversed(lines):
                 # ⚡ Bolt Optimization: Fast string match to skip JSON parsing for irrelevant lines
