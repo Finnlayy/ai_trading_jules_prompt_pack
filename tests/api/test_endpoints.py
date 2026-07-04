@@ -3,6 +3,8 @@ import json
 import hashlib
 import hmac
 from httpx import AsyncClient, ASGITransport
+import app.api.endpoints
+
 from unittest.mock import AsyncMock, patch
 
 from app.main import app
@@ -45,11 +47,37 @@ def mock_kimi_api():
         yield mock_method
 
 @pytest.mark.asyncio
-async def test_health_check():
+async def test_health_check_requires_api_key(monkeypatch):
+    monkeypatch.setenv("API_KEY", "test_health_key")
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        # Without key -> 401
         response = await ac.get("/health")
-    assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+        assert response.status_code == 401
+
+        # With incorrect key -> 401
+        response = await ac.get("/health", headers={"X-API-Key": "wrong_key"})
+        assert response.status_code == 401
+
+        # With correct key -> 200
+        response = await ac.get("/health", headers={"X-API-Key": "test_health_key"})
+        assert response.status_code == 200
+        assert response.json() == {"status": "ok"}
+
+@pytest.mark.asyncio
+async def test_health_check_missing_api_key_server_error(monkeypatch):
+    # Test that 500 is returned when server is misconfigured (no API_KEY or WEBHOOK_SECRET)
+    monkeypatch.delenv("API_KEY", raising=False)
+    monkeypatch.delenv("WEBHOOK_SECRET", raising=False)
+    import app.core.config as config_module
+    original_secret = config_module.WEBHOOK_SECRET
+    config_module.WEBHOOK_SECRET = ""
+
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+            response = await ac.get("/health", headers={"X-API-Key": "any_key"})
+            assert response.status_code == 500
+    finally:
+        config_module.WEBHOOK_SECRET = original_secret
 
 @pytest.mark.asyncio
 async def test_root_serves_frontend():
@@ -60,7 +88,14 @@ async def test_root_serves_frontend():
     assert "Pine Script Studio" not in response.text
 
 @pytest.mark.asyncio
-async def test_m8_webhook_valid_payload(mock_kimi_api):
+async def test_m8_webhook_valid_payload(mock_kimi_api, monkeypatch):
+    import app.api.endpoints as endpoints_module
+    monkeypatch.setattr(endpoints_module, '_verify_webhook_signature', lambda body, sig: True)
+    import app.core.config as config_module
+    import hmac
+    import hashlib
+    import json
+
     payload = {
         "signal_id": "sig-123",
         "symbol": "BTCUSD",
@@ -75,26 +110,42 @@ async def test_m8_webhook_valid_payload(mock_kimi_api):
         "mc_dispersion": 1.5,
         "spread": 10.0
     }
+    body = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+    sig = hmac.new(config_module.WEBHOOK_SECRET.encode("utf-8"), body, hashlib.sha256).hexdigest()
     
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-        response = await ac.post("/webhook/m8", json=payload)
+        response = await ac.post("/webhook/m8", content=body, headers={"x-m8-signature": sig})
         
     assert response.status_code == 200
     data = response.json()
+
+
     assert data["status"] == "success"
     assert data["result"]["signal_id"] == "sig-123"
     assert data["result"]["final_decision"] == "EXECUTED_SIM"
     assert data["result"]["ai_trace"]["trace_type"] == "ai_reasoning_audit_not_hidden_chain_of_thought"
 
 @pytest.mark.asyncio
-async def test_m8_webhook_invalid_payload():
+async def test_m8_webhook_invalid_payload(monkeypatch):
+    import app.api.endpoints as endpoints_module
+    monkeypatch.setattr(endpoints_module, '_verify_webhook_signature', lambda body, sig: True)
+    import app.core.config as config_module
+    import hmac
+    import hashlib
+    import json
+
     payload = {
         "signal_id": "sig-123",
         "direction": "INVALID"
     }
+    body = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+    sig = hmac.new(config_module.WEBHOOK_SECRET.encode("utf-8"), body, hashlib.sha256).hexdigest()
+
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-        response = await ac.post("/webhook/m8", json=payload)
+        response = await ac.post("/webhook/m8", content=body, headers={"x-m8-signature": sig})
     assert response.status_code == 422
+
+
 
 
 @pytest.mark.asyncio
@@ -104,7 +155,6 @@ async def test_m8_webhook_requires_signature_when_secret_configured(mock_kimi_ap
 
     original_secret = config_module.WEBHOOK_SECRET
     config_module.WEBHOOK_SECRET = "test-secret-123"
-    endpoints.WEBHOOK_SECRET = "test-secret-123"
 
     try:
         payload = {
@@ -141,4 +191,3 @@ async def test_m8_webhook_requires_signature_when_secret_configured(mock_kimi_ap
         assert response.status_code == 401
     finally:
         config_module.WEBHOOK_SECRET = original_secret
-        endpoints.WEBHOOK_SECRET = original_secret

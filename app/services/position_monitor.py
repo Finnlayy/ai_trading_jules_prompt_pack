@@ -1,10 +1,13 @@
 """
 Position Monitor — checks open positions for stop-loss, take-profit, and time-exit conditions.
 Called by PricePoller for live exits or directly by backtest/simulation loops.
+Also includes PaperPositionMonitor for auto SL/TP on Kraken paper positions.
 """
 
 from __future__ import annotations
 
+import asyncio
+import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import List
@@ -12,6 +15,11 @@ from typing import List
 from app.services.live_fill_tracker import live_fill_tracker, OpenPosition
 from app.core.config import POSITION_MAX_HOLD_MINUTES
 
+logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Legacy ExitResult + PositionMonitor (used by live_fill_tracker / price_poller)
+# ---------------------------------------------------------------------------
 
 @dataclass
 class ExitResult:
@@ -32,13 +40,13 @@ class PositionMonitor:
 
     _instance: PositionMonitor | None = None
 
-    def __new__(cls) -> PositionMonitor:
+    def __new__(cls, *args, **kwargs) -> PositionMonitor:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance._initialized = False
         return cls._instance
 
-    def __init__(self) -> None:
+    def __init__(self, broker=None) -> None:
         if self._initialized:
             return
         self._initialized = True
@@ -63,7 +71,6 @@ class PositionMonitor:
 
     def _check_position_bars(self, pos: OpenPosition, bars: list) -> ExitResult | None:
         """Check a single position against bar data. Stop takes precedence over target."""
-        # For simplicity in bar-based checking, use the latest bar
         if not bars:
             return None
         latest = bars[-1]
@@ -82,7 +89,6 @@ class PositionMonitor:
             )
 
         if pos.direction == "LONG":
-            # Stop takes precedence
             if latest.l <= pos.stop_price:
                 return ExitResult(
                     trade_id=pos.trade_id,
@@ -145,7 +151,6 @@ class PositionMonitor:
 
     def _check_position_price(self, pos: OpenPosition, current_price: float) -> ExitResult | None:
         """Check a single position against a live price."""
-        # Time exit
         max_hold_minutes = getattr(self, '_max_hold_minutes', 240)
         if pos.time_in_trade_minutes >= max_hold_minutes:
             return ExitResult(
@@ -229,7 +234,6 @@ class PositionMonitor:
             )
 
         if closed:
-            # Broadcast updated positions
             positions = live_fill_tracker.get_open_positions()
             dashboard_sse_manager.broadcast_position_update(
                 [{
@@ -248,5 +252,169 @@ class PositionMonitor:
         return closed
 
 
-# Global singleton
+# Global singleton (legacy API)
 position_monitor = PositionMonitor()
+
+
+# ---------------------------------------------------------------------------
+# PaperPositionMonitor — auto SL/TP for Kraken paper positions
+# ---------------------------------------------------------------------------
+
+from app.db import SessionLocal
+from app.db.models import PaperPosition
+from app.services.kraken_paper_broker import KrakenPaperBroker
+from app.services.lifecycle_recorder import lifecycle_recorder
+
+
+class PaperPositionMonitor:
+    """Monitors open paper positions and triggers SL/TP closes."""
+
+    def __init__(self, broker: KrakenPaperBroker | None = None) -> None:
+        self.broker = broker or KrakenPaperBroker()
+        self.is_running = False
+        self._task: asyncio.Task | None = None
+        self.check_interval_seconds = 5.0
+
+    def start(self) -> None:
+        if self.is_running:
+            return
+        self.is_running = True
+        self._task = asyncio.create_task(self._monitor_loop())
+        logger.info("PaperPositionMonitor started")
+
+    def stop(self) -> None:
+        self.is_running = False
+        if self._task:
+            self._task.cancel()
+            self._task = None
+        logger.info("PaperPositionMonitor stopped")
+
+    async def _monitor_loop(self) -> None:
+        """Main loop: check all open positions every N seconds."""
+        while self.is_running:
+            try:
+                await asyncio.to_thread(self._check_positions)
+            except Exception as exc:
+                logger.error("PaperPositionMonitor error: %s", exc)
+            await asyncio.sleep(self.check_interval_seconds)
+
+    def _check_positions(self) -> None:
+        """Check each open position against current live price."""
+        open_positions_data = []
+        with SessionLocal() as db:
+            positions = (
+                db.query(PaperPosition)
+                .filter(PaperPosition.status == "open")
+                .all()
+            )
+            for pos in positions:
+                open_positions_data.append({
+                    "id": pos.id,
+                    "symbol": pos.symbol,
+                    "direction": pos.direction,
+                    "volume": pos.volume,
+                    "stop_loss": pos.stop_loss,
+                    "take_profit": pos.take_profit,
+                    "candidate_id": pos.candidate_id,
+                    "signal_id": pos.signal_id,
+                    "strategy_id": pos.strategy_id,
+                    "timeframe": pos.timeframe,
+                    "avg_entry_price": pos.avg_entry_price,
+                    "created_at": pos.created_at,
+                })
+
+        for pos_data in open_positions_data:
+            try:
+                bid, ask = self.broker._get_live_price(pos_data["symbol"])
+                current = ask if pos_data["direction"] == "LONG" else bid
+
+                sl_hit = pos_data["stop_loss"] is not None and (
+                    (pos_data["direction"] == "LONG" and current <= pos_data["stop_loss"]) or
+                    (pos_data["direction"] == "SHORT" and current >= pos_data["stop_loss"])
+                )
+
+                tp_hit = pos_data["take_profit"] is not None and (
+                    (pos_data["direction"] == "LONG" and current >= pos_data["take_profit"]) or
+                    (pos_data["direction"] == "SHORT" and current <= pos_data["take_profit"])
+                )
+
+                if sl_hit:
+                    logger.info(
+                        "SL hit for %s: current=%.4f, sl=%.4f",
+                        pos_data["symbol"], current, pos_data["stop_loss"]
+                    )
+                    snapshot = {
+                        "candidate_id": pos_data["candidate_id"],
+                        "signal_id": pos_data["signal_id"],
+                        "symbol": pos_data["symbol"],
+                        "direction": pos_data["direction"],
+                        "strategy_id": pos_data["strategy_id"],
+                        "timeframe": pos_data["timeframe"],
+                        "volume": pos_data["volume"],
+                        "avg_entry_price": pos_data["avg_entry_price"],
+                        "stop_loss": pos_data["stop_loss"],
+                        "take_profit": pos_data["take_profit"],
+                        "created_at": pos_data["created_at"],
+                    }
+                    result = self.broker.close_paper_position(
+                        pos_data["symbol"],
+                        pos_data["volume"],
+                        close_reason="STOP_LOSS",
+                    )
+                    lifecycle_recorder.record_paper_outcome(
+                        position_snapshot=snapshot,
+                        close_result=result,
+                        close_reason="STOP_LOSS",
+                    )
+
+                elif tp_hit:
+                    logger.info(
+                        "TP hit for %s: current=%.4f, tp=%.4f",
+                        pos_data["symbol"], current, pos_data["take_profit"]
+                    )
+                    snapshot = {
+                        "candidate_id": pos_data["candidate_id"],
+                        "signal_id": pos_data["signal_id"],
+                        "symbol": pos_data["symbol"],
+                        "direction": pos_data["direction"],
+                        "strategy_id": pos_data["strategy_id"],
+                        "timeframe": pos_data["timeframe"],
+                        "volume": pos_data["volume"],
+                        "avg_entry_price": pos_data["avg_entry_price"],
+                        "stop_loss": pos_data["stop_loss"],
+                        "take_profit": pos_data["take_profit"],
+                        "created_at": pos_data["created_at"],
+                    }
+                    result = self.broker.close_paper_position(
+                        pos_data["symbol"],
+                        pos_data["volume"],
+                        close_reason="TAKE_PROFIT",
+                    )
+                    lifecycle_recorder.record_paper_outcome(
+                        position_snapshot=snapshot,
+                        close_result=result,
+                        close_reason="TAKE_PROFIT",
+                    )
+
+            except Exception as exc:
+                logger.warning("Could not check SL/TP for %s: %s", pos_data["symbol"], exc)
+
+    @staticmethod
+    def _position_snapshot(pos: PaperPosition) -> dict:
+        return {
+            "candidate_id": pos.candidate_id,
+            "signal_id": pos.signal_id,
+            "symbol": pos.symbol,
+            "direction": pos.direction,
+            "strategy_id": pos.strategy_id,
+            "timeframe": pos.timeframe,
+            "volume": pos.volume,
+            "avg_entry_price": pos.avg_entry_price,
+            "stop_loss": pos.stop_loss,
+            "take_profit": pos.take_profit,
+            "created_at": pos.created_at,
+        }
+
+
+# Singleton instance for paper trading
+paper_position_monitor_instance = PaperPositionMonitor()
