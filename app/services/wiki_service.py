@@ -4,7 +4,7 @@ from pathlib import Path
 from datetime import datetime, timezone
 from sqlalchemy import func
 from app.db import SessionLocal
-from app.db.models import Trade, PaperTrade, PaperPosition, PaperOutcome
+from app.db.models import Trade, PaperTrade, PaperPosition
 from app.services.agent_registry import agent_registry
 
 WIKI_DIR = Path("wiki")

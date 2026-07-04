@@ -28,6 +28,9 @@
 ## 2024-06-25 - Avoid Eager JSON Parsing in Kelly Sizer History Lookups
 **Learning:** The Kelly Sizer was doing full `json.loads` on every line of the historical trade journal (`trade_journal.jsonl`) only to discard most lines that didn't match the `EXECUTED_SIM` + `CLOSED` criteria. This eagerly allocates many dictionaries, wasting memory and CPU cycles.
 **Action:** Use fast substring string checks (e.g. `if '"final_decision": "EXECUTED_SIM"' not in raw_line...`) to skip the expensive `json.loads` parsing step on irrelevant lines. This provides an easy >5x performance gain for historical metric aggregations across huge log files.
+## 2024-05-31 - Fast API Sync I/O blocking Async endpoints in orchestration
+**Learning:** The `journal_logger_instance.log()` function, which performs synchronous file I/O (and DB commits), was called synchronously within `process_signal` and `process_manual_signal` in `app/api/orchestrator.py`. This blocks the main asyncio event loop, causing severe latency on concurrent traffic.
+**Action:** Wrapped the `journal_logger_instance.log(journal_entry)` call with `await asyncio.to_thread(journal_logger_instance.log, journal_entry)` to offload the I/O blocking execution to a worker thread pool. Keep the main loop unblocked.
 ## 2024-06-26 - Avoid Eager JSON Parsing in Position Ledger History Lookups
 **Learning:** `restore_from_journal` in `app/services/pionex_position_ledger.py` was previously calling `json.loads` for every line when reloading history, even when most lines do not contain a "ledger_delta". This created slow loading and a performance bottleneck.
 **Action:** By adding a fast string substring filter `if "ledger_delta" not in raw_line: continue` before trying to strip or load JSON, execution time improved by roughly 85% in benchmarking, saving memory and CPU by avoiding eagerly creating dict objects.
@@ -53,3 +56,10 @@
 ## 2025-02-27 - Bounded Deques with Post-Filtering Cause Truncation
 **Learning:** Using a bounded `deque(maxlen=limit)` to pre-buffer lines before parsing and filtering (like in `JournalLogger.get_entries()`) can cause the final result set to be smaller than the `limit` if some lines fail validation (e.g., invalid JSON), because the false-positive lines consumed the limited capacity of the deque.
 **Action:** When retrieving the last N valid items from a sequential file, use an unbounded list to collect all lines, iterate backwards using `reversed()`, apply the parsing/validation, break when `len(results) == limit`, and finally reverse the results back to chronological order.
+
+## 2025-07-04 - Optimize Strategy Health Dashboard Outcome Aggregation
+**Learning:** Looping through all DB objects in Python memory (`db.query(PaperOutcome).all()`) to calculate aggregated stats (count, sum, avg) causes significant memory overhead and slow calculation speed. SQL-native aggregation `func.count()`, `func.sum()`, etc., handles this far faster and scales much better. For calculations that strictly require ordered traversal (like max drawdown), querying only the specific columns needed (`PaperOutcome.strategy_id`, `PaperOutcome.pnl_pct`) avoids heavy ORM instantiation.
+**Action:** When calculating aggregate metrics on outcomes (or similar items) in bulk, prefer SQL `func.*` and group by over fetching all rows into memory and using python generators/list comprehensions. Use selective column querying (`db.query(Model.col1, Model.col2)`) when a python loop is strictly necessary.
+## 2025-02-28 - Optimizing multiple list iteration generator expressions
+**Learning:** Multiple O(N) generator expressions iterating over the same list (like summing `(t.pnl or 0) > 0` and `(t.pnl or 0) < 0` for calculating metric aggregations) causes unnecessary overhead and slows down endpoint responses.
+**Action:** Consolidate multiple list iteration operations (like calculating wins, losses, gross profit, and gross loss) into a single explicit unrolled `for` loop. This avoids Python generator overhead and repeated array traversal, significantly speeding up metric calculations on large datasets like backtest results.
