@@ -5,6 +5,7 @@ import re
 import uuid
 from pathlib import Path as FsPath
 from typing import Any, Dict, List
+from collections import deque
 
 import pandas as pd
 from fastapi import APIRouter, HTTPException, Query
@@ -147,12 +148,13 @@ def get_recent_policy_actions(limit: int = Query(default=50, ge=1, le=500)):
 
     actions = []
     try:
+        line_deque = deque(maxlen=limit)
         with ACTION_LOG_FILE.open("r", encoding="utf-8") as handle:
-            lines = [line for line in handle if line.strip()]
-        for line in reversed(lines):
+            for line in handle:
+                if line.strip():
+                    line_deque.append(line)
+        for line in reversed(line_deque):
             actions.append(json.loads(line))
-            if len(actions) >= limit:
-                break
     except (OSError, json.JSONDecodeError) as exc:
         raise HTTPException(status_code=500, detail=f"Could not read academy policy actions: {exc}")
 

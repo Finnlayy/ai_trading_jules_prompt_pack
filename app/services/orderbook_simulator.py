@@ -1,4 +1,3 @@
-import requests
 import time
 from typing import Dict, Any
 from app.schemas.simulator import OrderbookSnapshot, OrderbookLevel, SimulatedFill

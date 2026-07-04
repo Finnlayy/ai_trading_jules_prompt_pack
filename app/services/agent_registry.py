@@ -1,6 +1,5 @@
 from app.core.utils import write_json_async
 import json
-import os
 import asyncio
 from typing import List, Dict, Optional
 from pathlib import Path
