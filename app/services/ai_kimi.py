@@ -1,6 +1,7 @@
 import json
 import asyncio
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from app.schemas.m8_payload import M8Payload
@@ -132,13 +133,22 @@ class KimiSwarmService:
         return ai_layer_memory_instance.behavior_prompt()
 
 
+    def _prompt_base_dir(self) -> Path:
+        return Path(__file__).resolve().parents[1] / "ai_prompts"
+
     def get_prompt_for_scout(self, scout_name: str) -> str:
-        import os
-        from pathlib import Path
-        prompt_path = Path(f"app/ai_prompts/{scout_name}/v_active.md")
+        prompt_path = self._prompt_base_dir() / scout_name / "v_active.md"
         if prompt_path.exists():
-            with open(prompt_path, "r") as f:
-                return f.read()
+            active_text = prompt_path.read_text(encoding="utf-8").strip()
+            if active_text and "\n" not in active_text and active_text.endswith(".md"):
+                candidate = (prompt_path.parent / active_text).resolve()
+                try:
+                    candidate.relative_to(prompt_path.parent.resolve())
+                except ValueError:
+                    return active_text
+                if candidate.is_file():
+                    return candidate.read_text(encoding="utf-8")
+            return active_text
         return f"You are the {scout_name.capitalize()} Scout. Analyze the signal from a {scout_name} perspective."
 
     def _trace_base(self) -> dict[str, Any]:
@@ -171,17 +181,29 @@ class KimiSwarmService:
             scout_reports = dict(zip(tasks.keys(), scout_results))
             advisor_reports = await self._run_external_advisors(payload, symbol_context)
 
+            total_weight = 0.0
+            weighted_sum = 0.0
+            for scout_name, report in scout_reports.items():
+                weight = confidence_registry.get_scout_weight(payload.symbol, scout_name)
+                conf = self._extract_confidence_from_report(report)
+                total_weight += weight
+                weighted_sum += conf * weight
+            weighted_scout_vote = weighted_sum / total_weight if total_weight > 0 else 0.5
+
             # 3. Orchestrator synthesizes weighted by per-scout accuracy
             review = await self._run_orchestrator(payload, scout_reports, advisor_reports)
+            weighted_vote = self._weighted_scout_vote(payload, scout_reports)
+            review = self._apply_weighted_vote(review, weighted_vote)
 
             # 4. Record scout calls in confidence registry (outcome = None for now)
             for scout_name, report in scout_reports.items():
                 confidence = self._extract_confidence_from_report(report)
+                decision = weighted_vote["scouts"].get(scout_name, {}).get("decision", review.decision.value)
                 confidence_registry.record_scout_review(
                     symbol=payload.symbol,
                     scout_name=scout_name,
                     direction=payload.direction,
-                    decision=review.decision.value,
+                    decision=decision,
                     confidence=confidence,
                     was_correct=None,
                 )
@@ -202,6 +224,8 @@ class KimiSwarmService:
                     name: confidence_registry.get_scout_weight(payload.symbol, name)
                     for name in self.SCOUT_NAMES
                 },
+                "weighted_scout_vote": weighted_vote,
+                "confidence_recorded": True,
                 "final_summary": {
                     "decision": review.decision.value,
                     "confidence": review.confidence,
@@ -230,6 +254,88 @@ class KimiSwarmService:
                 "original_provider": self.provider or AI_PROVIDER,
             }
             return mock_review
+
+    def _weighted_scout_vote(self, payload: M8Payload, scout_reports: dict[str, Any]) -> dict[str, Any]:
+        rows: dict[str, dict[str, Any]] = {}
+        approval_score = 0.0
+        rejection_score = 0.0
+        total_weight = 0.0
+        weighted_confidence = 0.0
+
+        for scout_name in self.SCOUT_NAMES:
+            report = scout_reports.get(scout_name, "")
+            weight = confidence_registry.get_scout_weight(payload.symbol, scout_name)
+            confidence = self._extract_confidence_from_report(str(report))
+            decision = self._derive_report_decision(report, confidence)
+            score = weight * confidence
+            if decision == DecisionEnum.REJECT.value:
+                rejection_score += score
+            else:
+                approval_score += score
+            total_weight += weight
+            weighted_confidence += score
+            rows[scout_name] = {
+                "decision": decision,
+                "confidence": round(confidence, 4),
+                "weight": round(weight, 4),
+                "score": round(score, 4),
+            }
+
+        total_score = approval_score + rejection_score
+        approval_ratio = approval_score / total_score if total_score else 0.5
+        if approval_ratio >= 0.62:
+            decision_hint = DecisionEnum.PROCEED_TO_SIMULATION.value
+        elif approval_ratio <= 0.38:
+            decision_hint = DecisionEnum.REJECT.value
+        else:
+            decision_hint = DecisionEnum.HUMAN_REVIEW.value
+
+        return {
+            "approval_score": round(approval_score, 4),
+            "rejection_score": round(rejection_score, 4),
+            "approval_ratio": round(approval_ratio, 4),
+            "weighted_confidence": round(weighted_confidence / total_weight, 4) if total_weight else 0.5,
+            "decision_hint": decision_hint,
+            "scouts": rows,
+        }
+
+    @staticmethod
+    def _derive_report_decision(report: Any, confidence: float) -> str:
+        if isinstance(report, dict):
+            explicit = str(report.get("decision") or "").upper()
+            if explicit in {DecisionEnum.PROCEED_TO_SIMULATION.value, DecisionEnum.REJECT.value}:
+                return explicit
+            report_text = str(report.get("report") or report)
+        else:
+            report_text = str(report)
+
+        text = report_text.lower()
+        rejection_terms = ("reject", "avoid", "do not trade", "critical", "standby", "kill", "blocked")
+        if any(term in text for term in rejection_terms):
+            return DecisionEnum.REJECT.value
+        return DecisionEnum.PROCEED_TO_SIMULATION.value if confidence >= 0.55 else DecisionEnum.REJECT.value
+
+    @staticmethod
+    def _apply_weighted_vote(review: SignalReview, weighted_vote: dict[str, Any]) -> SignalReview:
+        decision_hint = weighted_vote.get("decision_hint")
+        weighted_confidence = float(weighted_vote.get("weighted_confidence") or review.confidence)
+
+        if decision_hint == DecisionEnum.REJECT.value:
+            review.decision = DecisionEnum.REJECT
+            review.requires_human_review = True
+            review.reject_reason = review.reject_reason or "Weighted scout vote rejected the candidate"
+            if "WEIGHTED_SCOUT_REJECT" not in review.reason_codes:
+                review.reason_codes.append("WEIGHTED_SCOUT_REJECT")
+        elif decision_hint == DecisionEnum.HUMAN_REVIEW.value:
+            review.decision = DecisionEnum.HUMAN_REVIEW
+            review.requires_human_review = True
+            if "WEIGHTED_SCOUT_DISAGREEMENT" not in review.reason_codes:
+                review.reason_codes.append("WEIGHTED_SCOUT_DISAGREEMENT")
+        elif "WEIGHTED_SCOUT_APPROVE" not in review.reason_codes:
+            review.reason_codes.append("WEIGHTED_SCOUT_APPROVE")
+
+        review.confidence = max(0.0, min(1.0, round((review.confidence + weighted_confidence) / 2.0, 4)))
+        return review
 
     # ------------------------------------------------------------------
     # Scouts
@@ -268,8 +374,10 @@ class KimiSwarmService:
             for n in relevant if n.symbol_relevance >= 0.3
         ) or "No relevant recent news."
 
+        base_prompt = self.get_prompt_for_scout("sentiment")
         system = (
             "You are the Sentiment Scout — a market sentiment analyst.\n"
+            f"{base_prompt}\n"
             "Analyze news flow, social sentiment, and event risk for this signal.\n"
             "Return a concise paragraph (2-4 sentences) with:\n"
             "  - Sentiment bias (bullish/bearish/neutral)\n"
@@ -290,8 +398,10 @@ class KimiSwarmService:
         return await self._call_llm_for_scout("sentiment", prompt, system=system)
 
     async def _run_technical_scout(self, payload: M8Payload, symbol_context: str) -> str:
+        base_prompt = self.get_prompt_for_scout("technical")
         system = (
             "You are the Technical Scout — a quant technical analyst.\n"
+            f"{base_prompt}\n"
             "Assess chart setup quality, indicator confluence, and price structure.\n"
             "Return a concise paragraph (2-4 sentences) with:\n"
             "  - Setup quality (excellent/good/fair/poor)\n"
@@ -314,8 +424,10 @@ class KimiSwarmService:
         return await self._call_llm_for_scout("technical", prompt, system=system)
 
     async def _run_risk_scout(self, payload: M8Payload, symbol_context: str) -> str:
+        base_prompt = self.get_prompt_for_scout("risk")
         system = (
             "You are the Risk Scout — a risk management specialist.\n"
+            f"{base_prompt}\n"
             "Evaluate position sizing, leverage, drawdown exposure, and tail risks.\n"
             "Return a concise paragraph (2-4 sentences) with:\n"
             "  - Risk assessment (low/moderate/high/critical)\n"
@@ -338,8 +450,10 @@ class KimiSwarmService:
         return await self._call_llm_for_scout("risk", prompt, system=system)
 
     async def _run_macro_scout(self, payload: M8Payload, symbol_context: str) -> str:
+        base_prompt = self.get_prompt_for_scout("macro")
         system = (
             "You are the Macro Scout — a macro regime analyst.\n"
+            f"{base_prompt}\n"
             "Evaluate broader market regime, correlations, and structural factors.\n"
             "For crypto: consider BTC dominance, funding rates, ETF flows.\n"
             "For forex: consider DXY trend, rate differentials, central bank posture.\n"
@@ -416,6 +530,7 @@ class KimiSwarmService:
             for name, w in weights.items()
         )
         advisor_block = self._format_advisor_reports(advisor_reports)
+        execution_prompt = self.get_prompt_for_scout("execution")
 
         prompt = f"""Signal ID: {payload.signal_id}
 Symbol: {payload.symbol} | Direction: {payload.direction} | Timeframe: {payload.timeframe}
@@ -454,6 +569,7 @@ Guidelines:
             prompt,
             system=(
                 "You are the Lead Trading Orchestrator. You synthesize multi-scout reports into a single trading decision.\n"
+                f"{execution_prompt}\n"
                 "You MUST return strictly valid JSON. Do not include markdown code blocks.\n"
                 f"\n{self._behavior_guidance()}"
             ),

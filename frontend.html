@@ -57,6 +57,7 @@
             --status-short: var(--coral);
             --status-executed: var(--mint-strong);
             --status-rejected: var(--rose);
+            --rust-red: #b84d4d;
             --status-sim: var(--sky-strong);
             --status-ai: var(--indigo);
             --status-warn: var(--amber);
@@ -1015,6 +1016,7 @@
         .pill.ok { background: var(--mint); color: #155932; }
         .pill.warn { background: var(--butter); color: #795404; }
         .pill.bad { background: var(--peach); color: #88361f; }
+        .pill.risk-reject { background: #b84d4d; color: #ffffff; }
         .pill.error { background: var(--peach); color: #88361f; }
         .pill.ai { background: var(--lilac); color: #493c78; }
         .pill.info { background: var(--sky); color: #1e3a8a; }
@@ -1658,7 +1660,7 @@
 
         function statusPill(value) {
             if (String(value || "").includes("EXECUTED") || String(value || "").includes("ok")) return "pill ok";
-            if (String(value || "").includes("REJECT")) return "pill bad";
+            if (String(value || "").includes("REJECT")) return "pill bad risk-reject";
             return "pill warn";
         }
 
@@ -1803,24 +1805,17 @@
         }
 
         const DEFAULT_LAYOUT_CONFIG = {
-            mode: "left",
-            locked: false,
-            showSettings: false,
-            panels: {
-                sidebar: true,
-                chart: true,
-                overview: true,
-                wallets: true,
-                control: true,
-                aiLayer: true,
-                logs: true,
-                news: true,
-                agents: true,
-                training: true,
-                strategies: true,
-                ctrader: true
-            }
-        };
+  activeSymbol: true,
+  ohlcvChart: true,
+  riskAuditLogs: true,
+  activeConnections: true,
+  unifiedBroker: true,
+  swarmWarRoom: true,
+  panels: {
+    sidebar: true,
+    logs: true
+  }
+};
 
         function mergeLayoutConfig(saved) {
             return {
@@ -1831,6 +1826,142 @@
                     ...(saved?.panels || {})
                 }
             };
+        }
+
+
+        // -------------------------------------------------------------
+        // Agentic Stack Panel
+        // -------------------------------------------------------------
+        function AgenticStackPanel({ request, addLog }) {
+            const [runId, setRunId] = useState("");
+            const [runData, setRunData] = useState(null);
+            const [loading, setLoading] = useState(false);
+
+            async function fetchRun() {
+                if (!runId) return;
+                setLoading(true);
+                try {
+                    const data = await request(`/agentic/runs/${runId}`);
+                    setRunData(data);
+                } catch (e) {
+                    addLog("error", "Failed to fetch Agentic Run", { error: e.message });
+                } finally {
+                    setLoading(false);
+                }
+            }
+
+            return (
+                <div className="grid">
+                    <div className="panel span-12">
+                        <div className="panel-title">Agentic Stack Explorer</div>
+                        <div style={{ padding: 16 }}>
+                            <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
+                                <input
+                                    type="text"
+                                    placeholder="Enter Run ID"
+                                    value={runId}
+                                    onChange={(e) => setRunId(e.target.value)}
+                                    style={{ padding: "8px 12px", borderRadius: "var(--radius-sm)", border: "1px solid var(--line)", flex: 1 }}
+                                />
+                                <button className="primary" onClick={fetchRun} disabled={loading}>
+                                    {loading ? "Loading..." : "Load Run"}
+                                </button>
+                            </div>
+
+                            {runData && (
+                                <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                                    {/* Timeline */}
+                                    <div style={{ padding: 16, border: "1px solid var(--line)", borderRadius: "var(--radius-sm)", background: "var(--surface-soft)" }}>
+                                        <h4 style={{ margin: "0 0 12px 0" }}>Run Timeline</h4>
+                                        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14 }}>
+                                            <span style={{ color: runData.perception_context ? "var(--emerald)" : "var(--muted)" }}>Perception</span>
+                                            <span>→</span>
+                                            <span style={{ color: runData.trading_plan ? "var(--emerald)" : "var(--muted)" }}>Plan Generation</span>
+                                            <span>→</span>
+                                            <span style={{ color: runData.risk_result ? "var(--emerald)" : "var(--muted)" }}>Risk Gate</span>
+                                            <span>→</span>
+                                            <span style={{ color: runData.simulator_result ? "var(--emerald)" : "var(--muted)" }}>Simulation</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Trading Plan Viewer */}
+                                    {runData.trading_plan && (
+                                        <div style={{ padding: 16, border: "1px solid var(--line)", borderRadius: "var(--radius-sm)", background: "var(--surface-soft)" }}>
+                                            <h4 style={{ margin: "0 0 12px 0" }}>Trading Plan Viewer</h4>
+                                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, fontSize: 13 }}>
+                                                <div>
+                                                    <div style={{ fontWeight: "bold", color: "var(--sky-strong)", marginBottom: 4 }}>Setup</div>
+                                                    <div>Regime: {runData.trading_plan.setup.regime}</div>
+                                                    <div>Volatility: {runData.trading_plan.setup.volatility}</div>
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontWeight: "bold", color: "var(--emerald)", marginBottom: 4 }}>Trigger</div>
+                                                    <div>Condition: {runData.trading_plan.trigger.entry_condition}</div>
+                                                    <div>Zone: {runData.trading_plan.trigger.price_zone_min} - {runData.trading_plan.trigger.price_zone_max}</div>
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontWeight: "bold", color: "var(--rose)", marginBottom: 4 }}>Invalidation</div>
+                                                    <div>Hard Stop: {runData.trading_plan.invalidation.hard_stop_price}</div>
+                                                    <div>Max Loss: {runData.trading_plan.invalidation.max_loss_pct}%</div>
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontWeight: "bold", color: "var(--amber)", marginBottom: 4 }}>Risk Intent</div>
+                                                    <div>R/R Ratio: {runData.trading_plan.risk_intent.risk_reward_ratio}</div>
+                                                    <div>Confidence: {runData.trading_plan.risk_intent.confidence_score}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Risk Gate Matrix */}
+                                    {runData.risk_result && (
+                                        <div style={{ padding: 16, border: "1px solid var(--line)", borderRadius: "var(--radius-sm)", background: "var(--surface-soft)" }}>
+                                            <h4 style={{ margin: "0 0 12px 0" }}>Risk Gate Matrix</h4>
+                                            <div style={{ display: "flex", gap: 16, fontSize: 13 }}>
+                                                <div style={{ padding: "8px 12px", borderRadius: 4, background: runData.risk_result.decision === "PROCEED_TO_SIMULATION" ? "var(--emerald-soft)" : "var(--rose-soft)", color: runData.risk_result.decision === "PROCEED_TO_SIMULATION" ? "var(--emerald)" : "var(--rose)", fontWeight: "bold" }}>
+                                                    Decision: {runData.risk_result.decision}
+                                                </div>
+                                                <div style={{ padding: "8px 12px", borderRadius: 4, background: "var(--surface)" }}>
+                                                    Risk Score: {runData.risk_result.risk_score}
+                                                </div>
+                                            </div>
+                                            {runData.risk_result.violated_rules?.length > 0 && (
+                                                <div style={{ marginTop: 12, color: "var(--rose)", fontSize: 13 }}>
+                                                    Violations: {runData.risk_result.violated_rules.join(", ")}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Orderbook Simulator Panel */}
+                                    {runData.simulator_result && (
+                                        <div style={{ padding: 16, border: "1px solid var(--line)", borderRadius: "var(--radius-sm)", background: "var(--surface-soft)" }}>
+                                            <h4 style={{ margin: "0 0 12px 0" }}>Orderbook Simulator Panel</h4>
+                                            <div style={{ fontSize: 13, color: "var(--muted)" }}>
+                                                <p>Die simulierte Win-Rate beliefe sich auf Basis dieses Fills auf den historischen Durchschnitt.</p>
+                                            </div>
+                                            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginTop: 12 }}>
+                                                <div style={{ background: "var(--surface)", padding: 12, borderRadius: 8, textAlign: "center" }}>
+                                                    <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 4 }}>VWAP Fill Price</div>
+                                                    <div style={{ fontSize: 16, fontFamily: "monospace", color: "var(--emerald)" }}>{runData.simulator_result.fill_price.toFixed(4)}</div>
+                                                </div>
+                                                <div style={{ background: "var(--surface)", padding: 12, borderRadius: 8, textAlign: "center" }}>
+                                                    <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 4 }}>Slippage</div>
+                                                    <div style={{ fontSize: 16, fontFamily: "monospace", color: "var(--rose)" }}>{runData.simulator_result.slippage_pct.toFixed(3)}%</div>
+                                                </div>
+                                                <div style={{ background: "var(--surface)", padding: 12, borderRadius: 8, textAlign: "center" }}>
+                                                    <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 4 }}>Status</div>
+                                                    <div style={{ fontSize: 14, fontWeight: "bold", color: runData.simulator_result.status === "FILLED" ? "var(--emerald)" : "var(--amber)" }}>{runData.simulator_result.status}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
         }
 
         function App() {
@@ -1966,9 +2097,21 @@
             }
 
             async function request(path, options = {}) {
+                // Read API_KEY from localStorage or query params if present
+                const apiKey = localStorage.getItem('API_KEY') || new URLSearchParams(window.location.search).get('api_key') || "";
+                if (apiKey && !localStorage.getItem('API_KEY')) {
+                    localStorage.setItem('API_KEY', apiKey);
+                }
+
+                const headers = {
+                    "Content-Type": "application/json",
+                    ...(apiKey ? {"X-API-Key": apiKey} : {}),
+                    ...(options.headers || {})
+                };
+
                 const response = await fetch(path, {
-                    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
-                    ...options
+                    ...options,
+                    headers: headers
                 });
                 let data;
                 const text = await response.text();
@@ -2433,34 +2576,59 @@
                         </div>
 
                         <nav>
-                            <div className="nav-category">Trading</div>
-                            {["Overview", "Control", "Orders", "Live Paper", "Kraken Paper", "Manual"].map(item => (
+                            <div className="nav-category">Command Center</div>
+                            {["Overview", "Control", "Orders", "Manual", "Charts", "Wallets"].map(item => (
                                 <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)} data-label={item}>
-                                    <span className="nav-icon">{item === "Overview" ? "🏠" : item === "Control" ? "🎮" : item === "Orders" ? "📋" : item === "Live Paper" ? "📈" : item === "Kraken Paper" ? "🦑" : "✋"}</span>
+                                    <span className="nav-icon">{item === "Overview" ? "🏠" : item === "Control" ? "🎮" : item === "Orders" ? "📋" : item === "Manual" ? "✋" : item === "Charts" ? "📊" : "👛"}</span>
                                     <span className="nav-label">{item}</span>
                                     <span className="nav-dot">{tab === item ? "●" : ""}</span>
                                 </button>
                             ))}
-                            <div className="nav-category">Analyse</div>
-                            {["Wallets", "Charts", "Backtest", "Confidence", "Strategies", "cTrader", "AI Layer"].map(item => (
+                            <div className="nav-category">Wiki & 2ndBrain</div>
+                            {["Wiki & 2ndBrain"].map(item => (
                                 <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)} data-label={item}>
-                                    <span className="nav-icon">{item === "Wallets" ? "👛" : item === "Charts" ? "📊" : item === "Backtest" ? "🧪" : item === "Confidence" ? "🎯" : item === "Strategies" ? "🎚️" : item === "cTrader" ? "📉" : "🤖"}</span>
+                                    <span className="nav-icon">🧠</span>
+                                    <span className="nav-label">{item}</span>
+                                    <span className="nav-dot">{tab === item ? "●" : ""}</span>
+                                </button>
+                            ))}
+                            <div className="nav-category">Akademie & Gymnasium</div>
+                            {["Agents", "Training", "Learning", "Confidence"].map(item => (
+                                <button type="button" key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)} data-label={item}>
+                                    <span className="nav-icon">{item === "Agents" ? "👤" : item === "Training" ? "🎓" : item === "Learning" ? "📝" : "🎯"}</span>
+                                    <span className="nav-label">{item}</span>
+                                    <span className="nav-dot">{tab === item ? "●" : ""}</span>
+                                </button>
+                            ))}
+                            <div className="nav-category">Risk & Paper Trading</div>
+                            {["Risk & Paper", "Live Paper", "Kraken Paper", "cTrader"].map(item => (
+                                <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)} data-label={item}>
+                                    <span className="nav-icon">{item === "Risk & Paper" ? "🛡️" : item === "Live Paper" ? "📈" : item === "Kraken Paper" ? "🦑" : "📉"}</span>
+                                    <span className="nav-label">{item}</span>
+                                    <span className="nav-dot">{tab === item ? "●" : ""}</span>
+                                </button>
+                            ))}
+                            <div className="nav-category">Model Hub (ONNX)</div>
+                            {["Model Hub"].map(item => (
+                                <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)} data-label={item}>
+                                    <span className="nav-icon">🤖</span>
+                                    <span className="nav-label">{item}</span>
+                                    <span className="nav-dot">{tab === item ? "●" : ""}</span>
+                                </button>
+                            ))}
+
+                            <div className="nav-category">Strategy Library</div>
+                            {["Strategies", "Backtest"].map(item => (
+                                <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)} data-label={item}>
+                                    <span className="nav-icon">{item === "Strategies" ? "🎚️" : "🧪"}</span>
                                     <span className="nav-label">{item}</span>
                                     <span className="nav-dot">{tab === item ? "●" : ""}</span>
                                 </button>
                             ))}
                             <div className="nav-category">System</div>
-                            {["News", "Logs"].map(item => (
+                            {["AI Layer", "News", "Logs"].map(item => (
                                 <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)} data-label={item}>
-                                    <span className="nav-icon">{item === "News" ? "📰" : "📜"}</span>
-                                    <span className="nav-label">{item}</span>
-                                    <span className="nav-dot">{tab === item ? "●" : ""}</span>
-                                </button>
-                            ))}
-                            <div className="nav-category">Academy</div>
-                            {["Agents", "Training", "Learning"].map(item => (
-                                <button type="button" key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)} data-label={item}>
-                                    <span className="nav-icon">{item === "Agents" ? "👤" : "🎓"}</span>
+                                    <span className="nav-icon">{item === "AI Layer" ? "🤖" : item === "News" ? "📰" : "📜"}</span>
                                     <span className="nav-label">{item}</span>
                                     <span className="nav-dot">{tab === item ? "●" : ""}</span>
                                 </button>
@@ -2559,7 +2727,7 @@
                         </section>
 
                         {layoutConfig.panels.strategies && (<section className={tab === "Strategies" ? "" : "hidden"}>
-                            <StrategyHealthPanel strategies={strategyHealth} loading={loading.strategies} onRefresh={fetchStrategyHealth} switchStrategy={switchStrategy} />
+                            <StrategyHealthPanel strategies={strategyHealth} loading={loading.strategies} onRefresh={fetchStrategyHealth} switchStrategy={switchStrategy} request={request} addLog={addLog} />
                         </section>)}
 
                         {layoutConfig.panels.ctrader && (<section className={tab === "cTrader" ? "" : "hidden"}>
@@ -2567,11 +2735,11 @@
                         </section>)}
 
                         <section className={tab === "Orders" ? "" : "hidden"}>
-                            <Orders orders={filteredOrders} />
+                            <Orders orders={filteredOrders} setTab={setTab} />
                         </section>
 
                         <section className={tab === "Backtest" ? "" : "hidden"}>
-                            <Backtest backtest={backtest} setBacktest={setBacktest} runBacktest={runBacktest} orders={filteredOrders} availableStrategies={availableStrategies} activeStrategy={activeStrategy} />
+                            <Backtest backtest={backtest} setBacktest={setBacktest} runBacktest={runBacktest} orders={filteredOrders} availableStrategies={availableStrategies} activeStrategy={activeStrategy} request={request} addLog={addLog} />
                         </section>
 
                         {layoutConfig.panels.news && (<section className={tab === "News" ? "" : "hidden"}>
@@ -2600,12 +2768,26 @@
                         </section>
 
                         <section className={tab === "Live Paper" ? "" : "hidden"}>
-                            <LivePaperPanel request={request} addLog={addLog} setLoadingKey={setLoadingKey} fetchStrategyHealth={fetchStrategyHealth} fetchCTraderStatus={fetchCTraderStatus} fetchCTraderBalance={fetchCTraderBalance} fetchCTraderSymbols={fetchCTraderSymbols} />
+                            <LivePaperPanel request={request} addLog={addLog} setTab={setTab} setLoadingKey={setLoadingKey} fetchStrategyHealth={fetchStrategyHealth} fetchCTraderStatus={fetchCTraderStatus} fetchCTraderBalance={fetchCTraderBalance} fetchCTraderSymbols={fetchCTraderSymbols} />
                         </section>
 
                         <section className={tab === "Kraken Paper" ? "" : "hidden"}>
                             <KrakenPaperPanel request={request} addLog={addLog} />
                         </section>
+
+                        <section className={tab === "Wiki & 2ndBrain" ? "" : "hidden"}>
+                            <SecondBrainPanel request={request} addLog={addLog} />
+                        </section>
+
+                        <section className={tab === "Risk & Paper" ? "" : "hidden"}>
+                            <RiskControlPanel request={request} addLog={addLog} />
+                        </section>
+
+                        <section className={tab === "Model Hub" ? "" : "hidden"}>
+                            <ModelHubPanel request={request} addLog={addLog} />
+                        </section>
+
+
                     </div>
 
                     {layoutConfig.showSettings && (
@@ -2784,7 +2966,7 @@
                         {report ? (
                             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 16, padding: 20 }}>
                                 <div style={{ textAlign: "center" }}>
-                                    <div style={{ fontSize: 11, color: "var(--muted)" }}>Winrate</div>
+                                    <div style={{ fontSize: 11, color: "var(--muted)" }}>Simulated Hit Rate</div>
                                     <div style={{ fontSize: 22, fontWeight: 600, color: report.winrate_pct >= 50 ? "var(--ok)" : "var(--danger)" }}>{report.winrate_pct}%</div>
                                 </div>
                                 <div style={{ textAlign: "center" }}>
@@ -2796,7 +2978,7 @@
                                     <div style={{ fontSize: 22, fontWeight: 600 }}>{report.total_trades}</div>
                                 </div>
                                 <div style={{ textAlign: "center" }}>
-                                    <div style={{ fontSize: 11, color: "var(--muted)" }}>Profit Factor</div>
+                                    <div style={{ fontSize: 11, color: "var(--muted)" }}>Simulated Profit Factor</div>
                                     <div style={{ fontSize: 22, fontWeight: 600, color: (report.profit_factor || 0) >= 1 ? "var(--ok)" : "var(--danger)" }}>{report.profit_factor || "—"}</div>
                                 </div>
                             </div>
@@ -3693,7 +3875,7 @@
             );
         }
 
-        function Backtest({ backtest, setBacktest, runBacktest, orders, availableStrategies = [], activeStrategy = "" }) {
+        function Backtest({ backtest, setBacktest, runBacktest, orders, availableStrategies = [], activeStrategy = "", request, addLog }) {
             const update = (key, value) => setBacktest(current => ({ ...current, [key]: value }));
             const [showModal, setShowModal] = React.useState(false);
             const [backtestResult, setBacktestResult] = React.useState(null);
@@ -3777,6 +3959,9 @@
                             </div>
                         </div>
                     )}
+                    <div className="span-12">
+                        <PolicyAnalyticsPanel request={request} addLog={addLog} />
+                    </div>
                 </div>
             );
         }
@@ -4127,6 +4312,22 @@
                         </div>
                         {latestTrace && latestTrace.scouts ? (
                             <div>
+                                {latestTrace.weighted_scout_vote && (
+                                    <div className="panel" data-testid="weighted-scout-vote-panel" style={{ marginBottom: 12, boxShadow: "none" }}>
+                                        <div className="panel-title">
+                                            <span>Weighted Scout Vote</span>
+                                            <span className={`pill ${latestTrace.weighted_scout_vote.decision_hint === "PROCEED_TO_SIMULATION" ? "ok" : latestTrace.weighted_scout_vote.decision_hint === "REJECT" ? "error" : "warn"}`}>
+                                                {latestTrace.weighted_scout_vote.decision_hint || "UNKNOWN"}
+                                            </span>
+                                        </div>
+                                        <div className="grid" style={{ gap: 8 }}>
+                                            <div className="span-3"><Kpi title="Approval" value={`${((latestTrace.weighted_scout_vote.approval_ratio || 0) * 100).toFixed(0)}%`} caption={`Score ${latestTrace.weighted_scout_vote.approval_score || 0}`} tone="ok" /></div>
+                                            <div className="span-3"><Kpi title="Rejection" value={`${(100 - ((latestTrace.weighted_scout_vote.approval_ratio || 0) * 100)).toFixed(0)}%`} caption={`Score ${latestTrace.weighted_scout_vote.rejection_score || 0}`} tone="warn" /></div>
+                                            <div className="span-3"><Kpi title="Weighted Conf" value={`${((latestTrace.weighted_scout_vote.weighted_confidence || 0) * 100).toFixed(0)}%`} caption="Outcome-calibrated" tone="info" /></div>
+                                            <div className="span-3"><Kpi title="Recorded" value={latestTrace.confidence_recorded ? "Yes" : "No"} caption="Confidence call dedupe" tone={latestTrace.confidence_recorded ? "ok" : "warn"} /></div>
+                                        </div>
+                                    </div>
+                                )}
                                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 12, marginBottom: 12 }}>
                                     {["technical", "sentiment", "risk", "macro"].map(name => {
                                         const scout = latestTrace.scouts[name] || {};
@@ -4524,7 +4725,53 @@
             );
         }
 
-        function StrategyHealthPanel({ strategies, loading, onRefresh, switchStrategy }) {
+        function StrategyHealthPanel({ strategies, loading, onRefresh, switchStrategy, request, addLog }) {
+            const [selectedId, setSelectedId] = React.useState("");
+            const [libraryDetails, setLibraryDetails] = React.useState({});
+            const [smokeParams, setSmokeParams] = React.useState({ symbol: "HYPEUSDT", timeframe: "1h", bars: 300, min_confluence: 70 });
+            const [smokeResult, setSmokeResult] = React.useState(null);
+            const [smokeLoading, setSmokeLoading] = React.useState(false);
+
+            const fetchLibraryDetails = async () => {
+                try {
+                    const res = await request("/strategies/library");
+                    if (res && res.strategies) {
+                        const dict = {};
+                        res.strategies.forEach(s => {
+                            dict[s.strategy_id] = s;
+                        });
+                        setLibraryDetails(dict);
+                        if (res.strategies.length && !selectedId) {
+                            setSelectedId(res.strategies[0].strategy_id);
+                        }
+                    }
+                } catch (e) {}
+            };
+
+            React.useEffect(() => {
+                fetchLibraryDetails();
+            }, [strategies]);
+
+            const runSmokeTest = async () => {
+                if (!selectedId) return;
+                setSmokeLoading(true);
+                setSmokeResult(null);
+                try {
+                    const res = await request(`/strategies/${selectedId}/backtest-smoke`, {
+                        method: "POST",
+                        body: JSON.stringify(smokeParams)
+                    });
+                    setSmokeResult(res);
+                    addLog("info", `Ran diagnostic smoke backtest for ${selectedId}`);
+                } catch (e) {
+                    addLog("error", `Failed to run smoke test for ${selectedId}`, { error: e.message });
+                } finally {
+                    setSmokeLoading(false);
+                }
+            };
+
+            const selectedDetails = libraryDetails[selectedId] || {};
+
             function formatAge(seconds) {
                 if (seconds === null || seconds === undefined) return "—";
                 if (seconds < 60) return `${Math.round(seconds)}s ago`;
@@ -4562,80 +4809,138 @@
                 <div className="grid">
                     <div className="panel span-12">
                         <div className="panel-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <span>Strategy Health <span className="pill">{strategies.length} strategies</span></span>
-                            <button onClick={onRefresh} disabled={loading}>{loading ? "Loading…" : "Refresh"}</button>
+                            <span>Strategy Library & Code Manager <span className="pill">{strategies.length} active</span></span>
+                            <button onClick={onRefresh} disabled={loading}>{loading ? "Loading…" : "🔄 Refresh Health"}</button>
                         </div>
-                        <div className="kpi-caption">Per-strategy performance, win rate, drawdown, and signal recency. Aggregated from ConfidenceRegistry + Journal.</div>
+                        <div className="kpi-caption">Centralized Pine Script v6 and Python strategies linked to source files.</div>
                     </div>
 
-                    {strategies.length === 0 && (
-                        <div className="panel span-12">
-                            <div style={{ textAlign: "center", color: "var(--muted)", padding: 32 }}>
-                                No strategy health data available yet.
-                            </div>
+                    <div className="panel span-5">
+                        <div className="panel-title" style={{ marginBottom: 12 }}>Strategy Repository</div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                            {strategies.map(strat => {
+                                const details = libraryDetails[strat.strategy_id] || {};
+                                const tags = details.tags || [];
+                                return (
+                                    <div
+                                        key={strat.strategy_id}
+                                        className={`panel ${strat.strategy_id === selectedId ? "active-strategy-card" : ""}`}
+                                        style={{ margin: 0, padding: 14, cursor: "pointer", border: strat.strategy_id === selectedId ? "2px solid var(--emerald)" : "1.5px solid var(--line)" }}
+                                        onClick={() => { setSelectedId(strat.strategy_id); setSmokeResult(null); }}
+                                    >
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                                            <strong style={{ fontSize: 14, color: "var(--ink)" }}>{strat.name || strat.strategy_id}</strong>
+                                            <div style={{ display: "flex", gap: 6 }}>
+                                                {strat.is_active && <span className="pill ok" style={{ fontSize: 10 }}>ACTIVE</span>}
+                                                <button
+                                                    className="small"
+                                                    onClick={(e) => { e.stopPropagation(); switchStrategy(strat.strategy_id); }}
+                                                    disabled={strat.is_active}
+                                                    style={{ padding: "2px 8px", minHeight: 24, fontSize: 11 }}
+                                                >
+                                                    {strat.is_active ? "Active" : "Switch"}
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 10 }}>
+                                            {tags.map(t => <span key={t} className="pill info" style={{ fontSize: 9, padding: "2px 6px" }}>{t}</span>)}
+                                        </div>
+                                        <div style={{ fontSize: 12, display: "flex", justifyContent: "space-between", color: "var(--muted)" }}>
+                                            <span>Win Rate: <b>{Math.round((strat.win_rate || 0) * 100)}%</b></span>
+                                            <span>Drawdown: <b style={{ color: "var(--rose)" }}>{(strat.max_drawdown_pct || 0).toFixed(1)}%</b></span>
+                                            <span>Signals: <b>{strat.total_signals || 0}</b></span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
-                    )}
+                    </div>
 
-                    {strategies.map(strat => (
-                        <div className={`panel span-6 ${strat.is_active ? "active-strategy-card" : ""}`} key={strat.strategy_id} style={{ position: "relative" }}>
-                            {strat.is_active && (
-                                <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: "var(--emerald)", borderRadius: "18px 18px 0 0" }} />
-                            )}
-                            <div className="panel-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                    <span>{strat.name || strat.strategy_id}</span>
-                                    {strat.is_active && <span className="pill ok">ACTIVE</span>}
+                    <div className="panel span-7">
+                        {selectedId ? (
+                            <div>
+                                <div className="panel-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                    <span>{selectedDetails.name || selectedId} Source Code</span>
+                                    <span className="pill info">{selectedDetails.filepath}</span>
                                 </div>
-                                <button
-                                    className="small secondary"
-                                    onClick={() => switchStrategy(strat.strategy_id)}
-                                    disabled={strat.is_active}
-                                    style={{ padding: "4px 10px", fontSize: 12, minHeight: 28 }}
-                                >
-                                    {strat.is_active ? "Active" : "Switch"}
-                                </button>
-                            </div>
-
-                            <div style={{ marginBottom: 14 }}>
-                                <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.5px", color: "var(--muted)", marginBottom: 4 }}>Health Score</div>
-                                <HealthBar score={strat.health_score || 0} />
-                            </div>
-
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 16px", fontSize: 13, marginBottom: 12 }}>
-                                <div>
-                                    <div style={{ color: "var(--muted)", fontSize: 11, marginBottom: 2 }}>Win Rate</div>
-                                    <WinRateBar rate={strat.win_rate} />
-                                </div>
-                                <div>
-                                    <div style={{ color: "var(--muted)", fontSize: 11, marginBottom: 2 }}>Profit Factor</div>
-                                    <div style={{ fontWeight: 700, color: (strat.profit_factor || 0) >= 1.5 ? "var(--emerald)" : (strat.profit_factor || 0) >= 1.0 ? "var(--amber)" : "var(--rose)" }}>
-                                        {(strat.profit_factor || 0).toFixed(2)}
+                                <p style={{ fontSize: 13, color: "var(--muted)", margin: "4px 0 12px 0" }}>{selectedDetails.description}</p>
+                                
+                                <div style={{ background: "var(--bg)", border: "1.5px solid var(--line)", borderRadius: "var(--radius-sm)", padding: 12, marginBottom: 16 }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--muted)", borderBottom: "1px solid var(--line)", paddingBottom: 6, marginBottom: 8 }}>
+                                        <span>SUPPORTED TIMEFRAMES: {selectedDetails.timeframes ? selectedDetails.timeframes.join(", ") : "—"}</span>
+                                        <span>TYPE: {selectedDetails.strategy_type}</span>
                                     </div>
+                                    {selectedDetails.code ? (
+                                        <pre style={{ margin: 0, maxHeight: 300, overflow: "auto", fontFamily: "JetBrains Mono, monospace", fontSize: 12, whiteSpace: "pre-wrap" }}>
+                                            <code>{selectedDetails.code}</code>
+                                        </pre>
+                                    ) : (
+                                        <div style={{ textAlign: "center", color: "var(--muted)", padding: 24, fontSize: 13 }}>
+                                            Python logic defined natively in codebase (<a href={`file:///${selectedDetails.filepath}`} target="_blank" rel="noopener noreferrer" style={{ color: "var(--indigo)" }}>{selectedDetails.filepath}</a>).
+                                        </div>
+                                    )}
                                 </div>
-                                <div>
-                                    <div style={{ color: "var(--muted)", fontSize: 11, marginBottom: 2 }}>Avg PnL</div>
-                                    <div style={{ fontWeight: 700, color: (strat.avg_pnl_pct || 0) >= 0 ? "var(--emerald)" : "var(--rose)" }}>
-                                        {(strat.avg_pnl_pct || 0) >= 0 ? "+" : ""}{(strat.avg_pnl_pct || 0).toFixed(2)}%
-                                    </div>
-                                </div>
-                                <div>
-                                    <div style={{ color: "var(--muted)", fontSize: 11, marginBottom: 2 }}>Max Drawdown</div>
-                                    <div style={{ fontWeight: 700, color: "var(--rose)" }}>
-                                        {(strat.max_drawdown_pct || 0).toFixed(2)}%
-                                    </div>
-                                </div>
-                            </div>
 
-                            <div style={{ display: "flex", gap: 16, fontSize: 12, color: "var(--muted)", borderTop: "1px solid var(--line)", paddingTop: 10 }}>
-                                <span>Signals: <strong style={{ color: "var(--ink)" }}>{strat.total_signals || 0}</strong></span>
-                                <span>24h: <strong style={{ color: "var(--ink)" }}>{strat.signal_count_24h || 0}</strong></span>
-                                <span>Last: <strong style={{ color: strat.last_signal_age_seconds !== null && strat.last_signal_age_seconds < 300 ? "var(--emerald)" : "var(--amber)" }}>{formatAge(strat.last_signal_age_seconds)}</strong></span>
+                                <div className="panel" style={{ background: "var(--surface-soft)", border: "1.5px solid var(--line)" }}>
+                                    <div className="panel-title" style={{ fontSize: 14 }}>Diagnostic Backtest Smoke Test</div>
+                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 10, marginTop: 8 }}>
+                                        <label style={{ fontSize: 11 }}>
+                                            <span>Symbol</span>
+                                            <input value={smokeParams.symbol} onChange={e => setSmokeParams({ ...smokeParams, symbol: e.target.value.toUpperCase() })} style={{ minHeight: 32, fontSize: 12, padding: 6 }} />
+                                        </label>
+                                        <label style={{ fontSize: 11 }}>
+                                            <span>Timeframe</span>
+                                            <input value={smokeParams.timeframe} onChange={e => setSmokeParams({ ...smokeParams, timeframe: e.target.value })} style={{ minHeight: 32, fontSize: 12, padding: 6 }} />
+                                        </label>
+                                        <label style={{ fontSize: 11 }}>
+                                            <span>Bars</span>
+                                            <input type="number" value={smokeParams.bars} onChange={e => setSmokeParams({ ...smokeParams, bars: parseInt(e.target.value) || 200 })} style={{ minHeight: 32, fontSize: 12, padding: 6 }} />
+                                        </label>
+                                        <label style={{ fontSize: 11 }}>
+                                            <span>Min Conf</span>
+                                            <input type="number" value={smokeParams.min_confluence} onChange={e => setSmokeParams({ ...smokeParams, min_confluence: parseFloat(e.target.value) || 70 })} style={{ minHeight: 32, fontSize: 12, padding: 6 }} />
+                                        </label>
+                                    </div>
+                                    <button
+                                        className="primary"
+                                        onClick={runSmokeTest}
+                                        disabled={smokeLoading}
+                                        style={{ marginTop: 12, minHeight: 32, padding: "6px 12px", fontSize: 12 }}
+                                    >
+                                        {smokeLoading ? "Scoring..." : "🔥 Run Smoke Backtest"}
+                                    </button>
+
+                                    {smokeResult && (
+                                        <div style={{ marginTop: 12, borderTop: "1px solid var(--line)", paddingTop: 10, fontSize: 12 }}>
+                                            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+                                                <div>Scored Bars: <b>{smokeResult.bars_scored}</b></div>
+                                                <div>Signals Generated: <b>{smokeResult.signals_generated}</b></div>
+                                                <div>Max Confluence: <b>{smokeResult.max_confluence}</b></div>
+                                            </div>
+                                            {smokeResult.sample_scores && smokeResult.sample_scores.length > 0 && (
+                                                <div style={{ marginTop: 8 }}>
+                                                    <strong>Sample Scores:</strong>
+                                                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 }}>
+                                                        {smokeResult.sample_scores.map((s, idx) => (
+                                                            <span key={idx} className={`pill ${s.direction === "LONG" ? "ok" : s.direction === "SHORT" ? "error" : "info"}`} style={{ fontSize: 10 }}>
+                                                                {s.direction} ({s.confluence_score}%)
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        ) : (
+                            <p className="muted" style={{ textAlign: "center", padding: 40 }}>Select a strategy from the repository to view code and run diagnostics.</p>
+                        )}
+                    </div>
                 </div>
             );
         }
+
 
         function ConfidencePanel({ request, addLog }) {
             const [stats, setStats] = React.useState({});
@@ -4889,10 +5194,10 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                         <Kpi title="Candidates" value={candidateStats.total || 0} caption={`${candidateStats.closed || 0} closed`} tone="ok" />
                     </div>
                     <div className="panel span-3">
-                        <Kpi title="Winrate" value={`${formatNumber((outcomeStats.win_rate || 0) * 100, 1)}%`} caption={`${outcomeStats.wins || 0}W / ${outcomeStats.losses || 0}L`} tone={(outcomeStats.win_rate || 0) >= 0.5 ? "ok" : "warn"} />
+                        <Kpi title="Simulated Hit Rate" value={`${formatNumber((outcomeStats.win_rate || 0) * 100, 1)}%`} caption={`${outcomeStats.wins || 0}W / ${outcomeStats.losses || 0}L`} tone={(outcomeStats.win_rate || 0) >= 0.5 ? "ok" : "warn"} />
                     </div>
                     <div className="panel span-3">
-                        <Kpi title="Total PnL" value={formatNumber(outcomeStats.total_pnl || 0, 4)} caption={`Avg R ${formatNumber(outcomeStats.avg_r_multiple || 0, 2)}`} tone={(outcomeStats.total_pnl || 0) >= 0 ? "ok" : "warn"} />
+                        <Kpi title="Simulated PnL" value={formatNumber(outcomeStats.total_pnl || 0, 4)} caption={`Avg R ${formatNumber(outcomeStats.avg_r_multiple || 0, 2)}`} tone={(outcomeStats.total_pnl || 0) >= 0 ? "ok" : "warn"} />
                     </div>
                     <div className="panel span-3">
                         <Kpi title="Learning Events" value={learningStats.events || 0} caption={`${scoutRows.length} scouts`} tone="info" />
@@ -4985,18 +5290,35 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                         <div className="panel-title">Recent Candidates</div>
                         <table className="ordertable">
                             <thead>
-                                <tr><th>Symbol</th><th>TF</th><th>Status</th><th>Score</th></tr>
+                                <tr><th>Symbol</th><th>TF</th><th>Status</th><th>Risk</th><th>Reason</th><th>Vote</th><th>Score</th></tr>
                             </thead>
                             <tbody>
                                 {candidates.slice(0, 12).map(row => (
-                                    <tr key={row.candidate_id}>
+                                    <tr key={row.candidate_id} title={row.confidence_context || ""}>
                                         <td><b>{row.symbol}</b></td>
                                         <td>{row.timeframe}</td>
-                                        <td><span className={`pill ${row.status === "paper_closed" ? "ok" : row.status === "risk_rejected" ? "error" : "warn"}`}>{row.status}</span></td>
+                                        <td>
+                                            <span
+                                                className={`pill ${row.status === "paper_closed" ? "ok" : row.status === "risk_rejected" ? "error" : "warn"}`}
+                                                style={{ cursor: row.status === "risk_rejected" ? "pointer" : "default" }}
+                                                onClick={(e) => {
+                                                    if (row.status === "risk_rejected") {
+                                                        e.preventDefault();
+                                                        const btn = document.querySelector('button[data-label="Shadow Queue"]');
+                                                        if (btn) btn.click();
+                                                    }
+                                                }}
+                                            >
+                                                {row.status}
+                                            </span>
+                                        </td>
+                                        <td>{row.risk_decision ? <span className={`pill ${row.risk_decision === 'PROCEED_TO_SIMULATION' ? 'ok' : 'error'}`}>{shortId(row.risk_decision)}</span> : "-"}</td>
+                                        <td>{shortId(row.reject_reason) || "-"}</td>
+                                        <td>{row.weighted_scout_vote !== undefined && row.weighted_scout_vote !== null ? formatNumber(row.weighted_scout_vote, 2) : "-"}</td>
                                         <td>{formatNumber(row.confluence_score, 1)}</td>
                                     </tr>
                                 ))}
-                                {candidates.length === 0 && <tr><td colSpan={4} style={{ textAlign: "center", color: "var(--muted)" }}>No candidates yet</td></tr>}
+                                {candidates.length === 0 && <tr><td colSpan={7} style={{ textAlign: "center", color: "var(--muted)" }}>No candidates yet</td></tr>}
                             </tbody>
                         </table>
                     </div>
@@ -5276,7 +5598,7 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
             );
         }
 
-        function Orders({ orders }) {
+        function Orders({ orders, setTab }) {
             const [showSim, setShowSim] = React.useState(false);
             const filtered = showSim ? orders.filter(o => (o.execution_mode || "simulation") !== "live") : orders;
             const wins = filtered.filter(o => (o.pnl || 0) > 0).length;
@@ -5294,11 +5616,11 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                                     <span>Sim only</span>
                                 </label>
                                 <div className="winrate-percentage" style={{ fontWeight: 700, color: "var(--emerald)" }}>
-                                    Winrate: {winrate}%
+                                    Simulated Hit Rate: {winrate}%
                                 </div>
                             </div>
                         </div>
-                        <OrderTable orders={filtered} />
+                        <OrderTable orders={filtered} setTab={setTab} />
                     </div>
                 </div>
             );
@@ -5363,7 +5685,7 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
             );
         }
 
-        function OrderTable({ orders, compact = false }) {
+        function OrderTable({ orders, setTab, compact = false }) {
             if (!orders.length) return <div className="kpi-caption">No matching orders yet.</div>;
             return (
                 <div className="table-wrap">
@@ -5378,6 +5700,7 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                                 {!compact && <th>Mode</th>}
                                 {!compact && <th>Client Order ID</th>}
                                 <th>Price</th>
+                                <th>Target/Stop</th>
                                 {!compact && <th>Size</th>}
                                 <th>Status</th>
                             </tr>
@@ -5388,13 +5711,37 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                                     <td className="mono">{new Date(order.at).toLocaleString()}</td>
                                     <td>{order.symbol}</td>
                                     <td>{order.direction}</td>
-                                    <td>{order.intent}</td>
+                                    <td>
+                                        <span
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                const btn = document.querySelector('button[data-label="Wiki & 2ndBrain"]');
+                                                if (btn) btn.click();
+                                            }}
+                                            style={{ cursor: "pointer", textDecoration: "underline" }}
+                                        >
+                                            {order.intent}
+                                        </span>
+                                    </td>
                                     <td><span className={statusPill(order.final_decision)}>{order.final_decision || "UNKNOWN"}</span></td>
+                                    <td>{order.intent}</td>
+                                    <td>
+                                        <span className={statusPill(order.final_decision)} title={String(order.final_decision || "").includes("REJECT") ? "See Second Brain for rules" : undefined} style={String(order.final_decision || "").includes("REJECT") ? { backgroundColor: "#b84d4d", color: "#fff", border: "none" } : undefined}>{order.final_decision || "UNKNOWN"}</span>
+                                        {String(order.final_decision || "").includes("REJECT") && setTab && (
+                                            <button className="small" onClick={() => setTab("Wiki & 2ndBrain")} style={{ marginLeft: 8, padding: "2px 6px", fontSize: 10 }} title="Check Second Brain Context">🧠</button>
+                                        )}
+                                    </td>
                                     {!compact && <td><span className={`pill ${order.execution_mode === "live" ? "error" : "ok"}`}>{order.execution_mode || "simulation"}</span></td>}
                                     {!compact && <td className="mono">{order.client_order_id || "-"}</td>}
                                     <td>{order.entry_price}</td>
+                                    <td>{order.target_price || "-"} / {order.stop_price || "-"}</td>
                                     {!compact && <td>{order.size_base || "-"}</td>}
-                                    <td>{order.reject_reason || order.broker_status || order.source}</td>
+                                    <td>
+                                        {order.reject_reason || order.broker_status || order.source}
+                                        {String(order.reject_reason || "").includes("correlation") && (
+                                            <div style={{ fontSize: 10, color: "var(--warn)", marginTop: 4 }}>* Prevented by Correlation Risk Cap (Second Brain Memory)</div>
+                                        )}
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>
@@ -5704,7 +6051,7 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
             );
         }
 
-        const LivePaperPanel = ({ request, addLog, setLoadingKey, fetchStrategyHealth, fetchCTraderStatus, fetchCTraderBalance, fetchCTraderSymbols }) => {
+        const LivePaperPanel = ({ request, addLog, setTab, setLoadingKey, fetchStrategyHealth, fetchCTraderStatus, fetchCTraderBalance, fetchCTraderSymbols }) => {
             const [loopStatus, setLoopStatus] = useState(null);
             const [watchlist, setWatchlist] = useState([]);
             const [positions, setPositions] = useState([]);
@@ -5888,14 +6235,27 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                             <span className="pill info">{sseConnected ? "SSE Connected" : "SSE Disconnected"}</span>
                         </div>
                         {loopStatus && (
-                            <div style={{ marginTop: 12, fontSize: 13, color: "var(--muted)" }}>
-                                Strategy: <b>{loopStatus.current_strategy_id}</b> ·
-                                Poll: <b>{loopStatus.poll_interval_seconds}s</b> ·
-                                Cycles: <b>{loopStatus.loop_stats?.cycles_completed || 0}</b> ·
-                                Signals: <b>{loopStatus.loop_stats?.signals_generated || 0}</b> ·
-                                Trades: <b>{loopStatus.loop_stats?.trades_executed || 0}</b> ·
-                                Errors (5m): <b>{loopStatus.loop_stats?.errors_last_5min || 0}</b>
-                            </div>
+                            <>
+                                <div style={{ marginTop: 12, fontSize: 13, color: "var(--muted)" }}>
+                                    Strategy: <b>{loopStatus.current_strategy_id}</b> ·
+                                    Poll: <b>{loopStatus.poll_interval_seconds}s</b> ·
+                                    Cycles: <b>{loopStatus.loop_stats?.cycles_completed || 0}</b> ·
+                                    Errors (5m): <b>{loopStatus.loop_stats?.errors_last_5min || 0}</b>
+                                    <div style={{ marginTop: 12, padding: 8, background: "rgba(0,0,0,0.2)", borderRadius: 4, border: "1px solid var(--line)" }}>
+                                        <div style={{ fontWeight: 600, marginBottom: 4 }}>Signal Funnel</div>
+                                        <div style={{ display: "flex", gap: 16 }}>
+                                            <div>Signals Generated: <b>{loopStatus.loop_stats?.signals_generated || 0}</b></div>
+                                            <div style={{ color: "var(--ok)" }}>Executed Live: <b>{loopStatus.loop_stats?.trades_executed || 0}</b></div>
+                                            <div style={{ color: "var(--warn)" }}>Routed to Shadow Queue: <b>{(loopStatus.loop_stats?.signals_generated || 0) - (loopStatus.loop_stats?.trades_executed || 0)}</b></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style={{ marginTop: 8 }}>
+                                    <button className="small secondary" onClick={() => {
+                                        if (setTab) setTab("Shadow Queue");
+                                    }}>View Shadow Queue (Rejected Signals)</button>
+                                </div>
+                            </>
                         )}
                     </div>
 
@@ -5952,8 +6312,9 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                         {performance ? (
                             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 12, marginTop: 8 }}>
                                 <Kpi title="Total Trades" value={performance.total_trades || 0} caption="Completed" tone="ok" />
-                                <Kpi title="Winrate" value={`${(performance.winrate_pct || 0).toFixed(1)}%`} caption={`${performance.winning_trades || 0}W / ${performance.losing_trades || 0}L`} tone={performance.winrate_pct >= 50 ? "ok" : "warn"} />
-                                <Kpi title="Total PnL" value={`${(performance.total_pnl || 0).toFixed(2)}`} caption="Quote currency" tone={performance.total_pnl >= 0 ? "ok" : "warn"} />
+                                <Kpi title="Simulated Hit Rate" value={`${(performance.winrate_pct || 0).toFixed(1)}%`} caption={`${performance.winning_trades || 0}W / ${performance.losing_trades || 0}L`} tone={performance.winrate_pct >= 50 ? "ok" : "warn"} />
+                                <Kpi title="Simulated PnL" value={`${(performance.total_pnl || 0).toFixed(2)}`} caption="Quote currency" tone={performance.total_pnl >= 0 ? "ok" : "warn"} />
+                                <Kpi title="Simulated Profit Factor" value={`${(performance.profit_factor || 0).toFixed(2)}`} caption="Gross win / gross loss" tone={performance.profit_factor >= 1.5 ? "ok" : "warn"} />
                                 <Kpi title="Profit Factor" value={`${(performance.profit_factor || 0).toFixed(2)}`} caption="Gross win / gross loss" tone={performance.profit_factor >= 1.5 ? "ok" : "warn"} />
                                 <Kpi title="Sharpe" value={`${(performance.sharpe_ratio || 0).toFixed(2)}`} caption="Risk-adjusted" tone={performance.sharpe_ratio >= 1 ? "ok" : "warn"} />
                                 <Kpi title="Max DD" value={`${(performance.max_drawdown_pct || 0).toFixed(2)}%`} caption="Peak to trough" tone="warn" />
@@ -5961,6 +6322,742 @@ Historical avg confluence: ${(d.avg_confluence || 0).toFixed(1)}, avg crisis: ${
                         ) : (
                             <div style={{ textAlign: "center", color: "var(--muted)", padding: 20 }}>No performance data yet. Execute some trades first.</div>
                         )}
+                    </div>
+
+                        <div className="panel span-12" style={{marginTop: "16px"}}>
+                            <ShadowQueuePanel request={request} addLog={addLog} />
+                        </div>
+                    </div>
+            );
+        }
+
+        // -------------------------------------------------------------
+        // Policy Analytics & PPO Academy Backtesting Panel
+        // -------------------------------------------------------------
+        function PolicyAnalyticsPanel({ request, addLog }) {
+            const [params, setParams] = useState({
+                ppo_backend: "heuristic",
+                ppo_target_scout_index: "0",
+                ppo_min_reward: "0.5",
+                ppo_min_accuracy: "0.6",
+                ppo_initial_cash: "10000",
+                ppo_records_json: "[]"
+            });
+            const [running, setRunning] = useState(false);
+            const [result, setResult] = useState(null);
+
+            const update = (key, val) => setParams(p => ({ ...p, [key]: val }));
+
+            async function runPpoAction(action) {
+                setRunning(true);
+                let path = "";
+                if (action === "run") path = "/academy/policy/backtesting/run";
+                if (action === "optimize") path = "/academy/policy/backtesting/optimize";
+                if (action === "report") path = "/academy/policy/backtesting/report";
+                try {
+                    const data = await request(path, {
+                        method: "POST",
+                        body: JSON.stringify({
+                            ppo_backend: params.ppo_backend,
+                            ppo_target_scout_index: parseInt(params.ppo_target_scout_index),
+                            ppo_min_reward: parseFloat(params.ppo_min_reward),
+                            ppo_min_accuracy: parseFloat(params.ppo_min_accuracy),
+                            ppo_initial_cash: parseFloat(params.ppo_initial_cash),
+                            ppo_records_json: JSON.parse(params.ppo_records_json || "[]")
+                        })
+                    });
+                    setResult(data);
+                    addLog("system", `PPO Academy Backtesting ${action} succeeded`, data);
+                } catch (e) {
+                    addLog("error", `PPO Academy Backtesting ${action} failed`, { error: e.message });
+                } finally {
+                    setRunning(false);
+                }
+            }
+
+            return (
+                <div className="panel" data-testid="ppo-academy-backtesting-panel">
+                    <div className="panel-title">PPO Academy Backtesting & Policy Analytics</div>
+                    <div className="form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, padding: 16 }}>
+                        <label>
+                            <span>PPO Backend</span>
+                            <select name="ppo_backend" value={params.ppo_backend} onChange={e => update("ppo_backend", e.target.value)}>
+                                <option value="heuristic">Heuristic</option>
+                                <option value="onnx">ONNX Model</option>
+                            </select>
+                        </label>
+                        <label>
+                            <span>Target Scout Index</span>
+                            <input name="ppo_target_scout_index" type="number" value={params.ppo_target_scout_index} onChange={e => update("ppo_target_scout_index", e.target.value)} />
+                        </label>
+                        <label>
+                            <span>Min Reward</span>
+                            <input name="ppo_min_reward" type="number" step="0.1" value={params.ppo_min_reward} onChange={e => update("ppo_min_reward", e.target.value)} />
+                        </label>
+                        <label>
+                            <span>Min Accuracy</span>
+                            <input name="ppo_min_accuracy" type="number" step="0.1" value={params.ppo_min_accuracy} onChange={e => update("ppo_min_accuracy", e.target.value)} />
+                        </label>
+                        <label>
+                            <span>Initial Cash</span>
+                            <input name="ppo_initial_cash" type="number" value={params.ppo_initial_cash} onChange={e => update("ppo_initial_cash", e.target.value)} />
+                        </label>
+                        <label className="full" style={{ gridColumn: "span 2" }}>
+                            <span>Records JSON</span>
+                            <textarea name="ppo_records_json" value={params.ppo_records_json} onChange={e => update("ppo_records_json", e.target.value)} style={{ fontFamily: "monospace", minHeight: 80 }} />
+                        </label>
+                    </div>
+                    <div className="row-actions" style={{ display: "flex", gap: 8, padding: "0 16px 16px" }}>
+                        <button type="button" className="primary" onClick={() => runPpoAction("run")} disabled={running}>Run</button>
+                        <button type="button" onClick={() => runPpoAction("optimize")} disabled={running}>Optimize</button>
+                        <button type="button" onClick={() => runPpoAction("report")} disabled={running}>Report</button>
+                    </div>
+                    {result && (
+                        <div style={{ padding: 16, borderTop: "1px solid var(--line)", background: "rgba(0,0,0,0.1)" }}>
+                            <h4>Results</h4>
+                            {result.charts_base64 && (
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                                    {Object.entries(result.charts_base64).map(([name, base64]) => (
+                                        <div key={name} style={{ border: "1px solid var(--line)", padding: 4, background: "var(--bg)" }}>
+                                            <div style={{ fontSize: 11, color: "var(--muted)", textTransform: "capitalize", marginBottom: 2 }}>{name.replace(/_/g, ' ')}</div>
+                                            <img src={`data:image/png;base64,${base64}`} alt={name} style={{ width: "100%", display: "block" }} />
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            <pre style={{ fontSize: 12, overflow: "auto" }}>{pretty(result.metrics || result)}</pre>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // -------------------------------------------------------------
+        // Wiki & 2ndBrain Panel
+        // -------------------------------------------------------------
+        function SecondBrainPanel({ request, addLog }) {
+            const [content, setContent] = useState("");
+            const [search, setSearch] = useState("");
+            const [loading, setLoading] = useState(false);
+            const [docs, setDocs] = useState([]);
+            const [selectedDoc, setSelectedDoc] = useState("");
+
+            async function fetchWiki() {
+                setLoading(true);
+                try {
+                    const data = await request("/db/second-brain");
+                    setContent(data.content || "");
+                    if (data.docs) {
+                        setDocs(data.docs);
+                    }
+                } catch (e) {
+                    addLog("error", "Failed to load Second Brain", { error: e.message });
+                } finally {
+                    setLoading(false);
+                }
+            }
+
+            useEffect(() => {
+                if (selectedDoc) {
+                    async function fetchDoc() {
+                        setLoading(true);
+                        try {
+                            const data = await request(`/db/second-brain/doc/${selectedDoc}`);
+                            setContent(data.content || "");
+                        } catch (e) {
+                            addLog("error", `Failed to load document: ${selectedDoc}`, { error: e.message });
+                        } finally {
+                            setLoading(false);
+                        }
+                    }
+                    fetchDoc();
+                } else {
+                    fetchWiki();
+                }
+            }, [selectedDoc]);
+
+            function parseInlineMarkdown(text) {
+                if (!text) return "";
+                const parts = [];
+                let currentIdx = 0;
+                const tokenRegex = /(\*\*.*?\*\*|`.*?`)/g;
+                let match;
+                while ((match = tokenRegex.exec(text)) !== null) {
+                    const matchIndex = match.index;
+                    const matchText = match[0];
+                    if (matchIndex > currentIdx) {
+                        parts.push(text.substring(currentIdx, matchIndex));
+                    }
+                    if (matchText.startsWith("**") && matchText.endsWith("**")) {
+                        parts.push(<strong key={matchIndex}>{matchText.slice(2, -2)}</strong>);
+                    } else if (matchText.startsWith("`") && matchText.endsWith("`")) {
+                        parts.push(<code key={matchIndex} style={{ background: "rgba(255,255,255,0.08)", padding: "2px 5px", borderRadius: 4, fontFamily: "var(--font-mono, monospace)" }}>{matchText.slice(1, -1)}</code>);
+                    }
+                    currentIdx = tokenRegex.lastIndex;
+                }
+                if (currentIdx < text.length) {
+                    parts.push(text.substring(currentIdx));
+                }
+                return parts.length > 0 ? parts : text;
+            }
+
+            const renderedContent = useMemo(() => {
+                if (!content) return <div style={{ color: "var(--muted)" }}>No entries found.</div>;
+                
+                const lines = content.split("\n");
+                const blocks = [];
+                let currentBlock = null;
+
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i];
+                    const trimmed = line.trim();
+
+                    // 1. Code blocks
+                    if (trimmed.startsWith("```")) {
+                        if (currentBlock && currentBlock.type === "code") {
+                            blocks.push(currentBlock);
+                            currentBlock = null;
+                        } else {
+                            if (currentBlock) blocks.push(currentBlock);
+                            currentBlock = { type: "code", lines: [] };
+                        }
+                        continue;
+                    }
+                    if (currentBlock && currentBlock.type === "code") {
+                        currentBlock.lines.push(line);
+                        continue;
+                    }
+
+                    // 2. Tables
+                    if (trimmed.startsWith("|") && trimmed.endsWith("|")) {
+                        if (currentBlock && currentBlock.type === "table") {
+                            currentBlock.lines.push(trimmed);
+                        } else {
+                            if (currentBlock) blocks.push(currentBlock);
+                            currentBlock = { type: "table", lines: [trimmed] };
+                        }
+                        continue;
+                    }
+
+                    // 3. Lists
+                    if (trimmed.startsWith("- ") || trimmed.startsWith("* ") || /^\d+\.\s/.test(trimmed)) {
+                        if (currentBlock && currentBlock.type === "list") {
+                            currentBlock.lines.push(trimmed);
+                        } else {
+                            if (currentBlock) blocks.push(currentBlock);
+                            currentBlock = { type: "list", lines: [trimmed] };
+                        }
+                        continue;
+                    }
+
+                    // 4. Empty lines
+                    if (trimmed === "") {
+                        if (currentBlock) {
+                            blocks.push(currentBlock);
+                            currentBlock = null;
+                        }
+                        continue;
+                    }
+
+                    // 5. Headers
+                    if (trimmed.startsWith("# ") || trimmed.startsWith("## ") || trimmed.startsWith("### ") || trimmed.startsWith("#### ")) {
+                        if (currentBlock) blocks.push(currentBlock);
+                        blocks.push({ type: "header", text: trimmed });
+                        currentBlock = null;
+                        continue;
+                    }
+
+                    // 6. Paragraphs
+                    if (currentBlock && currentBlock.type === "paragraph") {
+                        currentBlock.lines.push(line);
+                    } else {
+                        if (currentBlock) blocks.push(currentBlock);
+                        currentBlock = { type: "paragraph", lines: [line] };
+                    }
+                }
+                if (currentBlock) blocks.push(currentBlock);
+
+                // Filter by search query if applicable
+                let filteredBlocks = blocks;
+                if (search.trim()) {
+                    const query = search.toLowerCase();
+                    filteredBlocks = blocks.filter(b => {
+                        if (b.type === "header") return b.text.toLowerCase().includes(query);
+                        return b.lines.some(l => l.toLowerCase().includes(query));
+                    });
+                }
+
+                return filteredBlocks.map((block, idx) => {
+                    if (block.type === "header") {
+                        if (block.text.startsWith("# ")) return <h1 key={idx} style={{ borderBottom: "1px solid var(--line)", paddingBottom: 6, margin: "20px 0 10px", fontSize: "1.6em" }}>{block.text.slice(2)}</h1>;
+                        if (block.text.startsWith("## ")) return <h2 key={idx} style={{ borderBottom: "1px solid var(--line)", paddingBottom: 4, margin: "16px 0 8px", fontSize: "1.35em", color: "var(--text)" }}>{block.text.slice(3)}</h2>;
+                        if (block.text.startsWith("### ")) return <h3 key={idx} style={{ margin: "12px 0 6px", fontSize: "1.15em", color: "var(--text)" }}>{block.text.slice(4)}</h3>;
+                        return <h4 key={idx} style={{ margin: "10px 0 4px", fontSize: "1em", color: "var(--text)" }}>{block.text.slice(5)}</h4>;
+                    }
+                    if (block.type === "list") {
+                        return (
+                            <ul key={idx} style={{ margin: "8px 0", paddingLeft: 20 }}>
+                                {block.lines.map((item, lidx) => {
+                                    const contentStr = item.replace(/^[-*\d.]+\s+/, "");
+                                    return <li key={lidx} style={{ margin: "4px 0", lineHeight: "1.4" }}>{parseInlineMarkdown(contentStr)}</li>;
+                                })}
+                            </ul>
+                        );
+                    }
+                    if (block.type === "code") {
+                        return (
+                            <pre key={idx} style={{ background: "rgba(0,0,0,0.3)", padding: 12, borderRadius: "var(--radius-sm)", border: "1px solid var(--line)", overflowX: "auto", fontFamily: "var(--font-mono, monospace)", fontSize: 12, margin: "10px 0" }}>
+                                <code>{block.lines.join("\n")}</code>
+                            </pre>
+                        );
+                    }
+                    if (block.type === "table") {
+                        const rows = block.lines.map(line => {
+                            return line.split("|").slice(1, -1).map(p => p.trim());
+                        });
+                        const isSeparator = row => row.every(cell => /^[-:\s]+$/.test(cell));
+                        const validRows = rows.filter(r => !isSeparator(r));
+                        if (validRows.length === 0) return null;
+
+                        const hasHeader = rows.length > 1 && isSeparator(rows[1]);
+                        const headerRow = hasHeader ? validRows[0] : null;
+                        const bodyRows = hasHeader ? validRows.slice(1) : validRows;
+
+                        return (
+                            <div key={idx} style={{ overflowX: "auto", margin: "12px 0" }}>
+                                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                                    {headerRow && (
+                                        <thead>
+                                            <tr style={{ borderBottom: "2px solid var(--line)", background: "rgba(255,255,255,0.02)" }}>
+                                                {headerRow.map((cell, cidx) => (
+                                                    <th key={cidx} style={{ padding: "8px 12px", textAlign: "left", fontWeight: "600" }}>{parseInlineMarkdown(cell)}</th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                    )}
+                                    <tbody>
+                                        {bodyRows.map((row, ridx) => (
+                                            <tr key={ridx} style={{ borderBottom: "1px solid var(--line)", background: ridx % 2 === 0 ? "transparent" : "rgba(255,255,255,0.01)" }}>
+                                                {row.map((cell, cidx) => (
+                                                    <td key={cidx} style={{ padding: "8px 12px" }}>{parseInlineMarkdown(cell)}</td>
+                                                ))}
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        );
+                    }
+                    return (
+                        <p key={idx} style={{ margin: "8px 0", lineHeight: "1.5" }}>
+                            {parseInlineMarkdown(block.lines.join(" "))}
+                        </p>
+                    );
+                });
+            }, [content, search]);
+
+            return (
+                <div className="panel" style={{ display: "flex", flexDirection: "column", gap: 16, height: "100%" }}>
+                    <div className="panel-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span>Wiki & 2ndBrain</span>
+                        <button onClick={() => selectedDoc ? setSelectedDoc("") : fetchWiki()} disabled={loading} className="small">
+                            {loading ? "Refreshing..." : "Refresh"}
+                        </button>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                            <span style={{ fontSize: 12, color: "var(--muted)" }}>Document:</span>
+                            <select
+                                value={selectedDoc}
+                                onChange={e => setSelectedDoc(e.target.value)}
+                                style={{ flex: 1, padding: "6px 10px", background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-xs)", color: "var(--ink)", outline: "none" }}
+                            >
+                                <option value="">-- Compiled Second Brain --</option>
+                                {docs.map(doc => (
+                                    <option key={doc.name} value={doc.name}>
+                                        {doc.name} ({Math.round(doc.size_bytes / 10.24) / 100} KB)
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <input
+                            type="text"
+                            placeholder={selectedDoc ? `Search inside ${selectedDoc}...` : "Search second brain..."}
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                            style={{ flex: 1 }}
+                        />
+                    </div>
+                    <div className="wiki-content" style={{ flex: 1, overflowY: "auto", background: "var(--bg)", border: "1px solid var(--line)", borderRadius: "var(--radius-sm)", padding: 16, fontFamily: "var(--font-mono, monospace)", fontSize: 13 }}>
+                        {renderedContent}
+                    </div>
+                </div>
+            );
+        }
+
+        // -------------------------------------------------------------
+        // Risk & Paper Trading Control Panel
+        // -------------------------------------------------------------
+        function RiskControlPanel({ request, addLog }) {
+            const [config, setConfig] = useState({
+                PAPER_TRADING_RELAX_RISK: false,
+                REGIME_ALLOW_RW1_SIGNALS: false
+            });
+            const [loading, setLoading] = useState(false);
+            const [status, setStatus] = useState(null);
+
+            async function fetchConfig() {
+                try {
+                    const data = await request("/paper/config");
+                    setConfig(data);
+                } catch (e) {
+                    addLog("error", "Failed to fetch paper config", { error: e.message });
+                }
+            }
+
+            async function fetchStatus() {
+                try {
+                    const data = await request("/kraken/paper/status");
+                    setStatus(data);
+                } catch (e) {
+                    // Silently fail if Kraken Paper API not enabled or simulated
+                }
+            }
+
+            async function toggleConfig(key) {
+                setLoading(true);
+                const nextVal = !config[key];
+                const updated = { ...config, [key]: nextVal };
+                try {
+                    const res = await request("/paper/config", {
+                        method: "POST",
+                        body: JSON.stringify(updated)
+                    });
+                    setConfig(updated);
+                    addLog("system", `Updated risk config: ${key} = ${nextVal}`, res);
+                } catch (e) {
+                    addLog("error", `Failed to update risk config ${key}`, { error: e.message });
+                } finally {
+                    setLoading(false);
+                }
+            }
+
+            useEffect(() => {
+                fetchConfig();
+                fetchStatus();
+                const timer = setInterval(() => {
+                    fetchStatus();
+                }, 15000);
+                return () => clearInterval(timer);
+            }, []);
+
+            const isRelaxed = config.PAPER_TRADING_RELAX_RISK;
+
+            return (
+                <div className="grid">
+                    <div className="panel span-6">
+                        <div className="panel-title">Risk Config & Toggles</div>
+                        <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 16 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <div>
+                                    <h4 style={{ margin: 0 }}>Relax Risk Gates</h4>
+                                    <p style={{ margin: 0, fontSize: 12, color: "var(--muted)" }}>Bypass strict filters in simulation / paper trading</p>
+                                </div>
+                                <button
+                                    onClick={() => toggleConfig("PAPER_TRADING_RELAX_RISK")}
+                                    disabled={loading}
+                                    className={isRelaxed ? "primary" : "secondary"}
+                                >
+                                    {isRelaxed ? "RELAXED (ON)" : "STRICT (OFF)"}
+                                </button>
+                            </div>
+
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <div>
+                                    <h4 style={{ margin: 0 }}>Allow RW1 Signals</h4>
+                                    <p style={{ margin: 0, fontSize: 12, color: "var(--muted)" }}>Allow Random Walk Regime type 1 signals</p>
+                                </div>
+                                <button
+                                    onClick={() => toggleConfig("REGIME_ALLOW_RW1_SIGNALS")}
+                                    disabled={loading}
+                                    className={config.REGIME_ALLOW_RW1_SIGNALS ? "primary" : "secondary"}
+                                >
+                                    {config.REGIME_ALLOW_RW1_SIGNALS ? "ALLOWED (ON)" : "BLOCKED (OFF)"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="panel span-6">
+                        <div className="panel-title">Deterministic Gate Status</div>
+                        <div style={{ padding: 16, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                            <div style={{ border: "1px solid var(--line)", padding: 12, borderRadius: "var(--radius-sm)", background: isRelaxed ? "rgba(216,101,69,0.1)" : "rgba(51,165,107,0.1)" }}>
+                                <div style={{ fontSize: 12, color: "var(--muted)" }}>Confluence Gate</div>
+                                <div style={{ fontSize: 14, fontWeight: "bold", color: isRelaxed ? "var(--warning)" : "var(--ok)" }}>
+                                    {isRelaxed ? "⚠️ RELAXED" : "● ACTIVE (MIN 70)"}
+                                </div>
+                            </div>
+
+                            <div style={{ border: "1px solid var(--line)", padding: 12, borderRadius: "var(--radius-sm)", background: isRelaxed ? "rgba(216,101,69,0.1)" : "rgba(51,165,107,0.1)" }}>
+                                <div style={{ fontSize: 12, color: "var(--muted)" }}>Spread Gate</div>
+                                <div style={{ fontSize: 14, fontWeight: "bold", color: isRelaxed ? "var(--warning)" : "var(--ok)" }}>
+                                    {isRelaxed ? "⚠️ RELAXED" : "● ACTIVE (MAX 0.2%)"}
+                                </div>
+                            </div>
+
+                            <div style={{ border: "1px solid var(--line)", padding: 12, borderRadius: "var(--radius-sm)", background: isRelaxed ? "rgba(216,101,69,0.1)" : "rgba(51,165,107,0.1)" }}>
+                                <div style={{ fontSize: 12, color: "var(--muted)" }}>Crisis Gate</div>
+                                <div style={{ fontSize: 14, fontWeight: "bold", color: isRelaxed ? "var(--warning)" : "var(--ok)" }}>
+                                    {isRelaxed ? "⚠️ RELAXED" : "● ACTIVE (MAX 50)"}
+                                </div>
+                            </div>
+
+                            <div style={{ border: "1px solid var(--line)", padding: 12, borderRadius: "var(--radius-sm)", background: isRelaxed ? "rgba(216,101,69,0.1)" : "rgba(0,0,0,0.1)" }}>
+                                <div style={{ fontSize: 12, color: "var(--muted)" }}>Regime Halt Override</div>
+                                <div style={{ fontSize: 14, fontWeight: "bold", color: isRelaxed ? "var(--warning)" : "var(--muted)" }}>
+                                    {isRelaxed ? "⚡ ACTIVE (BYPASSED)" : "● INACTIVE"}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="panel span-12">
+                        <div className="panel-title">Kraken Broker Live Fail-Safe & Status</div>
+                        <div style={{ padding: 16, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+                            <div>
+                                <span className="kpi-caption">Spot Mode Only</span>
+                                <span className="kpi-value">{status?.broker?.spot_only ? "Yes" : "No"}</span>
+                            </div>
+                            <div>
+                                <span className="kpi-caption">Fee Percentage</span>
+                                <span className="kpi-value">{status?.broker?.fee_pct ? `${(status.broker.fee_pct * 100).toFixed(2)}%` : "—"}</span>
+                            </div>
+                            <div>
+                                <span className="kpi-caption">Initial Balance</span>
+                                <span className="kpi-value">${status?.broker?.initial_balance || "—"}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // -------------------------------------------------------------
+        // Model Hub (ONNX)
+        // -------------------------------------------------------------
+        function ModelHubPanel({ request, addLog }) {
+            const [models, setModels] = useState([]);
+            const [loading, setLoading] = useState(false);
+
+            async function fetchModels() {
+                setLoading(true);
+                try {
+                    const data = await request("/academy/policy/onnx/details");
+                    setModels(data.models || []);
+                } catch (e) {
+                    addLog("error", "Failed to fetch ONNX models details", { error: e.message });
+                } finally {
+                    setLoading(false);
+                }
+            }
+
+            async function openFolder() {
+                try {
+                    await request("/academy/policy/onnx/open-folder", { method: "POST" });
+                    addLog("info", "Opened ONNX models folder in explorer");
+                } catch (e) {
+                    addLog("error", "Failed to open ONNX models folder", { error: e.message });
+                }
+            }
+
+            useEffect(() => {
+                fetchModels();
+            }, []);
+
+            return (
+                <div className="panel" style={{ height: "100%" }}>
+                    <div className="panel-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span>Model Hub (ONNX Deployment)</span>
+                        <div style={{ display: "flex", gap: 8 }}>
+                            <button onClick={openFolder} className="small secondary">📁 Open Folder</button>
+                            <button onClick={fetchModels} disabled={loading} className="small">{loading ? "Scanning..." : "Scan Models"}</button>
+                        </div>
+                    </div>
+                    <div style={{ padding: 16 }}>
+                        {models.length === 0 ? (
+                            <div style={{ color: "var(--muted)" }}>No compiled .onnx models found in data/academy_policy/models/</div>
+                        ) : (
+                            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                                {models.map((m, idx) => (
+                                    <div key={idx} style={{ border: "1px solid var(--line)", borderRadius: "var(--radius-sm)", padding: 14, background: "rgba(0,0,0,0.15)" }}>
+                                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
+                                            <h4 style={{ margin: 0, fontFamily: "monospace" }}>{m.filename}</h4>
+                                            <div style={{ fontSize: 12, color: "var(--muted)" }}>
+                                                {new Date(m.mtime * 1000).toLocaleString()} · {(m.size / 1024).toFixed(1)} KB
+                                            </div>
+                                        </div>
+                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 12 }}>
+                                            <div>
+                                                <div style={{ fontSize: 11, color: "var(--muted)" }}>Input Tensors</div>
+                                                {m.inputs.map((inp, i) => (
+                                                    <div key={i} style={{ fontFamily: "monospace", fontSize: 12 }}>
+                                                        {inp.name}: [{inp.shape?.join(", ")}]
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div>
+                                                <div style={{ fontSize: 11, color: "var(--muted)" }}>Output Tensors</div>
+                                                {m.outputs.map((out, i) => (
+                                                    <div key={i} style={{ fontFamily: "monospace", fontSize: 12 }}>
+                                                        {out.name}: [{out.shape?.join(", ")}]
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid var(--line)", paddingTop: 10 }}>
+                                            <span style={{ fontSize: 12, color: "var(--muted)" }}>Average Inference Latency (10 runs benchmark)</span>
+                                            <span style={{ fontFamily: "monospace", color: "var(--emerald)", fontWeight: "bold" }}>
+                                                {m.latency_ms ? `${m.latency_ms.toFixed(3)} ms` : "N/A"}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        // -------------------------------------------------------------
+        // Shadow Queue Panel
+        // -------------------------------------------------------------
+        function ShadowQueuePanel({ request, addLog }) {
+            const [queueData, setQueueData] = useState({ entries: [], count: 0, pending_count: 0, evaluated_count: 0 });
+            const [workers, setWorkers] = useState(null);
+            const [loading, setLoading] = useState(false);
+
+            async function fetchData() {
+                setLoading(true);
+                try {
+                    const [q, w] = await Promise.all([
+                        request("/paper/shadow-queue?limit=50"),
+                        request("/paper/workers/status")
+                    ]);
+                    setQueueData(q);
+                    setWorkers(w);
+                } catch (e) {
+                    addLog("error", "Failed to fetch shadow queue/workers status", { error: e.message });
+                } finally {
+                    setLoading(false);
+                }
+            }
+
+            useEffect(() => {
+                fetchData();
+                const timer = setInterval(fetchData, 15000);
+                return () => clearInterval(timer);
+            }, []);
+
+            return (
+                <div className="grid">
+                    <div className="panel span-12">
+                        <div className="panel-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span>Background Worker Loops & Tasks</span>
+                            <button onClick={fetchData} disabled={loading} className="small">{loading ? "Refreshing..." : "Refresh"}</button>
+                        </div>
+                        <div style={{ padding: 16, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+                            <div style={{ border: "1px solid var(--line)", borderRadius: "var(--radius-sm)", padding: 12, background: "rgba(0,0,0,0.1)" }}>
+                                <h4 style={{ margin: "0 0 8px 0" }}>Webhook Consumer</h4>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                    <span style={{ fontSize: 12, color: "var(--muted)" }}>Status</span>
+                                    <span style={{ color: workers?.webhook_consumer?.is_running ? "var(--ok)" : "var(--danger)", fontWeight: "bold" }}>
+                                        {workers?.webhook_consumer?.is_running ? "RUNNING" : "STOPPED"}
+                                    </span>
+                                </div>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>
+                                    <span style={{ fontSize: 12, color: "var(--muted)" }}>Queue Size</span>
+                                    <span style={{ fontFamily: "monospace" }}>{workers?.webhook_consumer?.queue_size || 0}</span>
+                                </div>
+                            </div>
+
+                            <div style={{ border: "1px solid var(--line)", borderRadius: "var(--radius-sm)", padding: 12, background: "rgba(0,0,0,0.1)" }}>
+                                <h4 style={{ margin: "0 0 8px 0" }}>Position Monitor</h4>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                    <span style={{ fontSize: 12, color: "var(--muted)" }}>Status</span>
+                                    <span style={{ color: workers?.position_monitor?.is_running ? "var(--ok)" : "var(--danger)", fontWeight: "bold" }}>
+                                        {workers?.position_monitor?.is_running ? "RUNNING" : "STOPPED"}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div style={{ border: "1px solid var(--line)", borderRadius: "var(--radius-sm)", padding: 12, background: "rgba(0,0,0,0.1)" }}>
+                                <h4 style={{ margin: "0 0 8px 0" }}>Training Loop</h4>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                    <span style={{ fontSize: 12, color: "var(--muted)" }}>Status</span>
+                                    <span style={{ color: workers?.training_loop?.is_running ? "var(--ok)" : "var(--muted)", fontWeight: "bold" }}>
+                                        {workers?.training_loop?.is_running ? "ACTIVE" : "STANDBY"}
+                                    </span>
+                                </div>
+                                {workers?.training_loop?.interval_seconds && (
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>
+                                        <span style={{ fontSize: 12, color: "var(--muted)" }}>Interval</span>
+                                        <span>{workers.training_loop.interval_seconds}s</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="panel span-12">
+                        <div className="panel-title">Shadow Queue (Rejected Signal Feedback)</div>
+                        <div style={{ padding: 16 }}>
+                            <div style={{ display: "flex", gap: 16, marginBottom: 12, fontSize: 12, color: "var(--muted)" }}>
+                                <div>Total Rejected Candidates: <b>{queueData.count}</b></div>
+                                <div>Pending Evaluation: <b>{queueData.pending_count}</b></div>
+                                <div>Evaluated Outcomes: <b>{queueData.evaluated_count}</b></div>
+                            </div>
+                            <div style={{ overflowX: "auto" }}>
+                                <table className="table" style={{ width: "100%", fontSize: 12 }}>
+                                    <thead>
+                                        <tr>
+                                            <th>Signal ID</th>
+                                            <th>Added At</th>
+                                            <th>Symbol</th>
+                                            <th>Direction</th>
+                                            <th>Price</th>
+                                            <th>Scout Votes</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {queueData.entries.length === 0 ? (
+                                            <tr>
+                                                <td colSpan="7" style={{ textAlign: "center", color: "var(--muted)" }}>No rejected signals in shadow queue.</td>
+                                            </tr>
+                                        ) : (
+                                            queueData.entries.map((e, i) => (
+                                                <tr key={i}>
+                                                    <td style={{ fontFamily: "monospace" }}>{e.signal_id}</td>
+                                                    <td>{new Date(e.added_at * 1000).toLocaleTimeString()}</td>
+                                                    <td>{e.symbol}</td>
+                                                    <td style={{ color: e.direction === "LONG" || e.direction === "BUY" ? "var(--ok)" : "var(--danger)" }}>{e.direction}</td>
+                                                    <td>{e.entry_price}</td>
+                                                    <td style={{ fontFamily: "monospace", fontSize: 11 }}>
+                                                        {e.scout_decisions ? Object.entries(e.scout_decisions).map(([scout, dec]) => `${scout}:${dec}`).join(", ") : "—"}
+                                                    </td>
+                                                    <td>
+                                                        <span className={`badge ${e.evaluated ? "ok" : "warning"}`} style={{ padding: "2px 6px", borderRadius: 4, fontSize: 10 }}>
+                                                            {e.evaluated ? "EVALUATED" : "PENDING"}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
             );

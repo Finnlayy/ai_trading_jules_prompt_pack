@@ -13,6 +13,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Dict, List, Sequence
 
+from app.core.config import REGIME_ALLOW_RW1_SIGNALS
 from app.services.statistical_battery import run_battery
 
 
@@ -141,4 +142,4 @@ class RegimeEngine:
 
 
 # Global instance
-regime_engine_instance = RegimeEngine(allow_rw1_signals=False)
+regime_engine_instance = RegimeEngine(allow_rw1_signals=REGIME_ALLOW_RW1_SIGNALS)

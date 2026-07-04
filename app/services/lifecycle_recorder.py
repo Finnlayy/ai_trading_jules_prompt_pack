@@ -1,6 +1,7 @@
 """Persistence helpers for the paper-training lifecycle audit trail."""
-
 from __future__ import annotations
+
+from app.core.utils import json_dumps
 
 import json
 from datetime import datetime, timezone
@@ -30,8 +31,6 @@ def _json_default(value: Any) -> str:
     return str(value)
 
 
-def _json_dumps(value: Any) -> str:
-    return json.dumps(value, default=_json_default, ensure_ascii=True, sort_keys=True)
 
 
 def _enum_value(value: Any) -> str:
@@ -89,7 +88,7 @@ class LifecycleRecorder:
                 target_price=payload.target_price,
                 confluence_score=payload.confluence_score,
                 status="created",
-                features_json=_json_dumps(features_payload),
+                features_json=json_dumps(features_payload),
                 source=source,
             )
             db.add(candidate)
@@ -122,7 +121,7 @@ class LifecycleRecorder:
                         confidence=self._scout_confidence(scout_report, ai_review),
                         provider=provider or None,
                         model=self._scout_model(trace, str(scout_name)),
-                        reasons_json=_json_dumps(self._scout_reasons(scout_report, ai_review)),
+                        reasons_json=json_dumps(self._scout_reasons(scout_report, ai_review)),
                         raw_report=self._scout_raw_report(scout_report),
                     )
                 )
@@ -135,8 +134,8 @@ class LifecycleRecorder:
                     decision=_enum_value(ai_review.decision),
                     confidence=ai_review.confidence,
                     provider=provider or None,
-                    reasons_json=_json_dumps(ai_review.reason_codes),
-                    raw_report=ai_review.explanation or _json_dumps(trace),
+                    reasons_json=json_dumps(ai_review.reason_codes),
+                    raw_report=ai_review.explanation or json_dumps(trace),
                 )
             )
 
@@ -154,11 +153,12 @@ class LifecycleRecorder:
             db.commit()
             event_count = len(events)
 
-        self._record_confidence_reviews(
-            payload=payload,
-            ai_review=ai_review,
-            events=confidence_snapshots,
-        )
+        if not (ai_review.audit_trace or {}).get("confidence_recorded"):
+            self._record_confidence_reviews(
+                payload=payload,
+                ai_review=ai_review,
+                events=confidence_snapshots,
+            )
         return event_count
 
     def record_risk_decision(
@@ -177,7 +177,7 @@ class LifecycleRecorder:
                 signal_id=payload.signal_id,
                 decision=decision,
                 reason_code=str(reason) if reason else None,
-                limits_snapshot_json=_json_dumps(limits_snapshot or {}),
+                limits_snapshot_json=json_dumps(limits_snapshot or {}),
             )
             db.add(event)
             db.commit()
@@ -340,7 +340,7 @@ class LifecycleRecorder:
                     timeframe=timeframe,
                     was_correct=was_correct,
                     outcome_source=outcome_source,
-                    context_json=_json_dumps({
+                    context_json=json_dumps({
                         "close_reason": close_reason,
                         "review_decision": review.decision,
                         "review_confidence": review.confidence,
@@ -540,7 +540,7 @@ class LifecycleRecorder:
     def _scout_raw_report(scout_report: Any) -> str:
         if isinstance(scout_report, dict):
             report = scout_report.get("report")
-            return str(report) if report is not None else _json_dumps(scout_report)
+            return str(report) if report is not None else json_dumps(scout_report)
         return str(scout_report)
 
 

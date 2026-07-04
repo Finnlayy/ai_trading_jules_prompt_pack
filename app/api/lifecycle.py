@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
+import json
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
@@ -40,15 +41,25 @@ def lifecycle_summary(db: Session = Depends(get_db)) -> dict[str, Any]:
         sum(float(outcome.r_multiple or 0.0) for outcome in outcomes) / len(outcomes)
         if outcomes else 0.0
     )
+    from sqlalchemy import func
+    from sqlalchemy.sql.expression import case
+
     learning_events = db.query(AgentLearningEvent).count()
     scout_accuracy: dict[str, dict[str, Any]] = {}
-    for event in db.query(AgentLearningEvent).all():
-        row = scout_accuracy.setdefault(event.scout_name, {"total": 0, "correct": 0, "accuracy": 0.0})
-        row["total"] += 1
-        if event.was_correct:
-            row["correct"] += 1
-    for row in scout_accuracy.values():
-        row["accuracy"] = row["correct"] / row["total"] if row["total"] else 0.0
+
+    stats = db.query(
+        AgentLearningEvent.scout_name,
+        func.count().label('total'),
+        func.sum(case((AgentLearningEvent.was_correct == True, 1), else_=0)).label('correct')
+    ).group_by(AgentLearningEvent.scout_name).all()
+
+    for scout_name, total, correct in stats:
+        correct_count = int(correct) if correct else 0
+        scout_accuracy[scout_name] = {
+            "total": total,
+            "correct": correct_count,
+            "accuracy": correct_count / total if total else 0.0
+        }
 
     return {
         "status": "ok",

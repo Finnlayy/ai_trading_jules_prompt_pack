@@ -1,5 +1,4 @@
 """Closed-loop paper-training pipeline for autonomous candidates."""
-
 from __future__ import annotations
 
 import asyncio
@@ -10,10 +9,11 @@ from typing import Any
 from app.schemas.ai_review import SignalReview
 from app.schemas.journal import DecisionEnum
 from app.schemas.m8_payload import M8Payload
-from app.services.ai_kimi import ai_review_instance
+from app.core.config import BROKER_MODE, PAPER_TRADING_RELAX_RISK
+from app.services.ai_factory import ai_review_instance
 from app.services.kraken_paper_broker import KrakenPaperBroker
+from app.core.utils import json_dumps as _json_dumps
 from app.services.lifecycle_recorder import (
-    _json_dumps,
     candidate_id_for_signal,
     lifecycle_recorder,
     LifecycleRecorder,
@@ -57,7 +57,9 @@ class PaperTrainingPipeline:
         )
 
         decision_result = self.risk_engine.evaluate(payload, ai_review)
-        if payload.intent != "CLOSE" and not regime_result.get("trade_allowed", True):
+        is_paper_mode = BROKER_MODE in {"simulation", "sim", "paper", "kraken_paper", "krakenpaper"}
+        should_relax = is_paper_mode and PAPER_TRADING_RELAX_RISK
+        if payload.intent != "CLOSE" and not regime_result.get("trade_allowed", True) and not should_relax:
             decision_result = {
                 "decision": DecisionEnum.REJECT,
                 "reject_reason": f"REGIME_HALT: {regime_result.get('reason', 'Market regime unsuitable')}",
@@ -125,6 +127,7 @@ class PaperTrainingPipeline:
             direction=payload.direction,
             volume=self._volume_from_payload(payload),
             order_type="market",
+            price=payload.entry_price,
             stop_loss=payload.stop_price,
             take_profit=payload.target_price,
             candidate_id=candidate_id,
@@ -180,6 +183,12 @@ class PaperTrainingPipeline:
         regime_result: dict[str, Any],
         ai_review: SignalReview,
     ) -> dict[str, Any]:
+        weighted_scout_vote = None
+        confidence_context = None
+        if ai_review.audit_trace:
+            weighted_scout_vote = ai_review.audit_trace.get("weighted_scout_vote")
+            confidence_context = ai_review.audit_trace.get("symbol_context")
+
         return {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "symbol": payload.symbol,

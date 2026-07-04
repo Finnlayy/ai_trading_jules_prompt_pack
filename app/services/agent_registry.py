@@ -1,11 +1,12 @@
+from app.core.utils import write_json_async
 import json
-import os
 import asyncio
 from typing import List, Dict, Optional
 from pathlib import Path
 from datetime import datetime
 
-from app.schemas.academy import ScoutIdentity, CareerEntry, Badge, AgentLeaderboardEntry
+from app.schemas.academy import ScoutIdentity, CareerEntry, Badge
+from app.services.ai.gem_agents import DEFAULT_AGENT_DEFINITIONS
 
 DATA_DIR = Path("data")
 CAREER_LOG_FILE = DATA_DIR / "agent_careers.jsonl"
@@ -13,36 +14,66 @@ REGISTRY_FILE = DATA_DIR / "agent_registry.json"
 
 SCOUT_DEFAULTS = [
     {
-        "name": "technical",
+        "name": "macro_sentinel",
+        "archetype": "Stratege",
+        "personality_vector": {"analytical": 0.7, "cautious": 0.7, "momentum_driven": 0.3}
+    },
+    {
+        "name": "market_dna",
         "archetype": "Analyst",
         "personality_vector": {"analytical": 0.9, "cautious": 0.4, "momentum_driven": 0.8}
     },
     {
-        "name": "sentiment",
-        "archetype": "Diplomat",
-        "personality_vector": {"analytical": 0.3, "cautious": 0.5, "momentum_driven": 0.9}
+        "name": "structural_architect",
+        "archetype": "Architekt",
+        "personality_vector": {"analytical": 0.8, "cautious": 0.6, "momentum_driven": 0.2}
     },
     {
-        "name": "risk",
+        "name": "harmony_coordinator",
+        "archetype": "Diplomat",
+        "personality_vector": {"analytical": 0.5, "cautious": 0.5, "momentum_driven": 0.5}
+    },
+    {
+        "name": "indicator_fusion",
+        "archetype": "Analyst",
+        "personality_vector": {"analytical": 0.9, "cautious": 0.4, "momentum_driven": 0.8}
+    },
+    {
+        "name": "risk_kernel",
         "archetype": "Wächter",
         "personality_vector": {"analytical": 0.8, "cautious": 0.95, "momentum_driven": 0.1}
     },
     {
-        "name": "macro",
-        "archetype": "Stratege",
-        "personality_vector": {"analytical": 0.7, "cautious": 0.7, "momentum_driven": 0.5}
+        "name": "pine_core",
+        "archetype": "Entwickler",
+        "personality_vector": {"analytical": 0.9, "cautious": 0.6, "momentum_driven": 0.3}
     },
     {
-        "name": "execution",
-        "archetype": "Operateur",
+        "name": "payload_qa",
+        "archetype": "Prüfer",
+        "personality_vector": {"analytical": 0.9, "cautious": 0.9, "momentum_driven": 0.1}
+    },
+    {
+        "name": "execution_watchdog",
+        "archetype": "Operator",
         "personality_vector": {"analytical": 0.9, "cautious": 0.8, "momentum_driven": 0.2}
     },
     {
-        "name": "correlation",
-        "archetype": "Architekt",
-        "personality_vector": {"analytical": 0.85, "cautious": 0.85, "momentum_driven": 0.1}
+        "name": "evolution_optimizer",
+        "archetype": "Forscher",
+        "personality_vector": {"analytical": 0.8, "cautious": 0.4, "momentum_driven": 0.6}
     }
 ]
+
+for definition in DEFAULT_AGENT_DEFINITIONS:
+    if not any(item["name"] == definition.name for item in SCOUT_DEFAULTS):
+        SCOUT_DEFAULTS.append(
+            {
+                "name": definition.name,
+                "archetype": definition.archetype,
+                "personality_vector": definition.personality_vector,
+            }
+        )
 
 class AgentRegistryService:
     def __init__(self):
@@ -155,6 +186,11 @@ class AgentRegistryService:
 
             if save_registry:
                 self.save_registry()
+                try:
+                    from app.services.wiki_service import update_second_brain
+                    update_second_brain()
+                except Exception:
+                    pass
 
         if not write_log:
             return
@@ -213,6 +249,9 @@ class AgentRegistryService:
                     if scout_name not in line:
                         continue
                     if line.strip():
+                        # ⚡ Bolt Optimization: Fast string match to skip JSON parsing for irrelevant lines
+                        if f'"scout_name":"{scout_name}"' not in line and f'"scout_name": "{scout_name}"' not in line:
+                            continue
                         data = json.loads(line)
                         if data.get("scout_name") == scout_name:
                             entries.append(CareerEntry(**data))
@@ -242,6 +281,11 @@ class AgentRegistryService:
                     line_deque.append(line)
 
             for line in reversed(line_deque):
+                lines = [line for line in f if line.strip()]
+            for line in reversed(lines):
+                # ⚡ Bolt Optimization: Fast string match to skip JSON parsing for irrelevant lines
+                if event_type and f'"event_type":"{event_type}"' not in line and f'"event_type": "{event_type}"' not in line:
+                    continue
                 data = json.loads(line)
                 if event_type and data.get("event_type") != event_type:
                     continue

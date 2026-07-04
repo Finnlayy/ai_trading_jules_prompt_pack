@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import List, Optional, Dict
 from datetime import datetime
 from app.schemas.academy import PromptVersion
+from app.services.ai.gem_agents import DEFAULT_AGENT_NAMES
 
 DATA_DIR = Path("data")
 PROMPT_REGISTRY_FILE = DATA_DIR / "prompt_registry.json"
@@ -33,8 +34,13 @@ class PromptEvolutionService:
 
         # Populate defaults if empty
         if not self._versions:
-            for scout in ["technical", "sentiment", "risk", "macro", "execution", "correlation"]:
-                self.create_version(scout, "v1_base", f"You are the {scout} scout...", change_summary="Base version")
+            for scout in DEFAULT_AGENT_NAMES:
+                self.create_version(
+                    scout,
+                    f"{scout}_v1_base",
+                    f"You are the {scout} review agent.",
+                    change_summary="Base version",
+                )
 
     def save_registry(self):
         try:
