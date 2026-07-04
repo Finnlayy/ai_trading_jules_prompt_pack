@@ -448,3 +448,6 @@ COOLDOWN_BARS = _as_int(os.getenv("COOLDOWN_BARS"), 1)
 REGIME_ALLOW_RW1_SIGNALS = _as_bool(os.getenv("REGIME_ALLOW_RW1_SIGNALS"), False)
 PAPER_TRADING_RELAX_RISK = _as_bool(os.getenv("PAPER_TRADING_RELAX_RISK"), True)
 
+
+# CORS configuration
+CORS_ORIGINS = _as_csv_list(os.getenv("CORS_ORIGINS", "*"))
