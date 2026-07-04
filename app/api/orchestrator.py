@@ -85,7 +85,6 @@ async def _execute_trade_with_broker(payload, decision_result, ai_decision):
         "reject_reason": decision_result["reject_reason"],
         "ai_decision": ai_decision,
     }
-    import asyncio
     if _should_execute_broker_in_thread(broker_instance):
         journal_entry = await asyncio.to_thread(broker_instance.execute_trade, **execute_kwargs)
     else:
