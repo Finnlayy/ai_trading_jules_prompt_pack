@@ -18,6 +18,8 @@ from app.main import app
 @pytest.mark.asyncio
 async def test_ai_chat_large_payload_rejected_gracefully():
     """RED: Oversized chat payloads must return 422 (validation) or 413, never 500."""
+    from app.api.auth import get_current_user
+    app.dependency_overrides[get_current_user] = lambda: {"email": "test@example.com"}
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         response = await ac.post(
             "/ai/chat",
@@ -53,6 +55,8 @@ async def test_loop_stats_exposes_error_history():
     for i in range(5):
         autonomous_loop_instance._health.stats.record_error(f"audit-error-{i}")
 
+    from app.api.auth import get_current_user
+    app.dependency_overrides[get_current_user] = lambda: {"email": "test@example.com"}
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         response = await ac.get("/loop/stats")
 
@@ -76,6 +80,8 @@ async def test_loop_stats_exposes_error_history():
 @pytest.mark.asyncio
 async def test_live_trades_endpoint_returns_execution_mode():
     """RED: GET /live/trades must include execution_mode and formatted dates."""
+    from app.api.auth import get_current_user
+    app.dependency_overrides[get_current_user] = lambda: {"email": "test@example.com"}
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         response = await ac.get("/live/trades?limit=10")
     assert response.status_code == 200
@@ -98,6 +104,8 @@ async def test_live_trades_endpoint_returns_execution_mode():
 @pytest.mark.asyncio
 async def test_agent_registry_returns_metrics():
     """RED: Agent registry endpoint must expose confidence_level and experience_level."""
+    from app.api.auth import get_current_user
+    app.dependency_overrides[get_current_user] = lambda: {"email": "test@example.com"}
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         response = await ac.get("/academy/agents/registry")
     assert response.status_code == 200
@@ -168,6 +176,8 @@ async def test_backtest_response_contains_entry_exit_coordinates(monkeypatch):
         "end_date": "2026-01-15",
         "initial_balance": 10000,
     }
+    from app.api.auth import get_current_user
+    app.dependency_overrides[get_current_user] = lambda: {"email": "test@example.com"}
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         response = await ac.post("/backtest/run", json=payload)
 
