@@ -3,6 +3,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from app.core.config import CORS_ORIGINS
 from fastapi.responses import FileResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from app.api.auth import router as auth_router, get_current_user
@@ -41,6 +43,14 @@ app = FastAPI(
     title="Agent-Reflex Hybrid Trader API",
     description="Simulation-first trading API. Open this UI to inspect health, backtest, and M8 webhook routes.",
 )
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 app.mount("/static", StaticFiles(directory=ROOT_DIR / "app" / "static"), name="static")
@@ -88,7 +98,6 @@ except ImportError:
     pass
 
 
-app.mount("/", StaticFiles(directory=ROOT_DIR / "frontend" / "dist", html=True), name="vite_spa")
 
 @app.get("/favicon.ico", include_in_schema=False)
 def favicon():
@@ -236,3 +245,5 @@ def shutdown_event():
         _training_autostart_task.cancel()
     if _shadow_queue_task:
         _shadow_queue_task.cancel()
+
+app.mount("/", StaticFiles(directory=ROOT_DIR / "frontend" / "dist", html=True), name="vite_spa")
