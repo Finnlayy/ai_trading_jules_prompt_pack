@@ -102,6 +102,7 @@ class PricePoller:
                 positions = live_fill_tracker.get_open_positions()
                 if positions:
                     # Normalize symbols for ticker lookup
+                    normalized_symbols = list({normalize_symbol(p.symbol) for p in positions})
                     normalized_symbols = list(
                         {normalize_symbol(p.symbol) for p in positions}
                     )
@@ -154,6 +155,10 @@ class PricePoller:
         """Fetch latest mark prices from Bybit tickers endpoint."""
         prices: Dict[str, float] = {}
         try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                resp = await client.get(
+                    "https://api.bybit.com/v5/market/tickers",
+                    params={"category": "linear"},
             async with httpx.AsyncClient() as client:
                 resp = await client.get(
                     "https://api.bybit.com/v5/market/tickers",
