@@ -390,3 +390,47 @@ For implementation work, final responses should state:
 - what was tested,
 - what remains next,
 - and whether a commit/push was created.
+
+## Cursor Cloud specific instructions
+
+Environment: Ubuntu, Python 3.12, Node 22. The startup update script creates a repo-root
+`.venv/` and runs `pip install -r requirements.txt`. Prefix Python commands with `.venv/bin/`
+(e.g. `.venv/bin/uvicorn ...`, `.venv/bin/python -m pytest ...`). The venv lives at repo root
+`.venv/`, not `app/.venv/` as older docs suggest.
+
+Required `.env` (gitignored; create once with `cp .env.example .env`). Non-obvious gotchas:
+- **DB defaults to Postgres, not SQLite.** `app/core/config.py` builds
+  `postgresql://postgres:postgres@localhost:5432/metricflow` when `DATABASE_URL` is unset, so a
+  bare `.env` makes startup crash with a psycopg2 "connection refused". For local dev with no
+  Postgres, set `DATABASE_URL=sqlite:///app/data/trading.db` (matches the documented SQLite
+  default). Tables auto-create at startup.
+- For fully offline runs set `AI_PROVIDER=mock` and the per-scout `AI_PROVIDER_*=mock`; otherwise
+  the swarm needs real Moonshot/OpenAI/Gemini keys.
+- Protected endpoints (e.g. `GET /health`) require `API_KEY` (or `WEBHOOK_SECRET`) to be set, else
+  they return 500 "Server misconfiguration". Call them with header `X-API-Key: <API_KEY>`.
+- `POST /webhook/m8` requires `WEBHOOK_SECRET` set **and** an `x-m8-signature` header =
+  HMAC-SHA256(raw_body, WEBHOOK_SECRET). An empty secret rejects every request with 401, despite
+  the stale startup warning claiming unauthenticated requests are accepted.
+
+Running: `.venv/bin/uvicorn app.main:app --reload --port 8000` serves both the JSON API and the
+operator UI. The UI is a **pre-built Vite SPA** served from `frontend/dist` (mounted at `/`), and
+is gated behind Google OAuth — reaching the dashboard needs a real `GOOGLE_CLIENT_ID` and Google
+login, so it is not exercisable headless. The old "standalone `frontend.html` via CDN" description
+is outdated. A good headless smoke test of core functionality is the signed `POST /webhook/m8`
+pipeline (AI review → risk engine → simulation broker → `trade_journal.jsonl`).
+
+External market data (Bybit `api.bybit.com`) returns HTTP 403 from this sandbox. The regime check
+degrades gracefully (`trade_allowed=true`, `regime=UNKNOWN`); do not treat Bybit 403 as a setup
+failure.
+
+Lint/test/build:
+- No linter is configured (no ruff/flake8/black/mypy). The closest "lint" is
+  `.venv/bin/python -m compileall app`.
+- Backend tests: run the `run_qa.sh` backend subset. Known **pre-existing** breakages unrelated to
+  environment setup: `tests/services/test_statistical_battery.py` (syntax error ~line 207) and
+  `tests/services/test_news_aggregator.py` (imports functions removed from the module) fail
+  collection — exclude them with `--ignore`. A handful of other tests are pre-existing drift/flaky
+  (`test_endpoints.py::test_root_serves_frontend` expects the old UI title, `test_training_loop`
+  MagicMock misuse, `test_brain_compressor_caching`, `test_agent_registry` file-handle isolation).
+- E2E/UI Playwright tests (`tests/e2e/`, `tests/ui/`) need a `package.json`, which is `.gitignore`d
+  and absent from the repo, so they cannot run without first reconstructing the Playwright setup.
