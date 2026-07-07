@@ -390,3 +390,54 @@ For implementation work, final responses should state:
 - what was tested,
 - what remains next,
 - and whether a commit/push was created.
+
+## Cursor Cloud specific instructions
+
+Environment is Ubuntu 24.04 with Python 3.12 and Node 22. Dependencies live in a
+Python virtualenv at `/workspace/.venv` (the startup/update script creates it and
+installs `requirements.txt`). System `python3` is externally managed (PEP 668), so
+always run tools via `.venv/bin/...` (e.g. `.venv/bin/python -m pytest ...`,
+`.venv/bin/uvicorn app.main:app --reload --port 8000`).
+
+Non-obvious caveats discovered during setup:
+
+- **`.env` is required and gitignored.** Copy from `.env.example`, then set
+  `DATABASE_URL=sqlite:///app/data/trading.db`. `.env.example` omits `DATABASE_URL`,
+  and `app/core/config.py` otherwise defaults to `postgresql://...@localhost:5432`,
+  which makes several modules fail at import/startup (no Postgres in this env). For
+  offline dev without AI API keys, set `AI_PROVIDER=mock` (deterministic
+  `MockAIReviewLayer`). `.env` persists in the VM snapshot, so it does not need to
+  be recreated each run.
+- **`requirements.txt` was missing runtime deps** (`sqlalchemy`, `polars`,
+  `langgraph`) that the app imports directly; they are now added. If a future run
+  starts from a base without that change, the update script also installs them
+  explicitly.
+- **`GET /health` is shadowed** by the SPA static mount at `/` (route added after
+  the `app.mount("/")`), so it returns 404 despite existing. To check liveness, load
+  `GET /` (serves the SPA) or hit an API route (e.g. `GET /broker/status` with a
+  bearer token).
+- **Auth gates almost every API router** via `Depends(get_current_user)` (JWT bearer,
+  `app/api/auth.py`). Only `/webhook/*` and `/api/auth/*` are unauthenticated. The
+  committed tests in `tests/api/` do NOT send tokens, so ~70 tests currently fail
+  with `401` on this branch — this is pre-existing repo state, not an environment
+  problem (backend suite is otherwise ~508 passed). Mint a dev JWT with
+  `JWT_SECRET_KEY` (default `fallback_secret_key_change_in_production`, HS256) to call
+  protected endpoints.
+- **The core trading pipeline is testable unauthenticated** via
+  `POST /webhook/m8`, but it requires `WEBHOOK_SECRET` set in `.env` plus an
+  `x-m8-signature` header = HMAC-SHA256(secret, raw_body). It runs
+  AI review -> risk engine -> simulation broker -> journal (`trade_journal.jsonl`).
+  The regime pre-check calls Bybit and fails open when egress is blocked.
+- **Frontend is now a Vite/React SPA** served from the committed `frontend/dist`
+  (the "standalone `frontend.html`" description elsewhere is outdated). There is no
+  `frontend/package.json`, so the SPA cannot be rebuilt in-repo; the committed
+  `dist` is what the backend serves. Login uses Google OAuth with a placeholder
+  client ID, so real login does not work in dev — to view the dashboard, set a valid
+  JWT in `localStorage.jwtToken` and reload.
+- **Tests**: run the backend suite with `run_qa.sh` or the pytest commands above via
+  `.venv/bin/python -m pytest ...`. `tests/e2e/` are deprecated stubs that skip;
+  `run_qa.sh` passes `--browser chromium`, which requires `pytest-playwright`
+  (installed in the venv). There is no configured linter; `.venv/bin/python -m
+  compileall app` is a reasonable syntax check.
+- **`app/ai_prompts/*/v_active.md` are dangling symlinks**; `rg`/tools may print
+  "No such file or directory" warnings — harmless.
