@@ -1,7 +1,10 @@
 import pytest
 import asyncio
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
+from app.services.academy_policy import ACADEMY_POLICY_SCOUT_NAMES
 from app.services.training_loop import TrainingLoopService
+
+SCOUT_COUNT = len(ACADEMY_POLICY_SCOUT_NAMES)
 
 @pytest.fixture
 def training_loop():
@@ -58,6 +61,7 @@ async def test_run_cycle_full(training_loop):
     with patch("app.services.training_loop.training_drills.generate_random_drill") as mock_gen_drill, \
          patch("app.services.training_loop.agent_registry.get_identity") as mock_get_ident, \
          patch("app.services.training_loop.training_drills.evaluate_drill") as mock_eval_drill, \
+         patch("app.services.training_loop.training_drills.write_results", new_callable=AsyncMock), \
          patch("app.services.training_loop.academy_curriculum.record_drill_result") as mock_record_drill, \
          patch("app.services.training_loop.agent_registry.save_registry") as mock_save_reg, \
          patch("app.services.training_loop.prompt_evolution.create_version") as mock_create_version, \
@@ -82,12 +86,12 @@ async def test_run_cycle_full(training_loop):
         # Run cycle
         await training_loop._run_cycle()
 
-        # Check asserts
-        assert mock_gen_drill.call_count == 6  # 6 scouts
-        assert mock_eval_drill.call_count == 6
-        assert mock_record_drill.call_count == 6
+        # Check asserts — one drill per registered scout
+        assert mock_gen_drill.call_count == SCOUT_COUNT
+        assert mock_eval_drill.call_count == SCOUT_COUNT
+        assert mock_record_drill.call_count == SCOUT_COUNT
 
-        assert len(training_loop.recent_drills) == 6
+        assert len(training_loop.recent_drills) == SCOUT_COUNT
         assert training_loop.last_run_time is not None
 
 @pytest.mark.asyncio
@@ -243,6 +247,7 @@ async def test_run_cycle(mock_curriculum, mock_registry, mock_drills, service):
         confidence=0.9
     )
     mock_drills.evaluate_drill = AsyncMock(return_value=mock_result)
+    mock_drills.write_results = AsyncMock()
 
     # Prevent _check_auto_evolution from doing anything complex
     with patch.object(service, '_check_auto_evolution') as mock_check_evo:
@@ -251,15 +256,15 @@ async def test_run_cycle(mock_curriculum, mock_registry, mock_drills, service):
 
         await service._run_cycle()
 
-        # Verify calls
-        assert mock_drills.generate_random_drill.call_count == 6 # 6 scouts
-        assert mock_drills.evaluate_drill.call_count == 6
-        assert mock_curriculum.record_drill_result.call_count == 6
-        assert mock_check_evo.call_count == 6
+        # Verify calls — one drill per registered scout
+        assert mock_drills.generate_random_drill.call_count == SCOUT_COUNT
+        assert mock_drills.evaluate_drill.call_count == SCOUT_COUNT
+        assert mock_curriculum.record_drill_result.call_count == SCOUT_COUNT
+        assert mock_check_evo.call_count == SCOUT_COUNT
 
         # Verify state updates
         assert service.last_run_time is not None
-        assert len(service.recent_drills) == 6
+        assert len(service.recent_drills) == SCOUT_COUNT
         assert service.diversity_stats.total_evaluations == 1
 
 @pytest.mark.asyncio

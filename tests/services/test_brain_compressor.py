@@ -102,9 +102,14 @@ async def test_brain_compressor_caching(temp_workspace):
             await compressor.run_sync_and_compile()
             assert mock_summarizer.call_count == 0  # Cached, no new calls
             
-            # Modify a plan file to break cache
+            # Modify a plan file to break cache. Bump mtime explicitly so the
+            # change is strictly newer than the summary even on coarse or
+            # fast-clock filesystems (the cache check is mtime-based).
             plan1 = temp_workspace / "project_plan.md"
             plan1.write_text("# Project Plan\nUpdated text.", encoding="utf-8")
+            import time
+            future = time.time() + 5
+            os.utime(plan1, (future, future))
             
             # Third run with changes
             mock_summarizer.reset_mock()

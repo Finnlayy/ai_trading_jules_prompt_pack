@@ -1,13 +1,23 @@
 import pytest
 from fastapi.testclient import TestClient
 
-def test_health_check():
-    """Test the /health endpoint."""
+def test_health_check(monkeypatch):
+    """Test the /health endpoint (requires a configured API key + X-API-Key header)."""
+    monkeypatch.setenv("API_KEY", "test-api-key")
     from app.main import app
     client = TestClient(app)
-    response = client.get("/health")
+    response = client.get("/health", headers={"X-API-Key": "test-api-key"})
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
+
+
+def test_health_check_rejects_missing_key(monkeypatch):
+    """/health must reject requests without a valid X-API-Key."""
+    monkeypatch.setenv("API_KEY", "test-api-key")
+    from app.main import app
+    client = TestClient(app)
+    assert client.get("/health").status_code == 401
+    assert client.get("/health", headers={"X-API-Key": "wrong"}).status_code == 401
 
 def test_frontend():
     """Test the root endpoint serving frontend.html."""

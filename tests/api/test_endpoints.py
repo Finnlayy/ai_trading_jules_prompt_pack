@@ -81,10 +81,12 @@ async def test_health_check_missing_api_key_server_error(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_root_serves_frontend():
+    """GET / serves the built Vite SPA shell (frontend/dist/index.html)."""
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         response = await ac.get("/")
     assert response.status_code == 200
-    assert "MetricFlow Bot Command Center" in response.text
+    assert "MetricFlow Command Center" in response.text
+    assert '<div id="root">' in response.text
     assert "Pine Script Studio" not in response.text
 
 @pytest.mark.asyncio
