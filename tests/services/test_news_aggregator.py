@@ -1,5 +1,6 @@
 import pytest
-from app.services.news_aggregator import NewsAggregator, _iso_from_pubdate, _strip_html, _parse_rss
+from app.core.utils import iso_from_pubdate as _iso_from_pubdate, strip_html as _strip_html
+from app.services.news_aggregator import NewsAggregator, _parse_rss
 from datetime import datetime, timezone
 
 def test_iso_from_pubdate_rss_format():
@@ -138,7 +139,7 @@ async def test_news_aggregator_fetch_error_handling(monkeypatch):
 
     assert len(items) == 0
     await aggregator.close()
-from app.core.utils import strip_html as _strip_html
 
-def test_strip_html():
+
+def test_strip_html_removes_tags():
     assert _strip_html("<b>bold</b> text") == "bold text"

@@ -281,11 +281,6 @@ class AgentRegistryService:
                     line_deque.append(line)
 
             for line in reversed(line_deque):
-                lines = [line for line in f if line.strip()]
-            for line in reversed(lines):
-                # ⚡ Bolt Optimization: Fast string match to skip JSON parsing for irrelevant lines
-                if event_type and f'"event_type":"{event_type}"' not in line and f'"event_type": "{event_type}"' not in line:
-                    continue
                 data = json.loads(line)
                 if event_type and data.get("event_type") != event_type:
                     continue
