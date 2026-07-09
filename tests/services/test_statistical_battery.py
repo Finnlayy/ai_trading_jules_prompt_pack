@@ -203,8 +203,17 @@ def test_run_battery_happy_path(random_walk_prices):
     assert "value" in res["hurst"]
     assert "interpretation" in res["hurst"]
 
-    run_battery
-)
+    assert "ljung_box" in res
+    assert "variance_ratio" in res
+    assert "runs_test" in res
+    assert "arch_test" in res
+
+    assert "summary" in res
+    assert "uncorrelated" in res["summary"]
+    assert "predictable" in res["summary"]
+    assert "random_sequence" in res["summary"]
+    assert "vol_clustering" in res["summary"]
+    assert "memory" in res["summary"]
 
 def test_hurst_rs_random_walk():
     np.random.seed(42)

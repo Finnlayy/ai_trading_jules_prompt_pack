@@ -159,11 +159,6 @@ class PricePoller:
                 resp = await client.get(
                     "https://api.bybit.com/v5/market/tickers",
                     params={"category": "linear"},
-            async with httpx.AsyncClient() as client:
-                resp = await client.get(
-                    "https://api.bybit.com/v5/market/tickers",
-                    params={"category": "linear"},
-                    timeout=10,
                 )
                 resp.raise_for_status()
                 data = resp.json()
