@@ -413,11 +413,17 @@ Required `.env` (gitignored; create once with `cp .env.example .env`). Non-obvio
   the stale startup warning claiming unauthenticated requests are accepted.
 
 Running: `.venv/bin/uvicorn app.main:app --reload --port 8000` serves both the JSON API and the
-operator UI. The UI is a **pre-built Vite SPA** served from `frontend/dist` (mounted at `/`), and
-is gated behind Google OAuth — reaching the dashboard needs a real `GOOGLE_CLIENT_ID` and Google
-login, so it is not exercisable headless. The old "standalone `frontend.html` via CDN" description
-is outdated. A good headless smoke test of core functionality is the signed `POST /webhook/m8`
-pipeline (AI review → risk engine → simulation broker → `trade_journal.jsonl`).
+operator UI. The UI is a **pre-built Vite SPA** (source in `frontend/`, build output in
+`frontend/dist`, mounted at `/`); the old "standalone `frontend.html` via CDN" description is
+outdated. Rebuild it with `npm install && npm run build` inside `frontend/`. The login uses Google
+Identity Services; the SPA fetches the OAuth client ID **at runtime** from `GET /api/auth/config`
+(which returns `GOOGLE_CLIENT_ID`), so you only set `GOOGLE_CLIENT_ID` in `.env` — no rebuild is
+needed to change it. Reaching the dashboard still needs a **real** Google OAuth 2.0 Web Client ID
+(`...apps.googleusercontent.com`) with `http://localhost:8000` as an authorized origin, plus a real
+Google login, so full UI auth is not exercisable headless. When `GOOGLE_CLIENT_ID` is empty the
+login page shows a clear "not configured" message instead of a broken button. A good headless smoke
+test of core functionality is the signed `POST /webhook/m8` pipeline (AI review → risk engine →
+simulation broker → `trade_journal.jsonl`).
 
 External market data (Bybit `api.bybit.com`) returns HTTP 403 from this sandbox. The regime check
 degrades gracefully (`trade_allowed=true`, `regime=UNKNOWN`); do not treat Bybit 403 as a setup
