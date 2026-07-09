@@ -45,6 +45,21 @@ from app.core.config import GOOGLE_CLIENT_ID, JWT_SECRET_KEY, JWT_ALGORITHM, ACC
 router = APIRouter()
 security = HTTPBearer()
 
+
+class PublicConfigResponse(BaseModel):
+    googleClientId: str
+
+
+@router.get("/config", response_model=PublicConfigResponse)
+async def public_config():
+    """Expose non-secret frontend config (Google OAuth client ID) at runtime.
+
+    The client ID is a public OAuth identifier, safe to serve unauthenticated.
+    Serving it here lets the pre-built SPA read GOOGLE_CLIENT_ID from the
+    backend env without being rebuilt whenever the value changes.
+    """
+    return PublicConfigResponse(googleClientId=GOOGLE_CLIENT_ID)
+
 class AuthRequest(BaseModel):
     token: str
 
