@@ -1,6 +1,9 @@
 fastapi
 uvicorn
 pydantic
+sqlalchemy
+polars
+langgraph
 pytest
 httpx
 backtrader==1.9.78.123
