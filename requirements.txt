@@ -1,6 +1,9 @@
 fastapi
 uvicorn
 pydantic
+sqlalchemy
+polars
+langgraph
 pytest
 httpx
 backtrader==1.9.78.123
@@ -12,6 +15,7 @@ numpy==2.4.6
 pandas==2.3.3
 openai
 pytest-asyncio
+pytest-mock
 python-dotenv
 requests
 ctrader-open-api
@@ -22,3 +26,7 @@ asyncpg>=0.29.0
 google-auth>=2.28.0
 PyJWT>=2.8.0
 websockets
+sqlalchemy
+langgraph
+polars
+pytest-mock
