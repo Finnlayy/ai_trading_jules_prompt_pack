@@ -424,9 +424,11 @@ Identity Services; the SPA fetches the OAuth client ID **at runtime** from `GET 
 (which returns `GOOGLE_CLIENT_ID`), so you only set `GOOGLE_CLIENT_ID` in `.env` — no rebuild is
 needed to change it. Reaching the dashboard still needs a **real** Google OAuth 2.0 Web Client ID
 (`...apps.googleusercontent.com`) with `http://localhost:8000` as an authorized origin, plus a real
-Google login, so full UI auth is not exercisable headless. When `GOOGLE_CLIENT_ID` is empty the
-login page shows a clear "not configured" message instead of a broken button. A good headless smoke
-test of core functionality is the signed `POST /webhook/m8` pipeline (AI review → risk engine →
+Google login, so full UI auth against live `/api` data is not exercisable headless. However, the
+committed `frontend/dist` SPA renders the full operator dashboard at `/` (chart, War Room consensus,
+orders table with demo/placeholder data) without a Google login, so the UI itself **can** be
+smoke-tested headlessly by loading `http://localhost:8000/`. A good headless smoke test of core
+backend functionality is the signed `POST /webhook/m8` pipeline (AI review → risk engine →
 simulation broker → `trade_journal.jsonl`).
 
 External market data (Bybit `api.bybit.com`) returns HTTP 403 from this sandbox. The regime check
@@ -442,5 +444,13 @@ Lint/test/build:
   collection — exclude them with `--ignore`. A handful of other tests are pre-existing drift/flaky
   (`test_endpoints.py::test_root_serves_frontend` expects the old UI title, `test_training_loop`
   MagicMock misuse, `test_brain_compressor_caching`, `test_agent_registry` file-handle isolation).
+  Additionally, tests that hit **live external market data** fail here because egress is blocked
+  (`Connection reset by peer` / HTTP 502): the Kraken (`tests/api/test_kraken*.py`,
+  `tests/services/test_kraken_paper_broker.py`) and Binance-backed research/backtest tests
+  (`tests/research/test_backtest_engine.py`, `test_market_data_loader.py`), plus paper-trading
+  tests that need a live price (`test_auto_sl_tp.py`, `test_position_limits.py`,
+  `test_multi_symbol_parallel.py`, `test_webhook_to_paper.py`, `test_paper_history.py`). These are
+  environment/network limitations, not setup failures. The deterministic core (risk engine, db,
+  schemas, non-network api/services, academy backtesting) passes.
 - E2E/UI Playwright tests (`tests/e2e/`, `tests/ui/`) need a `package.json`, which is `.gitignore`d
   and absent from the repo, so they cannot run without first reconstructing the Playwright setup.
