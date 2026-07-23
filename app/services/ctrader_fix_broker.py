@@ -18,11 +18,7 @@ from typing import Any, Optional
 
 from app.core.config import (
     CTRADER_FIX_ENABLED,
-    CTRADER_FIX_HOST,
     CTRADER_FIX_LIVE_TRADING_ENABLED,
-    CTRADER_FIX_PASSWORD,
-    CTRADER_FIX_SENDER_COMP_ID,
-    CTRADER_FIX_TARGET_COMP_ID,
 )
 from app.schemas.ai_review import DecisionEnum as AIDecisionEnum
 from app.schemas.journal import DecisionEnum, FinalDecisionEnum, TradeJournalEntry, DirectionEnum
