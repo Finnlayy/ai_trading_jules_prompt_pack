@@ -3,8 +3,11 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.services.confidence_registry import confidence_registry
+from app.api.auth import get_current_user
 
 client = TestClient(app)
+
+app.dependency_overrides[get_current_user] = lambda: {'email': 'test@example.com'}
 
 
 @pytest.fixture(autouse=True)
