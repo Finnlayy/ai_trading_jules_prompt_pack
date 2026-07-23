@@ -1,3 +1,6 @@
-🎯 What: Addressed the missing test coverage for `app/services/dashboard_sse.py`.
-📊 Coverage: Added tests for SSE event serialization, manager singleton instantiation, connection and disconnection management, broadcasting and receiving events using an asynchronous generator, queue fullness logic, and the various `broadcast_*` helper methods.
-✨ Result: Successfully added `tests/services/test_dashboard_sse.py` giving confidence and verifying the expected behavior of the SSE management singleton, with 100% test passing success across the SSE specific and the larger suite.
+🧹 [remove unused import datetime in agent_registry.py]
+
+🎯 **What:** Removed unused import `datetime` from `app/services/agent_registry.py`.
+💡 **Why:** This improves code maintainability and readability by eliminating unnecessary dependencies and reducing clutter.
+✅ **Verification:** I ran the entire test suite using `pytest` and all tests passed successfully, confirming no functionality was broken.
+✨ **Result:** A cleaner codebase with fewer unused imports.

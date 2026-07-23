@@ -1,5 +1,6 @@
-🧪 [testing improvement] Cover malformed JSON in WebhookSignal
+🧹 [remove unused import datetime in agent_registry.py]
 
-🎯 **What:** The testing gap addressed is the missing validation for completely malformed JSON payloads in `WebhookSignalPayload.model_validate_json(body)`.
-📊 **Coverage:** A new test `test_webhook_signal_malformed_json` is now confirming that sending malformed JSON strings string results in a 422 Unprocessable Entity HTTP Exception.
-✨ **Result:** Enhanced test suite and validation path coverage preventing unknown JSON decoding bugs when parsing Webhooks payload.
+🎯 **What:** Removed unused import `datetime` from `app/services/agent_registry.py`.
+💡 **Why:** This improves code maintainability and readability by eliminating unnecessary dependencies and reducing clutter.
+✅ **Verification:** I ran the entire test suite using `pytest` and all tests passed successfully, confirming no functionality was broken.
+✨ **Result:** A cleaner codebase with fewer unused imports.
