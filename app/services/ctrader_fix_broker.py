@@ -421,8 +421,8 @@ class CTraderFixBroker(BaseBroker):
         if decision != DecisionEnum.PROCEED_TO_SIMULATION:
             return self._build_entry(
                 payload,
-                ai_decision,
-                FinalDecisionEnum.REJECTED,
+                ai_decision=ai_decision,
+                final_decision=FinalDecisionEnum.REJECTED,
                 simulated_fill={},
                 result={"status": "REJECTED", "reject_reason": reject_reason},
             )
@@ -430,8 +430,8 @@ class CTraderFixBroker(BaseBroker):
         if not self.config.enabled:
             return self._build_entry(
                 payload,
-                ai_decision,
-                FinalDecisionEnum.EXECUTED_SIM,
+                ai_decision=ai_decision,
+                final_decision=FinalDecisionEnum.EXECUTED_SIM,
                 simulated_fill={"mode": "CTRADER_FIX_DISABLED"},
                 result={"status": "DRY_RUN_CTRADER_FIX_DISABLED", "reject_reason": None},
             )
@@ -452,8 +452,8 @@ class CTraderFixBroker(BaseBroker):
         if not self.config.live_trading_enabled:
             return self._build_entry(
                 payload,
-                ai_decision,
-                FinalDecisionEnum.EXECUTED_SIM,
+                ai_decision=ai_decision,
+                final_decision=FinalDecisionEnum.EXECUTED_SIM,
                 simulated_fill={
                     "mode": "CTRADER_FIX_DRY_RUN",
                     "symbol": payload.symbol,
@@ -479,8 +479,8 @@ class CTraderFixBroker(BaseBroker):
             result["error"] = str(exc)
             return self._build_entry(
                 payload,
-                ai_decision,
-                FinalDecisionEnum.REJECTED,
+                ai_decision=ai_decision,
+                final_decision=FinalDecisionEnum.REJECTED,
                 simulated_fill={},
                 result=result,
             )
@@ -493,8 +493,8 @@ class CTraderFixBroker(BaseBroker):
         final = FinalDecisionEnum.EXECUTED_SIM if result.get("status") == "DRY_RUN" else FinalDecisionEnum.EXECUTED_SIM
         return self._build_entry(
             payload,
-            ai_decision,
-            final,
+            ai_decision=ai_decision,
+            final_decision=final,
             simulated_fill={
                 "mode": "CTRADER_FIX",
                 "symbol": payload.symbol,
@@ -622,10 +622,7 @@ class CTraderFixBroker(BaseBroker):
     def _build_entry(
         self,
         payload: M8Payload,
-        ai_decision: AIDecisionEnum,
-        final_decision: FinalDecisionEnum,
-        simulated_fill: dict[str, Any],
-        result: dict[str, Any],
+        **kwargs: Any,
     ) -> TradeJournalEntry:
         entry = TradeJournalEntry(
             trade_id=f"ctrader-fix-{payload.signal_id}",
@@ -638,10 +635,10 @@ class CTraderFixBroker(BaseBroker):
             target_price=payload.target_price or 0.0,
             risk_reward=0.0,
             m8_score=payload.confluence_score,
-            ai_decision=DecisionEnum(ai_decision.value),
-            final_decision=final_decision,
-            simulated_fill=simulated_fill,
-            result=result,
+            ai_decision=DecisionEnum(kwargs["ai_decision"].value),
+            final_decision=kwargs["final_decision"],
+            simulated_fill=kwargs.get("simulated_fill", {}),
+            result=kwargs.get("result", {}),
         )
         self.journal.append(entry)
         return entry

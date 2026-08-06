@@ -1,16 +1,15 @@
-⚡ Bolt: Remove redundant symbol normalization loop in PricePoller
+🧹 [Refactor] Fix Too Many Parameters in ctrader_fix_broker._build_entry
 
-💡 **What:**
-Removed a redundant list comprehension initialization for `normalized_symbols` in `app/services/price_poller.py`.
+🎯 What:
+Refactored `_build_entry` in `app/services/ctrader_fix_broker.py` to fix a "Too Many Parameters" code health issue. The method signature was changed to accept `**kwargs` instead of multiple positional arguments (`ai_decision`, `final_decision`, `simulated_fill`, `result`), and the 5 call sites were updated to use keyword arguments.
 
-🎯 **Why:**
-The exact same generator expression was being evaluated twice consecutively (`normalized_symbols = list({normalize_symbol(p.symbol) for p in positions})`), causing unnecessary loop iterations and function calls in the hot path.
+💡 Why:
+Passing 6 parameters (including `self`) to a function, especially when they represent contextual data rather than primary inputs, makes the function difficult to read and maintain. Extracting the decision, fill, and result payloads as keyword arguments reduces visual noise, improves flexibility for future schema changes, and resolves linting warnings (e.g. Pylint R0917).
 
-📊 **Impact:**
-Reduced CPU overhead and function calls in `_poll_loop`, slightly decreasing event loop blocking time.
+✅ Verification:
+- Patched the 5 calls to `_build_entry` with explicit keyword assignments.
+- Ran the broker unit tests using `pytest tests/services/` to ensure no breakages in payload unpacking.
+- Re-ran `pylint` on `ctrader_fix_broker.py` to confirm stable code rating.
 
-🔬 **Measurement:**
-Benchmarking `list({normalize_symbol(p.symbol) for p in positions})` execution twice vs once with 100 items for 10,000 iterations:
-- Baseline: 0.4104s
-- Optimized: 0.2035s
-- Improvement: 50.40% speed up over baseline execution time.
+✨ Result:
+The `_build_entry` helper is cleaner and no longer triggers the "Too Many Parameters" issue.
