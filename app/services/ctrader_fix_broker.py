@@ -13,6 +13,7 @@ import ssl
 import threading
 import time
 from datetime import datetime, timezone
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
 
@@ -64,6 +65,16 @@ class CTraderFixConfig:
 
     def has_credentials(self) -> bool:
         return bool(self.sender_comp_id and self.password)
+
+
+@dataclass(frozen=True)
+class CTraderFixOrderRequest:
+    symbol: str
+    side: str
+    qty: float
+    cl_ord_id: str
+    stop_loss: float | None = None
+    take_profit: float | None = None
 
 
 class CTraderFixClient:
@@ -124,23 +135,18 @@ class CTraderFixClient:
 
     def send_market_order(
         self,
-        symbol: str,
-        side: str,
-        qty: float,
-        cl_ord_id: str,
-        stop_loss: float | None = None,
-        take_profit: float | None = None,
+        order: CTraderFixOrderRequest,
     ) -> dict[str, Any]:
         """Send a market order and return the execution result."""
         self.connect()
 
-        fix_side = "1" if side.upper() in {"BUY", "LONG"} else "2"
+        fix_side = "1" if order.side.upper() in {"BUY", "LONG"} else "2"
         # cTrader FIX uses quantity in lots * 100000 (units)
-        fix_qty = int(qty * 100_000)
+        fix_qty = int(order.qty * 100_000)
 
         msg = self._build_message("D", [
-            ("11", cl_ord_id),
-            ("55", symbol),
+            ("11", order.cl_ord_id),
+            ("55", order.symbol),
             ("54", fix_side),
             ("38", str(fix_qty)),
             ("40", "1"),  # Market
@@ -466,10 +472,12 @@ class CTraderFixBroker(BaseBroker):
 
         try:
             fix_result = self.client.send_market_order(
-                symbol=payload.symbol,
-                side=side,
-                qty=lots,
-                cl_ord_id=cl_ord_id,
+                CTraderFixOrderRequest(
+                    symbol=payload.symbol,
+                    side=side,
+                    qty=lots,
+                    cl_ord_id=cl_ord_id,
+                )
             )
             result.update(fix_result)
             if result.get("status") == "FILLED":
@@ -598,10 +606,12 @@ class CTraderFixBroker(BaseBroker):
 
         try:
             result = self.client.send_market_order(
-                symbol=symbol,
-                side=side,
-                qty=volume_lots,
-                cl_ord_id=cl_ord_id,
+                CTraderFixOrderRequest(
+                    symbol=symbol,
+                    side=side,
+                    qty=volume_lots,
+                    cl_ord_id=cl_ord_id,
+                )
             )
             result["symbol"] = symbol
             result["direction"] = direction
