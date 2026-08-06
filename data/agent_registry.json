@@ -13,10 +13,10 @@
       "cautious": 0.7,
       "momentum_driven": 0.3
     },
-    "total_calls": 0,
-    "correct_calls": 0,
-    "accuracy": 0.0,
-    "current_streak": 0,
+    "total_calls": 3,
+    "correct_calls": 3,
+    "accuracy": 1.0,
+    "current_streak": 3,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -34,10 +34,10 @@
       "cautious": 0.4,
       "momentum_driven": 0.8
     },
-    "total_calls": 0,
-    "correct_calls": 0,
-    "accuracy": 0.0,
-    "current_streak": 0,
+    "total_calls": 3,
+    "correct_calls": 3,
+    "accuracy": 1.0,
+    "current_streak": 3,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -55,10 +55,10 @@
       "cautious": 0.6,
       "momentum_driven": 0.2
     },
-    "total_calls": 0,
-    "correct_calls": 0,
-    "accuracy": 0.0,
-    "current_streak": 0,
+    "total_calls": 3,
+    "correct_calls": 3,
+    "accuracy": 1.0,
+    "current_streak": 3,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -76,10 +76,10 @@
       "cautious": 0.5,
       "momentum_driven": 0.5
     },
-    "total_calls": 0,
-    "correct_calls": 0,
-    "accuracy": 0.0,
-    "current_streak": 0,
+    "total_calls": 3,
+    "correct_calls": 3,
+    "accuracy": 1.0,
+    "current_streak": 3,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -97,10 +97,10 @@
       "cautious": 0.4,
       "momentum_driven": 0.8
     },
-    "total_calls": 0,
-    "correct_calls": 0,
-    "accuracy": 0.0,
-    "current_streak": 0,
+    "total_calls": 3,
+    "correct_calls": 3,
+    "accuracy": 1.0,
+    "current_streak": 3,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -118,10 +118,10 @@
       "cautious": 0.95,
       "momentum_driven": 0.1
     },
-    "total_calls": 0,
-    "correct_calls": 0,
-    "accuracy": 0.0,
-    "current_streak": 0,
+    "total_calls": 3,
+    "correct_calls": 3,
+    "accuracy": 1.0,
+    "current_streak": 3,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -139,10 +139,10 @@
       "cautious": 0.6,
       "momentum_driven": 0.3
     },
-    "total_calls": 0,
-    "correct_calls": 0,
-    "accuracy": 0.0,
-    "current_streak": 0,
+    "total_calls": 3,
+    "correct_calls": 3,
+    "accuracy": 1.0,
+    "current_streak": 3,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -160,10 +160,10 @@
       "cautious": 0.9,
       "momentum_driven": 0.1
     },
-    "total_calls": 0,
-    "correct_calls": 0,
-    "accuracy": 0.0,
-    "current_streak": 0,
+    "total_calls": 3,
+    "correct_calls": 3,
+    "accuracy": 1.0,
+    "current_streak": 3,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -181,10 +181,10 @@
       "cautious": 0.8,
       "momentum_driven": 0.2
     },
-    "total_calls": 0,
-    "correct_calls": 0,
-    "accuracy": 0.0,
-    "current_streak": 0,
+    "total_calls": 3,
+    "correct_calls": 3,
+    "accuracy": 1.0,
+    "current_streak": 3,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -202,10 +202,10 @@
       "cautious": 0.4,
       "momentum_driven": 0.6
     },
-    "total_calls": 0,
-    "correct_calls": 0,
-    "accuracy": 0.0,
-    "current_streak": 0,
+    "total_calls": 3,
+    "correct_calls": 3,
+    "accuracy": 1.0,
+    "current_streak": 3,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -223,10 +223,10 @@
       "cautious": 0.4,
       "momentum_driven": 0.8
     },
-    "total_calls": 0,
-    "correct_calls": 0,
-    "accuracy": 0.0,
-    "current_streak": 0,
+    "total_calls": 6,
+    "correct_calls": 6,
+    "accuracy": 1.0,
+    "current_streak": 6,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -244,10 +244,10 @@
       "cautious": 0.5,
       "momentum_driven": 0.9
     },
-    "total_calls": 0,
-    "correct_calls": 0,
-    "accuracy": 0.0,
-    "current_streak": 0,
+    "total_calls": 3,
+    "correct_calls": 3,
+    "accuracy": 1.0,
+    "current_streak": 3,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -265,10 +265,10 @@
       "cautious": 0.95,
       "momentum_driven": 0.1
     },
-    "total_calls": 0,
-    "correct_calls": 0,
-    "accuracy": 0.0,
-    "current_streak": 0,
+    "total_calls": 6,
+    "correct_calls": 3,
+    "accuracy": 0.5,
+    "current_streak": 1,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -286,10 +286,10 @@
       "cautious": 0.7,
       "momentum_driven": 0.5
     },
-    "total_calls": 0,
-    "correct_calls": 0,
-    "accuracy": 0.0,
-    "current_streak": 0,
+    "total_calls": 3,
+    "correct_calls": 3,
+    "accuracy": 1.0,
+    "current_streak": 3,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -307,10 +307,10 @@
       "cautious": 0.8,
       "momentum_driven": 0.2
     },
-    "total_calls": 0,
-    "correct_calls": 0,
-    "accuracy": 0.0,
-    "current_streak": 0,
+    "total_calls": 3,
+    "correct_calls": 3,
+    "accuracy": 1.0,
+    "current_streak": 3,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -328,10 +328,10 @@
       "cautious": 0.85,
       "momentum_driven": 0.1
     },
-    "total_calls": 0,
-    "correct_calls": 0,
-    "accuracy": 0.0,
-    "current_streak": 0,
+    "total_calls": 3,
+    "correct_calls": 3,
+    "accuracy": 1.0,
+    "current_streak": 3,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },

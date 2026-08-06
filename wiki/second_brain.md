@@ -1,6 +1,6 @@
 # Project Wiki & Second Brain (Swarm Memory)
 
-*Last Updated: 2026-07-04T02:30:58.815117+00:00*
+*Last Updated: 2026-08-06T21:18:37.262170+00:00*
 
 This file serves as the unified project memory for all 17 Scouts and Gems, recording historical outcomes, accuracy ratings, and real-time portfolio metrics to prevent memory loss and optimize alignment.
 
@@ -23,31 +23,32 @@ This file serves as the unified project memory for all 17 Scouts and Gems, recor
 ## 💼 Open Paper Positions
 | Symbol | Direction | Volume | Avg Entry | Stop Loss | Take Profit | Unrealized P&L |
 | --- | --- | --- | --- | --- | --- | --- |
-| `SOLUSD` | LONG | 0.2000 | 82.3600 | 0.0000 | 0.0000 | $0.0000 |
-| `XETHZUSD` | LONG | 0.0100 | 1755.9000 | 0.0000 | 0.0000 | $0.0000 |
-| `XRPUSD` | LONG | 5.0000 | 1.1339 | 0.0000 | 0.0000 | $0.0000 |
+| `SOLUSD` | LONG | 0.2000 | 72.8300 | 0.0000 | 0.0000 | $0.0000 |
+| `XETHZUSD` | LONG | 0.0100 | 1906.0700 | 0.0000 | 0.0000 | $0.0000 |
+| `XRPUSD` | LONG | 5.0000 | 1.0329 | 0.0000 | 0.0000 | $0.0000 |
 
 ---
 
 ## 🤖 Academy Swarm Leaderboard
 | Agent Name | Archetype | Total Calls | Correct | Accuracy | Streak | Badges |
 | --- | --- | --- | --- | --- | --- | --- |
-| `macro_sentinel` | Stratege | 0 | 0 | 0.00% | 0 | None |
-| `market_dna` | Analyst | 0 | 0 | 0.00% | 0 | None |
-| `structural_architect` | Architekt | 0 | 0 | 0.00% | 0 | None |
-| `harmony_coordinator` | Diplomat | 0 | 0 | 0.00% | 0 | None |
-| `indicator_fusion` | Analyst | 0 | 0 | 0.00% | 0 | None |
-| `risk_kernel` | Wächter | 0 | 0 | 0.00% | 0 | None |
-| `pine_core` | Entwickler | 0 | 0 | 0.00% | 0 | None |
-| `payload_qa` | Prüfer | 0 | 0 | 0.00% | 0 | None |
-| `execution_watchdog` | Operator | 0 | 0 | 0.00% | 0 | None |
-| `evolution_optimizer` | Forscher | 0 | 0 | 0.00% | 0 | None |
-| `technical` | Analyst | 0 | 0 | 0.00% | 0 | None |
-| `sentiment` | Diplomat | 0 | 0 | 0.00% | 0 | None |
-| `risk` | Guardian | 0 | 0 | 0.00% | 0 | None |
-| `macro` | Strategist | 0 | 0 | 0.00% | 0 | None |
-| `execution` | Operator | 0 | 0 | 0.00% | 0 | None |
-| `correlation` | Architect | 0 | 0 | 0.00% | 0 | None |
+| `macro_sentinel` | Stratege | 3 | 3 | 100.00% | 3 | None |
+| `market_dna` | Analyst | 3 | 3 | 100.00% | 3 | None |
+| `structural_architect` | Architekt | 3 | 3 | 100.00% | 3 | None |
+| `harmony_coordinator` | Diplomat | 3 | 3 | 100.00% | 3 | None |
+| `indicator_fusion` | Analyst | 3 | 3 | 100.00% | 3 | None |
+| `risk_kernel` | Wächter | 3 | 3 | 100.00% | 3 | None |
+| `pine_core` | Entwickler | 3 | 3 | 100.00% | 3 | None |
+| `payload_qa` | Prüfer | 3 | 3 | 100.00% | 3 | None |
+| `execution_watchdog` | Operator | 3 | 3 | 100.00% | 3 | None |
+| `evolution_optimizer` | Forscher | 3 | 3 | 100.00% | 3 | None |
+| `technical` | Analyst | 6 | 6 | 100.00% | 6 | None |
+| `sentiment` | Diplomat | 3 | 3 | 100.00% | 3 | None |
+| `risk` | Guardian | 6 | 3 | 50.00% | 1 | None |
+| `macro` | Strategist | 3 | 3 | 100.00% | 3 | None |
+| `execution` | Operator | 3 | 3 | 100.00% | 3 | None |
+| `correlation` | Architect | 3 | 3 | 100.00% | 3 | None |
+| `test-agent` | Analyst | 0 | 0 | 0.00% | 0 | None |
 
 ---
 
@@ -81,25 +82,27 @@ This section lists all prompt pack instructions and design assets stored in the 
 
 | Document Name | Size | Last Modified (UTC) |
 | --- | --- | --- |
-| `01_jules_masterprompt.md` | 7.04 KB | 2026-07-04 00:15:22 UTC |
-| `01_jules_masterprompt_ui_redesign.md` | 7.03 KB | 2026-07-04 00:15:22 UTC |
-| `02_research_brief_input.md` | 3.20 KB | 2026-07-04 00:15:22 UTC |
-| `03_sigma_m8_context.md` | 1.74 KB | 2026-07-04 00:15:22 UTC |
-| `04_agent_roles_and_boundaries.md` | 2.39 KB | 2026-07-04 00:15:22 UTC |
-| `05_json_schema_contracts.md` | 3.68 KB | 2026-07-04 00:15:22 UTC |
-| `06_validation_and_risk_gates.md` | 2.51 KB | 2026-07-04 00:15:22 UTC |
-| `07_jules_execution_checklist.md` | 2.31 KB | 2026-07-04 00:15:22 UTC |
-| `09_ui_ux_disbelief_gauntlet.md` | 3.51 KB | 2026-07-04 00:15:22 UTC |
-| `AGENTS.md` | 21.68 KB | 2026-07-04 00:15:22 UTC |
-| `JULES_24H_SCHEDULE.md` | 46.65 KB | 2026-07-04 00:15:22 UTC |
-| `README.md` | 7.05 KB | 2026-07-04 00:15:22 UTC |
-| `RELEASE_RC_CHECKLIST.md` | 1.45 KB | 2026-07-04 00:15:22 UTC |
-| `ai_academy_plan.md` | 15.15 KB | 2026-07-04 00:15:22 UTC |
-| `file_plan.md` | 4.06 KB | 2026-07-04 00:15:23 UTC |
-| `pionex_layout_research.md` | 9.97 KB | 2026-07-04 00:15:23 UTC |
-| `plan.md` | 0.46 KB | 2026-07-04 02:27:45 UTC |
-| `plan_step_01_strategy_engine_pattern_recognition.md` | 11.05 KB | 2026-07-04 00:15:23 UTC |
-| `plan_step_02_news_aware_ai_layer.md` | 11.70 KB | 2026-07-04 00:15:23 UTC |
-| `plan_step_03_autonomous_trading_loop.md` | 11.81 KB | 2026-07-04 00:15:23 UTC |
-| `plan_step_04_live_paper_trading_integration.md` | 15.82 KB | 2026-07-04 00:15:23 UTC |
-| `project_plan.md` | 5.75 KB | 2026-07-04 00:15:23 UTC |
+| `01_jules_masterprompt.md` | 7.04 KB | 2026-08-06 20:56:55 UTC |
+| `01_jules_masterprompt_ui_redesign.md` | 7.03 KB | 2026-08-06 20:56:55 UTC |
+| `02_research_brief_input.md` | 3.20 KB | 2026-08-06 20:56:55 UTC |
+| `03_sigma_m8_context.md` | 1.74 KB | 2026-08-06 20:56:55 UTC |
+| `04_agent_roles_and_boundaries.md` | 2.39 KB | 2026-08-06 20:56:55 UTC |
+| `05_json_schema_contracts.md` | 3.68 KB | 2026-08-06 20:56:55 UTC |
+| `06_validation_and_risk_gates.md` | 2.51 KB | 2026-08-06 20:56:55 UTC |
+| `07_jules_execution_checklist.md` | 2.31 KB | 2026-08-06 20:56:55 UTC |
+| `09_ui_ux_disbelief_gauntlet.md` | 3.51 KB | 2026-08-06 20:56:55 UTC |
+| `AGENTS.md` | 33.41 KB | 2026-08-06 20:56:55 UTC |
+| `JULES_24H_SCHEDULE.md` | 46.65 KB | 2026-08-06 20:56:55 UTC |
+| `README.md` | 7.05 KB | 2026-08-06 20:56:55 UTC |
+| `RELEASE_RC_CHECKLIST.md` | 1.45 KB | 2026-08-06 20:56:55 UTC |
+| `ai_academy_plan.md` | 15.15 KB | 2026-08-06 20:56:55 UTC |
+| `file_plan.md` | 4.06 KB | 2026-08-06 20:56:56 UTC |
+| `pionex_layout_research.md` | 9.97 KB | 2026-08-06 20:56:56 UTC |
+| `plan.md` | 0.46 KB | 2026-08-06 20:56:56 UTC |
+| `plan_step_01_strategy_engine_pattern_recognition.md` | 11.05 KB | 2026-08-06 20:56:56 UTC |
+| `plan_step_02_news_aware_ai_layer.md` | 11.70 KB | 2026-08-06 20:56:56 UTC |
+| `plan_step_03_autonomous_trading_loop.md` | 11.81 KB | 2026-08-06 20:56:56 UTC |
+| `plan_step_04_live_paper_trading_integration.md` | 15.82 KB | 2026-08-06 20:56:56 UTC |
+| `pr_desc.md` | 1.06 KB | 2026-08-06 20:56:56 UTC |
+| `pr_description.md` | 1.11 KB | 2026-08-06 20:56:56 UTC |
+| `project_plan.md` | 5.75 KB | 2026-08-06 20:56:56 UTC |

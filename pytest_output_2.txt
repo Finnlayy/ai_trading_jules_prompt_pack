@@ -1,0 +1,525 @@
+...............................FFFFFFFFFFFFFFFFFFFFFFFFFFFFFF..F........ [ 12%]
+.......................ssssssss......................................... [ 25%]
+........s............................................................... [ 37%]
+........................................................................ [ 50%]
+........................................................................ [ 62%]
+...............xx....................................................... [ 75%]
+........................................................................ [ 88%]
+....................................................................     [100%]
+=================================== FAILURES ===================================
+__________________________ test_kraken_status_schema ___________________________
+
+    def test_kraken_status_schema():
+        """GET /kraken/status returns a valid status payload."""
+        response = client.get("/kraken/status")
+>       assert response.status_code == 200
+E       assert 401 == 200
+E        +  where 401 = <Response [401 Unauthorized]>.status_code
+
+tests/api/test_kraken.py:20: AssertionError
+___________________ test_kraken_status_credentials_detected ____________________
+
+    def test_kraken_status_credentials_detected():
+        """Kraken status should reflect actual credential state from .env."""
+        response = client.get("/kraken/status")
+        data = response.json()
+>       assert "ready" in data
+E       AssertionError: assert 'ready' in {'detail': 'Not authenticated'}
+
+tests/api/test_kraken.py:35: AssertionError
+__________________________ test_kraken_time_reachable __________________________
+
+    def test_kraken_time_reachable():
+        """GET /kraken/time should return Kraken server time."""
+        response = client.get("/kraken/time")
+>       assert response.status_code == 200
+E       assert 401 == 200
+E        +  where 401 = <Response [401 Unauthorized]>.status_code
+
+tests/api/test_kraken.py:47: AssertionError
+__________________________ test_kraken_ticker_btcusd ___________________________
+
+    def test_kraken_ticker_btcusd():
+        """POST /kraken/ticker should return ticker for BTCUSD."""
+        response = client.post("/kraken/ticker", json={"pair": "BTCUSD"})
+>       assert response.status_code == 200
+E       assert 401 == 200
+E        +  where 401 = <Response [401 Unauthorized]>.status_code
+
+tests/api/test_kraken.py:56: AssertionError
+__________________________ test_kraken_ticker_ethusd ___________________________
+
+    def test_kraken_ticker_ethusd():
+        """POST /kraken/ticker should return ticker for ETHUSD."""
+        response = client.post("/kraken/ticker", json={"pair": "ETHUSD"})
+>       assert response.status_code == 200
+E       assert 401 == 200
+E        +  where 401 = <Response [401 Unauthorized]>.status_code
+
+tests/api/test_kraken.py:66: AssertionError
+_______________________ test_kraken_balance_returns_data _______________________
+
+    def test_kraken_balance_returns_data():
+        """GET /kraken/balance returns balance data when credentials are present."""
+        response = client.get("/kraken/balance")
+        # With credentials → 200; without → 502
+>       assert response.status_code in (200, 502)
+E       assert 401 in (200, 502)
+E        +  where 401 = <Response [401 Unauthorized]>.status_code
+
+tests/api/test_kraken.py:80: AssertionError
+______________________ test_kraken_positions_returns_data ______________________
+
+    def test_kraken_positions_returns_data():
+        """GET /kraken/positions returns positions when credentials are present."""
+        response = client.get("/kraken/positions")
+        # With credentials → 200; without → 502
+>       assert response.status_code in (200, 502)
+E       assert 401 in (200, 502)
+E        +  where 401 = <Response [401 Unauthorized]>.status_code
+
+tests/api/test_kraken.py:91: AssertionError
+_______________________ test_kraken_order_validate_only ________________________
+
+    def test_kraken_order_validate_only():
+        """POST /kraken/order with validate_only=True should validate without placing."""
+        response = client.post("/kraken/order", json={
+            "symbol": "BTCUSD",
+            "direction": "BUY",
+            "volume": 0.001,
+            "order_type": "market",
+            "validate_only": True,
+        })
+        # Without credentials this will fail; but the endpoint should handle it gracefully
+>       assert response.status_code in (200, 502)
+E       assert 401 in (200, 502)
+E        +  where 401 = <Response [401 Unauthorized]>.status_code
+
+tests/api/test_kraken.py:112: AssertionError
+____________________ test_kraken_order_rejected_zero_volume ____________________
+
+    def test_kraken_order_rejected_zero_volume():
+        """POST /kraken/order with zero volume should return 422."""
+        response = client.post("/kraken/order", json={
+            "symbol": "BTCUSD",
+            "direction": "BUY",
+            "volume": 0,
+            "order_type": "market",
+        })
+>       assert response.status_code == 422
+E       assert 401 == 422
+E        +  where 401 = <Response [401 Unauthorized]>.status_code
+
+tests/api/test_kraken.py:123: AssertionError
+_________________ test_kraken_order_rejected_invalid_direction _________________
+
+    def test_kraken_order_rejected_invalid_direction():
+        """POST /kraken/order with invalid direction should return 422."""
+        response = client.post("/kraken/order", json={
+            "symbol": "BTCUSD",
+            "direction": "HODL",
+            "volume": 0.001,
+            "order_type": "market",
+        })
+>       assert response.status_code == 422
+E       assert 401 == 422
+E        +  where 401 = <Response [401 Unauthorized]>.status_code
+
+tests/api/test_kraken.py:134: AssertionError
+________________ test_kraken_order_rejected_invalid_order_type _________________
+
+    def test_kraken_order_rejected_invalid_order_type():
+        """POST /kraken/order with invalid order_type should return 422."""
+        response = client.post("/kraken/order", json={
+            "symbol": "BTCUSD",
+            "direction": "BUY",
+            "volume": 0.001,
+            "order_type": "invalid",
+        })
+>       assert response.status_code == 422
+E       assert 401 == 422
+E        +  where 401 = <Response [401 Unauthorized]>.status_code
+
+tests/api/test_kraken.py:145: AssertionError
+________________ test_kraken_order_response_has_required_fields ________________
+
+    def test_kraken_order_response_has_required_fields():
+        """When an order succeeds, response must contain status and validated flag."""
+        # This test expects validate-only mode to work even without live credentials
+        # because the broker forces validate=True when not live-capable.
+        response = client.post("/kraken/order", json={
+            "symbol": "BTCUSD",
+            "direction": "BUY",
+            "volume": 0.001,
+            "order_type": "market",
+            "validate_only": True,
+        })
+        # Without credentials we get 502; with credentials we'd get 200
+>       assert response.status_code in (200, 502)
+E       assert 401 in (200, 502)
+E        +  where 401 = <Response [401 Unauthorized]>.status_code
+
+tests/api/test_kraken.py:160: AssertionError
+____________________ test_kraken_cancel_without_credentials ____________________
+
+    def test_kraken_cancel_without_credentials():
+        """POST /kraken/cancel without credentials returns 502."""
+        response = client.post("/kraken/cancel", json={"txid": "ABCDEF-123456"})
+>       assert response.status_code == 502
+E       assert 401 == 502
+E        +  where 401 = <Response [401 Unauthorized]>.status_code
+
+tests/api/test_kraken.py:170: AssertionError
+_______________________ test_kraken_cancel_missing_txid ________________________
+
+    def test_kraken_cancel_missing_txid():
+        """POST /kraken/cancel without txid returns 422."""
+        response = client.post("/kraken/cancel", json={})
+>       assert response.status_code == 422
+E       assert 401 == 422
+E        +  where 401 = <Response [401 Unauthorized]>.status_code
+
+tests/api/test_kraken.py:176: AssertionError
+_______________________________ test_paper_reset _______________________________
+
+    def test_paper_reset():
+        """POST /kraken/paper/reset should reset the paper account."""
+        response = client.post("/kraken/paper/reset", json={})
+>       assert response.status_code == 200
+E       assert 401 == 200
+E        +  where 401 = <Response [401 Unauthorized]>.status_code
+
+tests/api/test_kraken_paper.py:20: AssertionError
+_______________________ test_paper_reset_custom_balance ________________________
+
+    def test_paper_reset_custom_balance():
+        """POST /kraken/paper/reset with custom balance."""
+        response = client.post("/kraken/paper/reset", json={"balance": 100.0})
+>       assert response.status_code == 200
+E       assert 401 == 200
+E        +  where 401 = <Response [401 Unauthorized]>.status_code
+
+tests/api/test_kraken_paper.py:29: AssertionError
+______________________________ test_paper_status _______________________________
+
+    def test_paper_status():
+        """GET /kraken/paper/status returns broker health and balance."""
+        client.post("/kraken/paper/reset", json={})
+        response = client.get("/kraken/paper/status")
+>       assert response.status_code == 200
+E       assert 401 == 200
+E        +  where 401 = <Response [401 Unauthorized]>.status_code
+
+tests/api/test_kraken_paper.py:42: AssertionError
+______________________________ test_paper_balance ______________________________
+
+    def test_paper_balance():
+        """GET /kraken/paper/balance returns paper balance."""
+        client.post("/kraken/paper/reset", json={})
+        response = client.get("/kraken/paper/balance")
+>       assert response.status_code == 200
+E       assert 401 == 200
+E        +  where 401 = <Response [401 Unauthorized]>.status_code
+
+tests/api/test_kraken_paper.py:54: AssertionError
+_____________________________ test_paper_buy_order _____________________________
+
+    def test_paper_buy_order():
+        """POST /kraken/paper/order BUY creates a paper position."""
+        client.post("/kraken/paper/reset", json={})
+        response = client.post("/kraken/paper/order", json={
+            "symbol": "SOLUSD",
+            "direction": "BUY",
+            "volume": 0.5,
+            "order_type": "market",
+        })
+>       assert response.status_code == 200
+E       assert 401 == 200
+E        +  where 401 = <Response [401 Unauthorized]>.status_code
+
+tests/api/test_kraken_paper.py:76: AssertionError
+_______________________ test_paper_sell_without_position _______________________
+
+    def test_paper_sell_without_position():
+        """POST /kraken/paper/order SELL without open position returns error."""
+        client.post("/kraken/paper/reset", json={})
+        response = client.post("/kraken/paper/order", json={
+            "symbol": "SOLUSD",
+            "direction": "SELL",
+            "volume": 0.5,
+            "order_type": "market",
+        })
+>       assert response.status_code == 400
+E       assert 401 == 400
+E        +  where 401 = <Response [401 Unauthorized]>.status_code
+
+tests/api/test_kraken_paper.py:97: AssertionError
+_____________________ test_paper_buy_insufficient_balance ______________________
+
+    def test_paper_buy_insufficient_balance():
+        """POST /kraken/paper/order BUY with more than balance returns error."""
+        client.post("/kraken/paper/reset", json={"balance": 5.0})
+        response = client.post("/kraken/paper/order", json={
+            "symbol": "BTCUSD",
+            "direction": "BUY",
+            "volume": 1.0,
+            "order_type": "market",
+        })
+>       assert response.status_code == 400
+E       assert 401 == 400
+E        +  where 401 = <Response [401 Unauthorized]>.status_code
+
+tests/api/test_kraken_paper.py:111: AssertionError
+______________________ test_paper_order_invalid_direction ______________________
+
+    def test_paper_order_invalid_direction():
+        """POST /kraken/paper/order with invalid direction returns 422."""
+        response = client.post("/kraken/paper/order", json={
+            "symbol": "SOLUSD",
+            "direction": "HODL",
+            "volume": 0.5,
+            "order_type": "market",
+        })
+>       assert response.status_code == 422
+E       assert 401 == 422
+E        +  where 401 = <Response [401 Unauthorized]>.status_code
+
+tests/api/test_kraken_paper.py:124: AssertionError
+_________________________ test_paper_order_zero_volume _________________________
+
+    def test_paper_order_zero_volume():
+        """POST /kraken/paper/order with zero volume returns 422."""
+        response = client.post("/kraken/paper/order", json={
+            "symbol": "SOLUSD",
+            "direction": "BUY",
+            "volume": 0,
+            "order_type": "market",
+        })
+>       assert response.status_code == 422
+E       assert 401 == 422
+E        +  where 401 = <Response [401 Unauthorized]>.status_code
+
+tests/api/test_kraken_paper.py:135: AssertionError
+__________________________ test_paper_close_position ___________________________
+
+    def test_paper_close_position():
+        """POST /kraken/paper/close closes an open position."""
+        client.post("/kraken/paper/reset", json={})
+        # Buy first
+        client.post("/kraken/paper/order", json={
+            "symbol": "SOLUSD",
+            "direction": "BUY",
+            "volume": 0.5,
+            "order_type": "market",
+        })
+        # Then close
+        response = client.post("/kraken/paper/close", json={
+            "symbol": "SOLUSD",
+            "volume": 0.5,
+            "order_type": "market",
+        })
+>       assert response.status_code == 200
+E       assert 401 == 200
+E        +  where 401 = <Response [401 Unauthorized]>.status_code
+
+tests/api/test_kraken_paper.py:158: AssertionError
+______________________ test_paper_close_without_position _______________________
+
+    def test_paper_close_without_position():
+        """POST /kraken/paper/close without open position returns error."""
+        client.post("/kraken/paper/reset", json={})
+        response = client.post("/kraken/paper/close", json={
+            "symbol": "SOLUSD",
+            "volume": 0.5,
+            "order_type": "market",
+        })
+>       assert response.status_code == 400
+E       assert 401 == 400
+E        +  where 401 = <Response [401 Unauthorized]>.status_code
+
+tests/api/test_kraken_paper.py:174: AssertionError
+______________________________ test_paper_history ______________________________
+
+    def test_paper_history():
+        """GET /kraken/paper/history returns trade history."""
+        client.post("/kraken/paper/reset", json={})
+        client.post("/kraken/paper/order", json={
+            "symbol": "SOLUSD",
+            "direction": "BUY",
+            "volume": 0.5,
+            "order_type": "market",
+        })
+        response = client.get("/kraken/paper/history?limit=10")
+>       assert response.status_code == 200
+E       assert 401 == 200
+E        +  where 401 = <Response [401 Unauthorized]>.status_code
+
+tests/api/test_kraken_paper.py:193: AssertionError
+__________________________ test_paper_full_round_trip __________________________
+
+    def test_paper_full_round_trip():
+        """Buy, check position, close, verify balance changed."""
+        client.post("/kraken/paper/reset", json={"balance": 100.0})
+
+        # Buy
+        r1 = client.post("/kraken/paper/order", json={
+            "symbol": "SOLUSD",
+            "direction": "BUY",
+            "volume": 0.5,
+            "order_type": "market",
+        })
+>       assert r1.status_code == 200
+E       assert 401 == 200
+E        +  where 401 = <Response [401 Unauthorized]>.status_code
+
+tests/api/test_kraken_paper.py:216: AssertionError
+_____________ test_lifecycle_summary_exposes_paper_training_counts _____________
+
+    def test_lifecycle_summary_exposes_paper_training_counts():
+        seed_lifecycle_rows()
+
+        response = client.get("/lifecycle/summary")
+
+>       assert response.status_code == 200
+E       assert 401 == 200
+E        +  where 401 = <Response [401 Unauthorized]>.status_code
+
+tests/api/test_lifecycle_api.py:94: AssertionError
+________ test_lifecycle_lists_candidates_outcomes_learning_and_reviews _________
+
+    def test_lifecycle_lists_candidates_outcomes_learning_and_reviews():
+        seed_lifecycle_rows()
+
+        candidates = client.get("/lifecycle/candidates").json()
+        outcomes = client.get("/lifecycle/outcomes").json()
+        learning = client.get("/lifecycle/learning").json()
+        reviews = client.get("/lifecycle/reviews/cand-live-BTCUSDT-001").json()
+
+>       assert candidates["count"] == 1
+               ^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'count'
+
+tests/api/test_lifecycle_api.py:113: KeyError
+___________________ test_lifecycle_engine_status_and_control ___________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fd7b9b7d760>
+
+    def test_lifecycle_engine_status_and_control(monkeypatch):
+        import app.api.lifecycle as lifecycle_api
+
+        fake_engine = PaperTrainingEngine(loop=FakeLoop(), monitor=FakeMonitor())
+        monkeypatch.setattr(lifecycle_api, "paper_training_engine", fake_engine)
+
+        started = client.post("/lifecycle/engine/control", json={"action": "start"}).json()
+        status = client.get("/lifecycle/engine/status").json()
+
+>       assert started["action"] == "start"
+               ^^^^^^^^^^^^^^^^^
+E       KeyError: 'action'
+
+tests/api/test_lifecycle_api.py:174: KeyError
+_________________ test_history_endpoint_returns_closed_trades __________________
+
+    def test_history_endpoint_returns_closed_trades():
+        """GET /kraken/paper/history must return closed trades from SQLite."""
+        # Reset and place + close a trade to have history
+        client.post("/kraken/paper/reset", json={"balance": 100})
+        client.post("/kraken/paper/order", json={
+            "symbol": "SOLUSD",
+            "direction": "BUY",
+            "volume": 0.5,
+            "order_type": "market",
+        })
+        client.post("/kraken/paper/close", json={
+            "symbol": "SOLUSD",
+            "volume": 0.5,
+            "order_type": "market",
+        })
+
+        response = client.get("/kraken/paper/history?limit=10")
+>       assert response.status_code == 200
+E       assert 401 == 200
+E        +  where 401 = <Response [401 Unauthorized]>.status_code
+
+tests/api/test_paper_history.py:29: AssertionError
+=============================== warnings summary ===============================
+../home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/fastapi/testclient.py:1
+  /home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+app/core/config.py:445
+  /app/app/core/config.py:445: UserWarning: WEBHOOK_SECRET is not set. Webhook endpoint will accept unauthenticated requests.
+    warnings.warn("WEBHOOK_SECRET is not set. Webhook endpoint will accept unauthenticated requests.")
+
+app/main.py:217
+  /app/app/main.py:217: DeprecationWarning:
+          on_event is deprecated, use lifespan event handlers instead.
+
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+
+    @app.on_event("startup")
+
+../home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/fastapi/applications.py:4681
+../home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/fastapi/applications.py:4681
+  /home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/fastapi/applications.py:4681: DeprecationWarning:
+          on_event is deprecated, use lifespan event handlers instead.
+
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+
+    return self.router.on_event(event_type)  # ty: ignore[deprecated]
+
+app/main.py:238
+  /app/app/main.py:238: DeprecationWarning:
+          on_event is deprecated, use lifespan event handlers instead.
+
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+
+    @app.on_event("shutdown")
+
+tests/api/test_academy_policy_backtesting.py: 18 warnings
+  /home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/vectorbt/utils/datetime_.py:23: FutureWarning: 'T' is deprecated and will be removed in a future version. Please use 'min' instead of 'T'.
+    return pd.Timedelta(arg)
+
+tests/api/test_multi_symbol_parallel.py: 3 warnings
+tests/api/test_webhook_signal.py: 8 warnings
+tests/api/test_webhook_to_paper.py: 1 warning
+  /home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/httpx/_models.py:408: DeprecationWarning: Use 'content=<...>' to upload raw bytes/text content.
+    headers, stream = encode_request(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/api/test_kraken.py::test_kraken_status_schema - assert 401 == 200
+FAILED tests/api/test_kraken.py::test_kraken_status_credentials_detected - As...
+FAILED tests/api/test_kraken.py::test_kraken_time_reachable - assert 401 == 200
+FAILED tests/api/test_kraken.py::test_kraken_ticker_btcusd - assert 401 == 200
+FAILED tests/api/test_kraken.py::test_kraken_ticker_ethusd - assert 401 == 200
+FAILED tests/api/test_kraken.py::test_kraken_balance_returns_data - assert 40...
+FAILED tests/api/test_kraken.py::test_kraken_positions_returns_data - assert ...
+FAILED tests/api/test_kraken.py::test_kraken_order_validate_only - assert 401...
+FAILED tests/api/test_kraken.py::test_kraken_order_rejected_zero_volume - ass...
+FAILED tests/api/test_kraken.py::test_kraken_order_rejected_invalid_direction
+FAILED tests/api/test_kraken.py::test_kraken_order_rejected_invalid_order_type
+FAILED tests/api/test_kraken.py::test_kraken_order_response_has_required_fields
+FAILED tests/api/test_kraken.py::test_kraken_cancel_without_credentials - ass...
+FAILED tests/api/test_kraken.py::test_kraken_cancel_missing_txid - assert 401...
+FAILED tests/api/test_kraken_paper.py::test_paper_reset - assert 401 == 200
+FAILED tests/api/test_kraken_paper.py::test_paper_reset_custom_balance - asse...
+FAILED tests/api/test_kraken_paper.py::test_paper_status - assert 401 == 200
+FAILED tests/api/test_kraken_paper.py::test_paper_balance - assert 401 == 200
+FAILED tests/api/test_kraken_paper.py::test_paper_buy_order - assert 401 == 200
+FAILED tests/api/test_kraken_paper.py::test_paper_sell_without_position - ass...
+FAILED tests/api/test_kraken_paper.py::test_paper_buy_insufficient_balance - ...
+FAILED tests/api/test_kraken_paper.py::test_paper_order_invalid_direction - a...
+FAILED tests/api/test_kraken_paper.py::test_paper_order_zero_volume - assert ...
+FAILED tests/api/test_kraken_paper.py::test_paper_close_position - assert 401...
+FAILED tests/api/test_kraken_paper.py::test_paper_close_without_position - as...
+FAILED tests/api/test_kraken_paper.py::test_paper_history - assert 401 == 200
+FAILED tests/api/test_kraken_paper.py::test_paper_full_round_trip - assert 40...
+FAILED tests/api/test_lifecycle_api.py::test_lifecycle_summary_exposes_paper_training_counts
+FAILED tests/api/test_lifecycle_api.py::test_lifecycle_lists_candidates_outcomes_learning_and_reviews
+FAILED tests/api/test_lifecycle_api.py::test_lifecycle_engine_status_and_control
+FAILED tests/api/test_paper_history.py::test_history_endpoint_returns_closed_trades
+31 failed, 530 passed, 9 skipped, 119 deselected, 2 xfailed, 36 warnings in 36.37s
