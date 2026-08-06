@@ -1,13 +1,11 @@
 🎯 **What:**
-- Discovered and fixed an `AttributeError` in `PerformanceCalculator._extract_pnl()` where it mistakenly queried `entry.exit_price` instead of safely handling missing dictionary attributes when deserializing JSON.
-- Implemented a comprehensive pytest test suite for `PerformanceCalculator`.
+Refactored `CTraderFixConfig` in `app/services/ctrader_fix_broker.py` to use a `@dataclass`. This resolves a code health issue where the `__init__` method had too many parameters, making it cumbersome and harder to maintain.
 
-📊 **Coverage:**
-- `calculate_metrics`: Edge cases with empty lists, mathematical calculation correctness using fixed PnLs.
-- `_extract_pnl`: Accurate extraction falling back across dictionaries vs. schema objects and accessing both result and simulated execution fields.
-- Mathematical functions `_sharpe` and `_sortino`: Covered single-pass numerical arrays evaluating accurate annualized standard deviations and variance logic.
-- `calculate_equity_curve_data`: Ensures properly formatted `{"trade_idx": i, "equity": val}` outputs for frontend charting.
+💡 **Why:**
+By migrating from a manual `__init__` with many arguments to a Python `dataclass`, we drastically reduce boilerplate code, simplify default parameter assignment mapped to environment configurations (`app.core.config`), and improve code readability while retaining the post-initialization conditional logic in `__post_init__`.
+
+✅ **Verification:**
+Verified the fix by compiling the Python file manually (`python -m py_compile`) and running the full pytest test suite on the backend services (`pytest tests/services/`) without any regressions or test failures.
 
 ✨ **Result:**
-- Full function coverage achieved over core statistical tracking algorithms.
-- `PerformanceCalculator` isolated tests are robust and deterministically passing, enabling confident downstream risk validation.
+The `CTraderFixConfig` is now simpler, cleaner, easier to instantiate, and leverages standard Python data modeling constructs without altering the functionality.

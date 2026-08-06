@@ -12,6 +12,7 @@ import socket
 import ssl
 import threading
 import time
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
@@ -38,29 +39,25 @@ class CTraderFixError(RuntimeError):
     """Raised when FIX communication fails."""
 
 
+@dataclass
 class CTraderFixConfig:
     """Runtime settings for cTrader FIX API."""
 
-    def __init__(
-        self,
-        enabled: bool = CTRADER_FIX_ENABLED,
-        live_trading_enabled: bool = CTRADER_FIX_LIVE_TRADING_ENABLED,
-        host: str = "",
-        port: int = 5212,
-        sender_comp_id: str = "",
-        target_comp_id: str = "cServer",
-        password: str = "",
-        sender_sub_id: str = "",
-    ) -> None:
-        self.enabled = enabled
-        self.live_trading_enabled = live_trading_enabled
-        self.host = host or "demo-uk-eqx-01.p.c-trader.com"
-        self.port = port
-        self.sender_comp_id = sender_comp_id
-        self.target_comp_id = target_comp_id
-        self.password = password
-        self.sender_sub_id = sender_sub_id or ("TRADE" if port == 5212 or port == 5202 else "QUOTE")
-        self.fix_version = "FIX.4.4"
+    enabled: bool = CTRADER_FIX_ENABLED
+    live_trading_enabled: bool = CTRADER_FIX_LIVE_TRADING_ENABLED
+    host: str = ""
+    port: int = 5212
+    sender_comp_id: str = ""
+    target_comp_id: str = "cServer"
+    password: str = ""
+    sender_sub_id: str = ""
+    fix_version: str = "FIX.4.4"
+
+    def __post_init__(self) -> None:
+        if not self.host:
+            self.host = "demo-uk-eqx-01.p.c-trader.com"
+        if not self.sender_sub_id:
+            self.sender_sub_id = "TRADE" if self.port in (5212, 5202) else "QUOTE"
 
     def has_credentials(self) -> bool:
         return bool(self.sender_comp_id and self.password)

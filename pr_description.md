@@ -1,14 +1,11 @@
-💡 **What:**
-Removed a redundant list comprehension initialization for `normalized_symbols` in `app/services/price_poller.py`.
+🎯 **What:**
+Refactored `CTraderFixConfig` in `app/services/ctrader_fix_broker.py` to use a `@dataclass`. This resolves a code health issue where the `__init__` method had too many parameters, making it cumbersome and harder to maintain.
 
-🎯 **Why:**
-The exact same generator expression was being evaluated twice consecutively (`normalized_symbols = list({normalize_symbol(p.symbol) for p in positions})`), causing unnecessary loop iterations and function calls in the hot path.
+💡 **Why:**
+By migrating from a manual `__init__` with many arguments to a Python `dataclass`, we drastically reduce boilerplate code, simplify default parameter assignment mapped to environment configurations (`app.core.config`), and improve code readability while retaining the post-initialization conditional logic in `__post_init__`.
 
-📊 **Impact:**
-Reduced CPU overhead and function calls in `_poll_loop`, slightly decreasing event loop blocking time.
+✅ **Verification:**
+Verified the fix by compiling the Python file manually (`python -m py_compile`) and running the full pytest test suite on the backend services (`pytest tests/services/`) without any regressions or test failures.
 
-🔬 **Measurement:**
-Benchmarking `list({normalize_symbol(p.symbol) for p in positions})` execution twice vs once with 100 items for 10,000 iterations:
-- Baseline: 0.4104s
-- Optimized: 0.2035s
-- Improvement: 50.40% speed up over baseline execution time.
+✨ **Result:**
+The `CTraderFixConfig` is now simpler, cleaner, easier to instantiate, and leverages standard Python data modeling constructs without altering the functionality.
