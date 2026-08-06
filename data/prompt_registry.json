@@ -129,9 +129,9 @@
   },
   {
     "version_id": "v2_auto_evolved",
-    "scout_name": "risk_kernel",
-    "prompt_text": "Auto-evolved prompt for risk_kernel focusing on recent failures.",
-    "created_at": "2026-06-13T17:55:17.612881+00:00",
+    "scout_name": "correlation",
+    "prompt_text": "Auto-evolved prompt for correlation focusing on recent failures.",
+    "created_at": "2026-08-06T21:46:50.202452+00:00",
     "parent_version": "v1_base",
     "change_summary": "Auto-correction from Training Loop"
   },
