@@ -129,17 +129,17 @@
   },
   {
     "version_id": "v2_auto_evolved",
-    "scout_name": "risk_kernel",
-    "prompt_text": "Auto-evolved prompt for risk_kernel focusing on recent failures.",
-    "created_at": "2026-06-13T17:55:17.612881+00:00",
+    "scout_name": "sentiment",
+    "prompt_text": "Auto-evolved prompt for sentiment focusing on recent failures.",
+    "created_at": "2026-08-06T23:41:58.208189+00:00",
     "parent_version": "v1_base",
     "change_summary": "Auto-correction from Training Loop"
   },
   {
     "version_id": "v3_auto_evolved",
-    "scout_name": "structural_architect",
-    "prompt_text": "Auto-evolved prompt for structural_architect focusing on recent failures.",
-    "created_at": "2026-06-13T17:57:34.391583+00:00",
+    "scout_name": "sentiment",
+    "prompt_text": "Auto-evolved prompt for sentiment focusing on recent failures.",
+    "created_at": "2026-08-06T23:41:58.228793+00:00",
     "parent_version": "v1_base",
     "change_summary": "Auto-correction from Training Loop"
   },
