@@ -7,16 +7,29 @@
     "born_from": "v1_base",
     "generation": 1,
     "specialization_symbols": [],
-    "badges": [],
+    "badges": [
+      {
+        "name": "Apprentice",
+        "description": "10+ Calls",
+        "icon": "\ud83e\udd49",
+        "awarded_at": "2026-08-06T21:05:59.133444+00:00"
+      },
+      {
+        "name": "Streak",
+        "description": "10 correct calls in a row",
+        "icon": "\u26a1",
+        "awarded_at": "2026-08-06T21:05:59.133452+00:00"
+      }
+    ],
     "personality_vector": {
       "analytical": 0.7,
       "cautious": 0.7,
       "momentum_driven": 0.3
     },
-    "total_calls": 0,
-    "correct_calls": 0,
-    "accuracy": 0.0,
-    "current_streak": 0,
+    "total_calls": 14,
+    "correct_calls": 14,
+    "accuracy": 1.0,
+    "current_streak": 14,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -28,15 +41,22 @@
     "born_from": "v1_base",
     "generation": 1,
     "specialization_symbols": [],
-    "badges": [],
+    "badges": [
+      {
+        "name": "Apprentice",
+        "description": "10+ Calls",
+        "icon": "\ud83e\udd49",
+        "awarded_at": "2026-08-06T21:05:59.133592+00:00"
+      }
+    ],
     "personality_vector": {
       "analytical": 0.9,
       "cautious": 0.4,
       "momentum_driven": 0.8
     },
-    "total_calls": 0,
-    "correct_calls": 0,
-    "accuracy": 0.0,
+    "total_calls": 14,
+    "correct_calls": 4,
+    "accuracy": 0.2857142857142857,
     "current_streak": 0,
     "confidence_level": 0.5,
     "experience_level": "Novice"
@@ -49,16 +69,23 @@
     "born_from": "v1_base",
     "generation": 1,
     "specialization_symbols": [],
-    "badges": [],
+    "badges": [
+      {
+        "name": "Apprentice",
+        "description": "10+ Calls",
+        "icon": "\ud83e\udd49",
+        "awarded_at": "2026-08-06T21:05:59.133764+00:00"
+      }
+    ],
     "personality_vector": {
       "analytical": 0.8,
       "cautious": 0.6,
       "momentum_driven": 0.2
     },
-    "total_calls": 0,
-    "correct_calls": 0,
-    "accuracy": 0.0,
-    "current_streak": 0,
+    "total_calls": 14,
+    "correct_calls": 7,
+    "accuracy": 0.5,
+    "current_streak": 2,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -70,16 +97,29 @@
     "born_from": "v1_base",
     "generation": 1,
     "specialization_symbols": [],
-    "badges": [],
+    "badges": [
+      {
+        "name": "Apprentice",
+        "description": "10+ Calls",
+        "icon": "\ud83e\udd49",
+        "awarded_at": "2026-08-06T21:05:59.133892+00:00"
+      },
+      {
+        "name": "Streak",
+        "description": "10 correct calls in a row",
+        "icon": "\u26a1",
+        "awarded_at": "2026-08-06T21:05:59.133899+00:00"
+      }
+    ],
     "personality_vector": {
       "analytical": 0.5,
       "cautious": 0.5,
       "momentum_driven": 0.5
     },
-    "total_calls": 0,
-    "correct_calls": 0,
-    "accuracy": 0.0,
-    "current_streak": 0,
+    "total_calls": 14,
+    "correct_calls": 14,
+    "accuracy": 1.0,
+    "current_streak": 14,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -91,16 +131,29 @@
     "born_from": "v1_base",
     "generation": 1,
     "specialization_symbols": [],
-    "badges": [],
+    "badges": [
+      {
+        "name": "Apprentice",
+        "description": "10+ Calls",
+        "icon": "\ud83e\udd49",
+        "awarded_at": "2026-08-06T21:05:59.134029+00:00"
+      },
+      {
+        "name": "Streak",
+        "description": "10 correct calls in a row",
+        "icon": "\u26a1",
+        "awarded_at": "2026-08-06T21:05:59.134037+00:00"
+      }
+    ],
     "personality_vector": {
       "analytical": 0.9,
       "cautious": 0.4,
       "momentum_driven": 0.8
     },
-    "total_calls": 0,
-    "correct_calls": 0,
-    "accuracy": 0.0,
-    "current_streak": 0,
+    "total_calls": 14,
+    "correct_calls": 14,
+    "accuracy": 1.0,
+    "current_streak": 14,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -112,16 +165,29 @@
     "born_from": "v1_base",
     "generation": 1,
     "specialization_symbols": [],
-    "badges": [],
+    "badges": [
+      {
+        "name": "Apprentice",
+        "description": "10+ Calls",
+        "icon": "\ud83e\udd49",
+        "awarded_at": "2026-08-06T21:05:59.134178+00:00"
+      },
+      {
+        "name": "Streak",
+        "description": "10 correct calls in a row",
+        "icon": "\u26a1",
+        "awarded_at": "2026-08-06T21:05:59.134186+00:00"
+      }
+    ],
     "personality_vector": {
       "analytical": 0.8,
       "cautious": 0.95,
       "momentum_driven": 0.1
     },
-    "total_calls": 0,
-    "correct_calls": 0,
-    "accuracy": 0.0,
-    "current_streak": 0,
+    "total_calls": 14,
+    "correct_calls": 14,
+    "accuracy": 1.0,
+    "current_streak": 14,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -133,16 +199,23 @@
     "born_from": "v1_base",
     "generation": 1,
     "specialization_symbols": [],
-    "badges": [],
+    "badges": [
+      {
+        "name": "Apprentice",
+        "description": "10+ Calls",
+        "icon": "\ud83e\udd49",
+        "awarded_at": "2026-08-06T21:05:59.134326+00:00"
+      }
+    ],
     "personality_vector": {
       "analytical": 0.9,
       "cautious": 0.6,
       "momentum_driven": 0.3
     },
-    "total_calls": 0,
-    "correct_calls": 0,
-    "accuracy": 0.0,
-    "current_streak": 0,
+    "total_calls": 14,
+    "correct_calls": 7,
+    "accuracy": 0.5,
+    "current_streak": 1,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -154,16 +227,29 @@
     "born_from": "v1_base",
     "generation": 1,
     "specialization_symbols": [],
-    "badges": [],
+    "badges": [
+      {
+        "name": "Apprentice",
+        "description": "10+ Calls",
+        "icon": "\ud83e\udd49",
+        "awarded_at": "2026-08-06T21:05:59.134441+00:00"
+      },
+      {
+        "name": "Streak",
+        "description": "10 correct calls in a row",
+        "icon": "\u26a1",
+        "awarded_at": "2026-08-06T21:05:59.153893+00:00"
+      }
+    ],
     "personality_vector": {
       "analytical": 0.9,
       "cautious": 0.9,
       "momentum_driven": 0.1
     },
-    "total_calls": 0,
-    "correct_calls": 0,
-    "accuracy": 0.0,
-    "current_streak": 0,
+    "total_calls": 14,
+    "correct_calls": 12,
+    "accuracy": 0.8571428571428571,
+    "current_streak": 11,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -175,16 +261,29 @@
     "born_from": "v1_base",
     "generation": 1,
     "specialization_symbols": [],
-    "badges": [],
+    "badges": [
+      {
+        "name": "Apprentice",
+        "description": "10+ Calls",
+        "icon": "\ud83e\udd49",
+        "awarded_at": "2026-08-06T21:05:59.134554+00:00"
+      },
+      {
+        "name": "Streak",
+        "description": "10 correct calls in a row",
+        "icon": "\u26a1",
+        "awarded_at": "2026-08-06T21:05:59.134561+00:00"
+      }
+    ],
     "personality_vector": {
       "analytical": 0.9,
       "cautious": 0.8,
       "momentum_driven": 0.2
     },
-    "total_calls": 0,
-    "correct_calls": 0,
-    "accuracy": 0.0,
-    "current_streak": 0,
+    "total_calls": 14,
+    "correct_calls": 14,
+    "accuracy": 1.0,
+    "current_streak": 14,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -196,16 +295,29 @@
     "born_from": "v1_base",
     "generation": 1,
     "specialization_symbols": [],
-    "badges": [],
+    "badges": [
+      {
+        "name": "Apprentice",
+        "description": "10+ Calls",
+        "icon": "\ud83e\udd49",
+        "awarded_at": "2026-08-06T21:05:59.134701+00:00"
+      },
+      {
+        "name": "Streak",
+        "description": "10 correct calls in a row",
+        "icon": "\u26a1",
+        "awarded_at": "2026-08-06T21:05:59.134708+00:00"
+      }
+    ],
     "personality_vector": {
       "analytical": 0.8,
       "cautious": 0.4,
       "momentum_driven": 0.6
     },
-    "total_calls": 0,
-    "correct_calls": 0,
-    "accuracy": 0.0,
-    "current_streak": 0,
+    "total_calls": 14,
+    "correct_calls": 14,
+    "accuracy": 1.0,
+    "current_streak": 14,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -217,16 +329,29 @@
     "born_from": "v1_base",
     "generation": 1,
     "specialization_symbols": [],
-    "badges": [],
+    "badges": [
+      {
+        "name": "Apprentice",
+        "description": "10+ Calls",
+        "icon": "\ud83e\udd49",
+        "awarded_at": "2026-08-06T21:05:59.132467+00:00"
+      },
+      {
+        "name": "Streak",
+        "description": "10 correct calls in a row",
+        "icon": "\u26a1",
+        "awarded_at": "2026-08-06T21:05:59.132480+00:00"
+      }
+    ],
     "personality_vector": {
       "analytical": 0.9,
       "cautious": 0.4,
       "momentum_driven": 0.8
     },
-    "total_calls": 0,
-    "correct_calls": 0,
-    "accuracy": 0.0,
-    "current_streak": 0,
+    "total_calls": 14,
+    "correct_calls": 14,
+    "accuracy": 1.0,
+    "current_streak": 14,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -238,16 +363,29 @@
     "born_from": "v1_base",
     "generation": 1,
     "specialization_symbols": [],
-    "badges": [],
+    "badges": [
+      {
+        "name": "Apprentice",
+        "description": "10+ Calls",
+        "icon": "\ud83e\udd49",
+        "awarded_at": "2026-08-06T21:05:59.132671+00:00"
+      },
+      {
+        "name": "Streak",
+        "description": "10 correct calls in a row",
+        "icon": "\u26a1",
+        "awarded_at": "2026-08-06T21:05:59.132680+00:00"
+      }
+    ],
     "personality_vector": {
       "analytical": 0.3,
       "cautious": 0.5,
       "momentum_driven": 0.9
     },
-    "total_calls": 0,
-    "correct_calls": 0,
-    "accuracy": 0.0,
-    "current_streak": 0,
+    "total_calls": 14,
+    "correct_calls": 14,
+    "accuracy": 1.0,
+    "current_streak": 14,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -259,15 +397,22 @@
     "born_from": "v1_base",
     "generation": 1,
     "specialization_symbols": [],
-    "badges": [],
+    "badges": [
+      {
+        "name": "Apprentice",
+        "description": "10+ Calls",
+        "icon": "\ud83e\udd49",
+        "awarded_at": "2026-08-06T21:05:59.132901+00:00"
+      }
+    ],
     "personality_vector": {
       "analytical": 0.8,
       "cautious": 0.95,
       "momentum_driven": 0.1
     },
-    "total_calls": 0,
-    "correct_calls": 0,
-    "accuracy": 0.0,
+    "total_calls": 14,
+    "correct_calls": 7,
+    "accuracy": 0.5,
     "current_streak": 0,
     "confidence_level": 0.5,
     "experience_level": "Novice"
@@ -280,16 +425,23 @@
     "born_from": "v1_base",
     "generation": 1,
     "specialization_symbols": [],
-    "badges": [],
+    "badges": [
+      {
+        "name": "Apprentice",
+        "description": "10+ Calls",
+        "icon": "\ud83e\udd49",
+        "awarded_at": "2026-08-06T21:05:59.133026+00:00"
+      }
+    ],
     "personality_vector": {
       "analytical": 0.7,
       "cautious": 0.7,
       "momentum_driven": 0.5
     },
-    "total_calls": 0,
-    "correct_calls": 0,
-    "accuracy": 0.0,
-    "current_streak": 0,
+    "total_calls": 14,
+    "correct_calls": 5,
+    "accuracy": 0.35714285714285715,
+    "current_streak": 2,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -301,16 +453,29 @@
     "born_from": "v1_base",
     "generation": 1,
     "specialization_symbols": [],
-    "badges": [],
+    "badges": [
+      {
+        "name": "Apprentice",
+        "description": "10+ Calls",
+        "icon": "\ud83e\udd49",
+        "awarded_at": "2026-08-06T21:05:59.133146+00:00"
+      },
+      {
+        "name": "Streak",
+        "description": "10 correct calls in a row",
+        "icon": "\u26a1",
+        "awarded_at": "2026-08-06T21:05:59.133154+00:00"
+      }
+    ],
     "personality_vector": {
       "analytical": 0.9,
       "cautious": 0.8,
       "momentum_driven": 0.2
     },
-    "total_calls": 0,
-    "correct_calls": 0,
-    "accuracy": 0.0,
-    "current_streak": 0,
+    "total_calls": 14,
+    "correct_calls": 14,
+    "accuracy": 1.0,
+    "current_streak": 14,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
@@ -322,16 +487,29 @@
     "born_from": "v1_base",
     "generation": 1,
     "specialization_symbols": [],
-    "badges": [],
+    "badges": [
+      {
+        "name": "Apprentice",
+        "description": "10+ Calls",
+        "icon": "\ud83e\udd49",
+        "awarded_at": "2026-08-06T21:05:59.133295+00:00"
+      },
+      {
+        "name": "Streak",
+        "description": "10 correct calls in a row",
+        "icon": "\u26a1",
+        "awarded_at": "2026-08-06T21:05:59.133303+00:00"
+      }
+    ],
     "personality_vector": {
       "analytical": 0.85,
       "cautious": 0.85,
       "momentum_driven": 0.1
     },
-    "total_calls": 0,
-    "correct_calls": 0,
-    "accuracy": 0.0,
-    "current_streak": 0,
+    "total_calls": 14,
+    "correct_calls": 14,
+    "accuracy": 1.0,
+    "current_streak": 14,
     "confidence_level": 0.5,
     "experience_level": "Novice"
   },
