@@ -9,7 +9,7 @@
       "size": 0.0002,
       "unrealized_pnl": 0.0,
       "realized_pnl": 0.0,
-      "open_time": "2026-07-04T02:31:02.040516+00:00",
+      "open_time": "2026-08-06T21:25:24.224480+00:00",
       "strategy_id": null,
       "stop_price": 48000.0,
       "target_price": 54000.0
@@ -28,7 +28,6 @@
       "decision": "PROCEED_TO_SIMULATION",
       "ai_trace": {
         "trace_type": "ai_reasoning_audit_not_hidden_chain_of_thought",
-        "provider": "moonshot",
         "provider": "mock",
         "behavior_profile": {
           "trading_style": "balanced",
@@ -43,7 +42,7 @@
             "Do not request live execution directly.",
             "Prefer human review when confidence is low or preferences conflict."
           ],
-          "updated_at": "2026-07-04T02:30:58.791247+00:00"
+          "updated_at": "2026-08-06T21:02:01.291713+00:00"
         },
         "scouts": {
           "macro_sentinel": {
@@ -87,21 +86,21 @@
             "decision": "PROCEED_TO_SIMULATION"
           }
         },
-        "symbol_context": "Symbol: BTCUSDT | Direction: LONG\nTotal signals reviewed: 8\n  Macro_Sentinel scout: 0% accuracy (0/8), exp: 8\n  Market_Dna scout: 0% accuracy (0/8), exp: 8\n  Structural_Architect scout: 0% accuracy (0/8), exp: 8\n  Harmony_Coordinator scout: 0% accuracy (0/8), exp: 8\n  Indicator_Fusion scout: 0% accuracy (0/8), exp: 8\n  Risk_Kernel scout: 0% accuracy (0/8), exp: 8\n  Pine_Core scout: 0% accuracy (0/8), exp: 8\n  Payload_Qa scout: 0% accuracy (0/8), exp: 8\n  Execution_Watchdog scout: 0% accuracy (0/8), exp: 8\n  Evolution_Optimizer scout: 0% accuracy (0/8), exp: 8\nHistorical avg confluence: 85.0, avg crisis: 5.0",
+        "symbol_context": "Symbol: BTCUSDT | Direction: LONG\nTotal signals reviewed: 2\n  Macro_Sentinel scout: 0% accuracy (0/2), exp: 2\n  Market_Dna scout: 0% accuracy (0/2), exp: 2\n  Structural_Architect scout: 0% accuracy (0/2), exp: 2\n  Harmony_Coordinator scout: 0% accuracy (0/2), exp: 2\n  Indicator_Fusion scout: 0% accuracy (0/2), exp: 2\n  Risk_Kernel scout: 0% accuracy (0/2), exp: 2\n  Pine_Core scout: 0% accuracy (0/2), exp: 2\n  Payload_Qa scout: 0% accuracy (0/2), exp: 2\n  Execution_Watchdog scout: 0% accuracy (0/2), exp: 2\n  Evolution_Optimizer scout: 0% accuracy (0/2), exp: 2\nHistorical avg confluence: 85.0, avg crisis: 5.0",
         "scout_weights": {
-          "macro_sentinel": 0.1,
-          "market_dna": 0.1,
-          "structural_architect": 0.1,
-          "harmony_coordinator": 0.1,
-          "indicator_fusion": 0.1,
-          "risk_kernel": 0.1,
-          "pine_core": 0.1,
-          "payload_qa": 0.1,
-          "execution_watchdog": 0.1,
-          "evolution_optimizer": 0.1
+          "macro_sentinel": 0.5,
+          "market_dna": 0.5,
+          "structural_architect": 0.5,
+          "harmony_coordinator": 0.5,
+          "indicator_fusion": 0.5,
+          "risk_kernel": 0.5,
+          "pine_core": 0.5,
+          "payload_qa": 0.5,
+          "execution_watchdog": 0.5,
+          "evolution_optimizer": 0.5
         },
         "weighted_scout_vote": {
-          "approval_score": 0.835,
+          "approval_score": 4.175,
           "rejection_score": 0.0,
           "approval_ratio": 1.0,
           "weighted_confidence": 0.835,
@@ -110,62 +109,62 @@
             "macro_sentinel": {
               "decision": "PROCEED_TO_SIMULATION",
               "confidence": 0.5,
-              "weight": 0.1,
-              "score": 0.05
+              "weight": 0.5,
+              "score": 0.25
             },
             "market_dna": {
               "decision": "PROCEED_TO_SIMULATION",
               "confidence": 0.95,
-              "weight": 0.1,
-              "score": 0.095
+              "weight": 0.5,
+              "score": 0.475
             },
             "structural_architect": {
               "decision": "PROCEED_TO_SIMULATION",
               "confidence": 0.95,
-              "weight": 0.1,
-              "score": 0.095
+              "weight": 0.5,
+              "score": 0.475
             },
             "harmony_coordinator": {
               "decision": "PROCEED_TO_SIMULATION",
               "confidence": 0.95,
-              "weight": 0.1,
-              "score": 0.095
+              "weight": 0.5,
+              "score": 0.475
             },
             "indicator_fusion": {
               "decision": "PROCEED_TO_SIMULATION",
               "confidence": 0.95,
-              "weight": 0.1,
-              "score": 0.095
+              "weight": 0.5,
+              "score": 0.475
             },
             "risk_kernel": {
               "decision": "PROCEED_TO_SIMULATION",
               "confidence": 0.8,
-              "weight": 0.1,
-              "score": 0.08
+              "weight": 0.5,
+              "score": 0.4
             },
             "pine_core": {
               "decision": "PROCEED_TO_SIMULATION",
               "confidence": 0.95,
-              "weight": 0.1,
-              "score": 0.095
+              "weight": 0.5,
+              "score": 0.475
             },
             "payload_qa": {
               "decision": "PROCEED_TO_SIMULATION",
               "confidence": 0.8,
-              "weight": 0.1,
-              "score": 0.08
+              "weight": 0.5,
+              "score": 0.4
             },
             "execution_watchdog": {
               "decision": "PROCEED_TO_SIMULATION",
               "confidence": 0.8,
-              "weight": 0.1,
-              "score": 0.08
+              "weight": 0.5,
+              "score": 0.4
             },
             "evolution_optimizer": {
               "decision": "PROCEED_TO_SIMULATION",
               "confidence": 0.7,
-              "weight": 0.1,
-              "score": 0.07
+              "weight": 0.5,
+              "score": 0.35
             }
           }
         },
@@ -186,8 +185,8 @@
           "reason": "Mocked for tests"
         }
       },
-      "timestamp": "2026-07-04T02:30:58.791827+00:00"
+      "timestamp": "2026-08-06T21:25:24.188552+00:00"
     }
   ],
-  "updated_at": "2026-07-04T02:31:02.040678+00:00"
+  "updated_at": "2026-08-06T21:25:24.224596+00:00"
 }
