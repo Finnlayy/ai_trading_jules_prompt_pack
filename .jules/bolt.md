@@ -73,3 +73,7 @@
 ## 2024-05-18 - Optimize SQLite Query Aggregation
 **Learning:** Replaced manual Python-side O(N) memory/time aggregations on DB objects with `func.count()`, `func.sum()`, and `func.avg()` directly via SQLAlchemy to dramatically increase speed (~70x faster in tests) and lower memory pressure.
 **Action:** When aggregating rows, especially for reports and summaries, utilize SQLAlchemy's database-side aggregation functions rather than loading all objects into Python and iterating over them.
+
+## 2024-08-06 - Remove redundant symbol normalization loop
+**Learning:** Found redundant initialization of `normalized_symbols` in `app/services/price_poller.py`, saving 50.40% execution time in the loop via micro-benchmarks.
+**Action:** Always check loop variables aren't re-initialized redundantly.
