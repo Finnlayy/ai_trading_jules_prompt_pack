@@ -463,12 +463,10 @@ class PionexDirectBroker(BaseBroker):
     def _build_entry(
         self,
         payload: M8Payload,
-        decision: DecisionEnum,
-        reject_reason: Optional[str],
         ai_decision: AIDecisionEnum,
         final_decision: FinalDecisionEnum,
-        simulated_fill: Dict[str, Any],
-        result: Dict[str, Any],
+        simulated_fill: dict[str, Any],
+        result: dict[str, Any],
     ) -> TradeJournalEntry:
         entry = TradeJournalEntry(
             trade_id=f"pionex-direct-{payload.signal_id}",
@@ -500,8 +498,6 @@ class PionexDirectBroker(BaseBroker):
             self.notifier.send_reject(payload.symbol, reject_reason or "REJECTED", f"pionex-direct-{payload.signal_id}", payload.intent)
             return self._build_entry(
                 payload=payload,
-                decision=decision,
-                reject_reason=reject_reason,
                 ai_decision=ai_decision,
                 final_decision=FinalDecisionEnum.REJECTED,
                 simulated_fill={},
@@ -511,8 +507,6 @@ class PionexDirectBroker(BaseBroker):
         if not self.config.enabled:
             return self._build_entry(
                 payload=payload,
-                decision=decision,
-                reject_reason=None,
                 ai_decision=ai_decision,
                 final_decision=FinalDecisionEnum.EXECUTED_SIM,
                 simulated_fill={"mode": "PIONEX_DIRECT_DISABLED"},
@@ -524,8 +518,6 @@ class PionexDirectBroker(BaseBroker):
             self.notifier.send_reject(payload.symbol, "FUTURES_DISABLED", f"pionex-direct-{payload.signal_id}", payload.intent)
             return self._build_entry(
                 payload=payload,
-                decision=decision,
-                reject_reason="FUTURES_DISABLED",
                 ai_decision=ai_decision,
                 final_decision=FinalDecisionEnum.REJECTED,
                 simulated_fill={},
@@ -538,8 +530,6 @@ class PionexDirectBroker(BaseBroker):
             self.notifier.send_reject(symbol, reason, f"pionex-direct-{payload.signal_id}", payload.intent)
             return self._build_entry(
                 payload=payload,
-                decision=decision,
-                reject_reason=reason,
                 ai_decision=ai_decision,
                 final_decision=FinalDecisionEnum.REJECTED,
                 simulated_fill={},
@@ -556,8 +546,6 @@ class PionexDirectBroker(BaseBroker):
             self.notifier.send_reject(symbol, war_room.reject_reason, f"pionex-direct-{payload.signal_id}", payload.intent)
             return self._build_entry(
                 payload=payload,
-                decision=DecisionEnum.PROCEED_TO_SIMULATION,
-                reject_reason=war_room.reject_reason,
                 ai_decision=ai_decision,
                 final_decision=FinalDecisionEnum.REJECTED,
                 simulated_fill={},
@@ -573,8 +561,6 @@ class PionexDirectBroker(BaseBroker):
             self.notifier.send_reject(symbol, reason, f"pionex-direct-{payload.signal_id}", payload.intent)
             return self._build_entry(
                 payload=payload,
-                decision=DecisionEnum.PROCEED_TO_SIMULATION,
-                reject_reason=reason,
                 ai_decision=ai_decision,
                 final_decision=FinalDecisionEnum.REJECTED,
                 simulated_fill={},
@@ -651,8 +637,6 @@ class PionexDirectBroker(BaseBroker):
                 self.notifier.send_error("ENTRY", exc.message)
                 return self._build_entry(
                     payload=payload,
-                    decision=DecisionEnum.PROCEED_TO_SIMULATION,
-                    reject_reason=exc.message,
                     ai_decision=ai_decision,
                     final_decision=FinalDecisionEnum.REJECTED,
                     simulated_fill=simulated_fill,
@@ -678,8 +662,6 @@ class PionexDirectBroker(BaseBroker):
         )
         return self._build_entry(
             payload=payload,
-            decision=DecisionEnum.PROCEED_TO_SIMULATION,
-            reject_reason=None,
             ai_decision=ai_decision,
             final_decision=FinalDecisionEnum.EXECUTED_SIM,
             simulated_fill=simulated_fill,
@@ -734,8 +716,6 @@ class PionexDirectBroker(BaseBroker):
             self.notifier.send_reject(symbol, reason, trade_id, payload.intent)
             return self._build_entry(
                 payload=payload,
-                decision=DecisionEnum.PROCEED_TO_SIMULATION,
-                reject_reason=reason,
                 ai_decision=ai_decision,
                 final_decision=FinalDecisionEnum.REJECTED,
                 simulated_fill={},
@@ -754,8 +734,6 @@ class PionexDirectBroker(BaseBroker):
             self.notifier.send_reject(symbol, reason, trade_id, payload.intent)
             return self._build_entry(
                 payload=payload,
-                decision=DecisionEnum.PROCEED_TO_SIMULATION,
-                reject_reason=reason,
                 ai_decision=ai_decision,
                 final_decision=FinalDecisionEnum.REJECTED,
                 simulated_fill={},
@@ -840,8 +818,6 @@ class PionexDirectBroker(BaseBroker):
                 self.notifier.send_error("CLOSE", exc.message)
                 return self._build_entry(
                     payload=payload,
-                    decision=DecisionEnum.PROCEED_TO_SIMULATION,
-                    reject_reason=exc.message,
                     ai_decision=ai_decision,
                     final_decision=FinalDecisionEnum.REJECTED,
                     simulated_fill=simulated_fill,
@@ -859,8 +835,6 @@ class PionexDirectBroker(BaseBroker):
         )
         return self._build_entry(
             payload=payload,
-            decision=DecisionEnum.PROCEED_TO_SIMULATION,
-            reject_reason=None,
             ai_decision=ai_decision,
             final_decision=FinalDecisionEnum.EXECUTED_SIM,
             simulated_fill=simulated_fill,
