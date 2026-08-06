@@ -69,3 +69,7 @@
 ## 2025-02-28 - Optimizing multiple list iteration generator expressions
 **Learning:** Multiple O(N) generator expressions iterating over the same list (like summing `(t.pnl or 0) > 0` and `(t.pnl or 0) < 0` for calculating metric aggregations) causes unnecessary overhead and slows down endpoint responses.
 **Action:** Consolidate multiple list iteration operations (like calculating wins, losses, gross profit, and gross loss) into a single explicit unrolled `for` loop. This avoids Python generator overhead and repeated array traversal, significantly speeding up metric calculations on large datasets like backtest results.
+
+## 2024-08-06 - Remove redundant symbol normalization loop
+**Learning:** Found redundant initialization of `normalized_symbols` in `app/services/price_poller.py`, saving 50.40% execution time in the loop via micro-benchmarks.
+**Action:** Always check loop variables aren't re-initialized redundantly.
