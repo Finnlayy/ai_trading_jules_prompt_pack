@@ -1,6 +1,6 @@
 # Project Wiki & Second Brain (Swarm Memory)
 
-*Last Updated: 2026-08-06T21:48:07.832341+00:00*
+*Last Updated: 2026-08-06T23:15:27.483296+00:00*
 
 This file serves as the unified project memory for all 17 Scouts and Gems, recording historical outcomes, accuracy ratings, and real-time portfolio metrics to prevent memory loss and optimize alignment.
 
@@ -23,9 +23,9 @@ This file serves as the unified project memory for all 17 Scouts and Gems, recor
 ## 💼 Open Paper Positions
 | Symbol | Direction | Volume | Avg Entry | Stop Loss | Take Profit | Unrealized P&L |
 | --- | --- | --- | --- | --- | --- | --- |
-| `SOLUSD` | LONG | 0.2000 | 72.8500 | 0.0000 | 0.0000 | $0.0000 |
-| `XETHZUSD` | LONG | 0.0100 | 1904.8500 | 0.0000 | 0.0000 | $0.0000 |
-| `XRPUSD` | LONG | 5.0000 | 1.0350 | 0.0000 | 0.0000 | $0.0000 |
+| `SOLUSD` | LONG | 0.2000 | 72.6200 | 0.0000 | 0.0000 | $0.0000 |
+| `XETHZUSD` | LONG | 0.0100 | 1903.3100 | 0.0000 | 0.0000 | $0.0000 |
+| `XRPUSD` | LONG | 5.0000 | 1.0342 | 0.0000 | 0.0000 | $0.0000 |
 
 ---
 
@@ -33,21 +33,21 @@ This file serves as the unified project memory for all 17 Scouts and Gems, recor
 | Agent Name | Archetype | Total Calls | Correct | Accuracy | Streak | Badges |
 | --- | --- | --- | --- | --- | --- | --- |
 | `macro_sentinel` | Stratege | 15 | 15 | 100.00% | 15 | 🥉 Apprentice, ⚡ Streak |
-| `market_dna` | Analyst | 15 | 14 | 93.33% | 14 | 🥉 Apprentice, ⚡ Streak |
-| `structural_architect` | Architekt | 15 | 15 | 100.00% | 15 | 🥉 Apprentice, ⚡ Streak |
+| `market_dna` | Analyst | 15 | 15 | 100.00% | 15 | 🥉 Apprentice, ⚡ Streak |
+| `structural_architect` | Architekt | 15 | 6 | 40.00% | 3 | 🥉 Apprentice |
 | `harmony_coordinator` | Diplomat | 15 | 15 | 100.00% | 15 | 🥉 Apprentice, ⚡ Streak |
-| `indicator_fusion` | Analyst | 15 | 15 | 100.00% | 15 | 🥉 Apprentice, ⚡ Streak |
+| `indicator_fusion` | Analyst | 15 | 8 | 53.33% | 1 | 🥉 Apprentice |
 | `risk_kernel` | Wächter | 15 | 15 | 100.00% | 15 | 🥉 Apprentice, ⚡ Streak |
-| `pine_core` | Entwickler | 15 | 9 | 60.00% | 3 | 🥉 Apprentice |
-| `payload_qa` | Prüfer | 15 | 15 | 100.00% | 15 | 🥉 Apprentice, ⚡ Streak |
-| `execution_watchdog` | Operator | 15 | 2 | 13.33% | 1 | 🥉 Apprentice |
+| `pine_core` | Entwickler | 15 | 5 | 33.33% | 1 | 🥉 Apprentice |
+| `payload_qa` | Prüfer | 15 | 9 | 60.00% | 3 | 🥉 Apprentice |
+| `execution_watchdog` | Operator | 15 | 15 | 100.00% | 15 | 🥉 Apprentice, ⚡ Streak |
 | `evolution_optimizer` | Forscher | 15 | 2 | 13.33% | 1 | 🥉 Apprentice |
-| `technical` | Analyst | 19 | 17 | 89.47% | 0 | 🥉 Apprentice, ⚡ Streak |
-| `sentiment` | Diplomat | 16 | 16 | 100.00% | 16 | 🥉 Apprentice, ⚡ Streak |
-| `risk` | Guardian | 16 | 5 | 31.25% | 1 | 🥉 Apprentice |
-| `macro` | Strategist | 15 | 15 | 100.00% | 15 | 🥉 Apprentice, ⚡ Streak |
+| `technical` | Analyst | 19 | 18 | 94.74% | 0 | 🥉 Apprentice, ⚡ Streak |
+| `sentiment` | Diplomat | 16 | 9 | 56.25% | 3 | 🥉 Apprentice |
+| `risk` | Guardian | 16 | 4 | 25.00% | 1 | 🥉 Apprentice |
+| `macro` | Strategist | 15 | 9 | 60.00% | 2 | 🥉 Apprentice |
 | `execution` | Operator | 15 | 15 | 100.00% | 15 | 🥉 Apprentice, ⚡ Streak |
-| `correlation` | Architect | 15 | 10 | 66.67% | 2 | 🥉 Apprentice |
+| `correlation` | Architect | 15 | 15 | 100.00% | 15 | 🥉 Apprentice, ⚡ Streak |
 | `test-agent` | Analyst | 0 | 0 | 0.00% | 0 | None |
 
 ---
@@ -104,5 +104,5 @@ This section lists all prompt pack instructions and design assets stored in the 
 | `plan_step_03_autonomous_trading_loop.md` | 11.81 KB | 2026-08-06 21:36:49 UTC |
 | `plan_step_04_live_paper_trading_integration.md` | 15.82 KB | 2026-08-06 21:36:49 UTC |
 | `pr_desc.md` | 1.06 KB | 2026-08-06 21:36:49 UTC |
-| `pr_description.md` | 0.73 KB | 2026-08-06 21:36:49 UTC |
+| `pr_description.md` | 1.04 KB | 2026-08-06 21:59:09 UTC |
 | `project_plan.md` | 5.75 KB | 2026-08-06 21:36:49 UTC |
