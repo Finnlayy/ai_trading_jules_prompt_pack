@@ -27,6 +27,7 @@ from app.core.config import (
 from app.schemas.ai_review import DecisionEnum as AIDecisionEnum
 from app.schemas.journal import DecisionEnum, FinalDecisionEnum, TradeJournalEntry, DirectionEnum
 from app.schemas.m8_payload import M8Payload
+from app.schemas.ctrader import CTraderOrderRequest
 from app.services.broker_interface import BaseBroker
 
 logger = logging.getLogger(__name__)
@@ -561,54 +562,49 @@ class CTraderFixBroker(BaseBroker):
 
     def place_direct_order(
         self,
-        symbol: str,
-        direction: str,
-        volume_lots: float,
-        stop_loss: float | None = None,
-        take_profit: float | None = None,
-        label: str | None = None,
+        req: CTraderOrderRequest
     ) -> dict[str, Any]:
         if not self.config.enabled:
             return {"status": "ERROR", "error": "CTRADER_FIX_DISABLED"}
         if not self.is_ready():
             return {"status": "ERROR", "error": "CTRADER_FIX_CREDENTIALS_MISSING"}
 
-        side = "BUY" if direction.upper() in {"BUY", "LONG"} else "SELL"
-        cl_ord_id = (label or f"metricfix-direct-{datetime.now(timezone.utc).strftime('%H%M%S')}")[:20]
+        side = "BUY" if req.direction.upper() in {"BUY", "LONG"} else "SELL"
+        cl_ord_id = (req.label or f"metricfix-direct-{datetime.now(timezone.utc).strftime('%H%M%S')}")[:20]
 
         if not self.config.live_trading_enabled:
             return {
                 "status": "DRY_RUN_CTRADER_FIX",
                 "order_id": None,
                 "position_id": None,
-                "symbol": symbol,
-                "direction": direction,
-                "volume_lots": volume_lots,
+                "symbol": req.symbol,
+                "direction": req.direction,
+                "volume_lots": req.volume_lots,
                 "fill_price": None,
                 "error": None,
                 "preview": {
-                    "symbol": symbol,
+                    "symbol": req.symbol,
                     "side": side,
-                    "qty": volume_lots,
+                    "qty": req.volume_lots,
                     "cl_ord_id": cl_ord_id,
-                    "stop_loss": stop_loss,
-                    "take_profit": take_profit,
+                    "stop_loss": req.stop_loss,
+                    "take_profit": req.take_profit,
                 },
             }
 
         try:
             result = self.client.send_market_order(
-                symbol=symbol,
+                symbol=req.symbol,
                 side=side,
-                qty=volume_lots,
+                qty=req.volume_lots,
                 cl_ord_id=cl_ord_id,
             )
-            result["symbol"] = symbol
-            result["direction"] = direction
-            result["volume_lots"] = volume_lots
+            result["symbol"] = req.symbol
+            result["direction"] = req.direction
+            result["volume_lots"] = req.volume_lots
             return result
         except Exception as exc:
-            return {"status": "FIX_ERROR", "error": str(exc), "cl_ord_id": cl_ord_id, "symbol": symbol, "direction": direction, "volume_lots": volume_lots}
+            return {"status": "FIX_ERROR", "error": str(exc), "cl_ord_id": cl_ord_id, "symbol": req.symbol, "direction": req.direction, "volume_lots": req.volume_lots}
         finally:
             try:
                 self.client.disconnect()
