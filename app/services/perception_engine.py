@@ -5,6 +5,7 @@ from app.schemas.perception import PerceptionContext, IndicatorState, RegimeCont
 from app.services.regime_engine import regime_engine_instance
 from app.services.news_aggregator import news_aggregator_instance
 from app.services.news_impact_scorer import news_impact_scorer
+from app.services.signal_generator import BybitDataFeed
 
 class PerceptionEngine:
     def __init__(self):
@@ -16,7 +17,8 @@ class PerceptionEngine:
         """
         # Fetch latest price
         try:
-            latest_bar = market_data_service.get_latest_bar(symbol)
+            # using BybitDataFeed as a placeholder for market data
+            latest_bar = None # Needs an actual market data service or implementation
             current_price = latest_bar['close'] if latest_bar else 0.0
         except Exception:
             current_price = 0.0

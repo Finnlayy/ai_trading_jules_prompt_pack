@@ -8,6 +8,7 @@ from app.services.ai_factory import ai_review_instance
 from app.services.broker_factory import BrokerFactory
 from app.services.journal_logger import journal_logger_instance
 from app.services.regime_engine import regime_engine_instance
+from app.services.confidence_registry import confidence_registry
 from app.services.signal_generator import BybitDataFeed
 from app.schemas.journal import DecisionEnum, FinalDecisionEnum
 from app.schemas.ai_review import SignalReview

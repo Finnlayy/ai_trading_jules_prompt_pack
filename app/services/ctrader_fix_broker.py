@@ -154,7 +154,7 @@ class CTraderFixClient:
         ])
 
         self._send_raw(msg)
-        return self._wait_for_execution(cl_ord_id, timeout=15.0)
+        return self._wait_for_execution(order.cl_ord_id, timeout=15.0)
 
     # ------------------------------------------------------------------
     # Socket I/O
