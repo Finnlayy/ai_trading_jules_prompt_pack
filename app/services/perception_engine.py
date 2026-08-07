@@ -5,6 +5,7 @@ from app.schemas.perception import PerceptionContext, IndicatorState, RegimeCont
 from app.services.regime_engine import regime_engine_instance
 from app.services.news_aggregator import news_aggregator_instance
 from app.services.news_impact_scorer import news_impact_scorer
+from app.services.price_poller import price_poller
 
 class PerceptionEngine:
     def __init__(self):
