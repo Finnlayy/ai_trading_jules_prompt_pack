@@ -129,25 +129,25 @@
   },
   {
     "version_id": "v2_auto_evolved",
-    "scout_name": "sentiment",
-    "prompt_text": "Auto-evolved prompt for sentiment focusing on recent failures.",
-    "created_at": "2026-08-06T23:41:58.208189+00:00",
+    "scout_name": "structural_architect",
+    "prompt_text": "Auto-evolved prompt for structural_architect focusing on recent failures.",
+    "created_at": "2026-08-07T00:08:28.188153+00:00",
     "parent_version": "v1_base",
     "change_summary": "Auto-correction from Training Loop"
   },
   {
     "version_id": "v3_auto_evolved",
-    "scout_name": "sentiment",
-    "prompt_text": "Auto-evolved prompt for sentiment focusing on recent failures.",
-    "created_at": "2026-08-06T23:41:58.228793+00:00",
+    "scout_name": "evolution_optimizer",
+    "prompt_text": "Auto-evolved prompt for evolution_optimizer focusing on recent failures.",
+    "created_at": "2026-08-07T00:08:28.191373+00:00",
     "parent_version": "v1_base",
     "change_summary": "Auto-correction from Training Loop"
   },
   {
     "version_id": "v4_auto_evolved",
-    "scout_name": "structural_architect",
-    "prompt_text": "Auto-evolved prompt for structural_architect focusing on recent failures.",
-    "created_at": "2026-06-13T23:46:39.375582+00:00",
+    "scout_name": "sentiment",
+    "prompt_text": "Auto-evolved prompt for sentiment focusing on recent failures.",
+    "created_at": "2026-08-07T00:08:28.098615+00:00",
     "parent_version": "v1_base",
     "change_summary": "Auto-correction from Training Loop"
   },

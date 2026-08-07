@@ -1,6 +1,6 @@
 # Project Wiki & Second Brain (Swarm Memory)
 
-*Last Updated: 2026-08-06T23:42:37.990139+00:00*
+*Last Updated: 2026-08-07T00:09:00.245185+00:00*
 
 This file serves as the unified project memory for all 17 Scouts and Gems, recording historical outcomes, accuracy ratings, and real-time portfolio metrics to prevent memory loss and optimize alignment.
 
@@ -14,7 +14,7 @@ This file serves as the unified project memory for all 17 Scouts and Gems, recor
 - **Win Rate**: 0.00%
 
 ### 2. Live Trading Summary
-- **Total Live Trades**: 1043
+- **Total Live Trades**: 1045
 - **Net Live P&L**: $0.0000 USD
 - **Win Rate**: 0.00%
 
@@ -23,31 +23,31 @@ This file serves as the unified project memory for all 17 Scouts and Gems, recor
 ## 💼 Open Paper Positions
 | Symbol | Direction | Volume | Avg Entry | Stop Loss | Take Profit | Unrealized P&L |
 | --- | --- | --- | --- | --- | --- | --- |
-| `SOLUSD` | LONG | 0.2000 | 72.3200 | 0.0000 | 0.0000 | $0.0000 |
-| `XETHZUSD` | LONG | 0.0100 | 1898.2000 | 0.0000 | 0.0000 | $0.0000 |
-| `XRPUSD` | LONG | 5.0000 | 1.0303 | 0.0000 | 0.0000 | $0.0000 |
+| `SOLUSD` | LONG | 0.2000 | 72.7100 | 0.0000 | 0.0000 | $0.0000 |
+| `XETHZUSD` | LONG | 0.0100 | 1903.3600 | 0.0000 | 0.0000 | $0.0000 |
+| `XRPUSD` | LONG | 5.0000 | 1.0351 | 0.0000 | 0.0000 | $0.0000 |
 
 ---
 
 ## 🤖 Academy Swarm Leaderboard
 | Agent Name | Archetype | Total Calls | Correct | Accuracy | Streak | Badges |
 | --- | --- | --- | --- | --- | --- | --- |
-| `macro_sentinel` | Stratege | 29 | 29 | 100.00% | 29 | 🥉 Apprentice, ⚡ Streak |
-| `market_dna` | Analyst | 29 | 29 | 100.00% | 29 | 🥉 Apprentice, ⚡ Streak |
-| `structural_architect` | Architekt | 29 | 8 | 27.59% | 1 | 🥉 Apprentice |
-| `harmony_coordinator` | Diplomat | 29 | 29 | 100.00% | 29 | 🥉 Apprentice, ⚡ Streak |
-| `indicator_fusion` | Analyst | 29 | 17 | 58.62% | 5 | 🥉 Apprentice |
-| `risk_kernel` | Wächter | 29 | 29 | 100.00% | 29 | 🥉 Apprentice, ⚡ Streak |
-| `pine_core` | Entwickler | 29 | 7 | 24.14% | 1 | 🥉 Apprentice |
-| `payload_qa` | Prüfer | 29 | 15 | 51.72% | 2 | 🥉 Apprentice |
-| `execution_watchdog` | Operator | 29 | 29 | 100.00% | 29 | 🥉 Apprentice, ⚡ Streak |
-| `evolution_optimizer` | Forscher | 29 | 3 | 10.34% | 1 | 🥉 Apprentice |
-| `technical` | Analyst | 33 | 30 | 90.91% | 0 | 🥉 Apprentice, ⚡ Streak |
-| `sentiment` | Diplomat | 30 | 19 | 63.33% | 5 | 🥉 Apprentice |
-| `risk` | Guardian | 30 | 9 | 30.00% | 1 | 🥉 Apprentice |
-| `macro` | Strategist | 29 | 19 | 65.52% | 1 | 🥉 Apprentice |
-| `execution` | Operator | 29 | 29 | 100.00% | 29 | 🥉 Apprentice, ⚡ Streak |
-| `correlation` | Architect | 29 | 29 | 100.00% | 29 | 🥉 Apprentice, ⚡ Streak |
+| `macro_sentinel` | Stratege | 43 | 43 | 100.00% | 43 | 🥉 Apprentice, ⚡ Streak |
+| `market_dna` | Analyst | 43 | 43 | 100.00% | 43 | 🥉 Apprentice, ⚡ Streak |
+| `structural_architect` | Architekt | 43 | 11 | 25.58% | 1 | 🥉 Apprentice |
+| `harmony_coordinator` | Diplomat | 43 | 43 | 100.00% | 43 | 🥉 Apprentice, ⚡ Streak |
+| `indicator_fusion` | Analyst | 43 | 26 | 60.47% | 4 | 🥉 Apprentice |
+| `risk_kernel` | Wächter | 43 | 43 | 100.00% | 43 | 🥉 Apprentice, ⚡ Streak |
+| `pine_core` | Entwickler | 43 | 10 | 23.26% | 1 | 🥉 Apprentice |
+| `payload_qa` | Prüfer | 43 | 25 | 58.14% | 1 | 🥉 Apprentice |
+| `execution_watchdog` | Operator | 43 | 43 | 100.00% | 43 | 🥉 Apprentice, ⚡ Streak |
+| `evolution_optimizer` | Forscher | 43 | 3 | 6.98% | 1 | 🥉 Apprentice |
+| `technical` | Analyst | 47 | 44 | 93.62% | 0 | 🥉 Apprentice, ⚡ Streak |
+| `sentiment` | Diplomat | 44 | 28 | 63.64% | 2 | 🥉 Apprentice |
+| `risk` | Guardian | 44 | 11 | 25.00% | 1 | 🥉 Apprentice |
+| `macro` | Strategist | 43 | 26 | 60.47% | 1 | 🥉 Apprentice |
+| `execution` | Operator | 43 | 43 | 100.00% | 43 | 🥉 Apprentice, ⚡ Streak |
+| `correlation` | Architect | 43 | 43 | 100.00% | 43 | 🥉 Apprentice, ⚡ Streak |
 | `test-agent` | Analyst | 0 | 0 | 0.00% | 0 | None |
 
 ---
