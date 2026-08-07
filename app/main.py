@@ -216,6 +216,7 @@ async def _shadow_queue_loop():
 
 @app.on_event("startup")
 def startup_event():
+    global _heartbeat_task, _news_poll_task, _autostart_task, _training_autostart_task, _shadow_queue_task
     # Create DB tables
     from app.db import Base, engine
     Base.metadata.create_all(bind=engine)

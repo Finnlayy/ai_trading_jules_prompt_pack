@@ -17,8 +17,9 @@ class PerceptionEngine:
         """
         # Fetch latest price
         try:
-            current_price = price_poller.get_last_price(symbol) or 0.0
-
+            # latest_bar = market_data_service.get_latest_bar(symbol)
+            latest_bar = None  # mock for now as market_data_service is undefined
+            current_price = latest_bar['close'] if latest_bar else 0.0
         except Exception:
             current_price = 0.0
 
