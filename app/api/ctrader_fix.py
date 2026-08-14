@@ -33,16 +33,7 @@ _fix_broker_instance: CTraderFixBroker | None = None
 def _get_fix_broker() -> CTraderFixBroker:
     global _fix_broker_instance
     if _fix_broker_instance is None:
-        config = CTraderFixConfig(
-            enabled=CTRADER_FIX_ENABLED,
-            live_trading_enabled=CTRADER_FIX_LIVE_TRADING_ENABLED,
-            host=CTRADER_FIX_HOST,
-            port=CTRADER_FIX_PORT,
-            sender_comp_id=CTRADER_FIX_SENDER_COMP_ID,
-            target_comp_id=CTRADER_FIX_TARGET_COMP_ID,
-            password=CTRADER_FIX_PASSWORD,
-            sender_sub_id=CTRADER_FIX_SENDER_SUB_ID,
-        )
+        config = CTraderFixConfig()
         _fix_broker_instance = CTraderFixBroker(config=config)
     return _fix_broker_instance
 
@@ -85,12 +76,7 @@ async def place_fix_order(req: CTraderOrderRequest):
     broker = _get_fix_broker()
     result = await asyncio.to_thread(
         broker.place_direct_order,
-        symbol=req.symbol,
-        direction=req.direction,
-        volume_lots=req.volume_lots,
-        stop_loss=req.stop_loss,
-        take_profit=req.take_profit,
-        label=req.label,
+        req=req,
     )
     return CTraderOrderResponse(**result)
 

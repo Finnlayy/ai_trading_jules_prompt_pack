@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
 from app.api.ctrader_fix import router as fix_router
+from app.services.ctrader_fix_broker import CTraderFixOrderRequest
 
 
 def _test_app():
@@ -40,15 +41,20 @@ class FakeFixClient:
             "last_error": None,
         }
 
-    def send_market_order(self, symbol, side, qty, cl_ord_id, **kwargs):
-        self.orders.append({"symbol": symbol, "side": side, "qty": qty, "cl_ord_id": cl_ord_id})
+    def send_market_order(self, order: CTraderFixOrderRequest, **kwargs):
+        self.orders.append({
+            "symbol": order.symbol,
+            "side": order.side,
+            "qty": order.qty,
+            "cl_ord_id": order.cl_ord_id
+        })
         return {
             "status": "FILLED",
-            "cl_ord_id": cl_ord_id,
+            "cl_ord_id": order.cl_ord_id,
             "order_id": "order-1",
-            "symbol": symbol,
-            "side": side,
-            "qty": qty,
+            "symbol": order.symbol,
+            "side": order.side,
+            "qty": order.qty,
             "price": "1.1000",
         }
 

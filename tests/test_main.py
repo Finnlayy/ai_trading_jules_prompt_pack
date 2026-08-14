@@ -1,13 +1,23 @@
 import pytest
 from fastapi.testclient import TestClient
 
-def test_health_check():
-    """Test the /health endpoint."""
+def test_health_check(monkeypatch):
+    """Test the /health endpoint (requires a configured API key + X-API-Key header)."""
+    monkeypatch.setenv("API_KEY", "test-api-key")
     from app.main import app
     client = TestClient(app)
-    response = client.get("/health")
+    response = client.get("/health", headers={"X-API-Key": "test-api-key"})
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
+
+
+def test_health_check_rejects_missing_key(monkeypatch):
+    """/health must reject requests without a valid X-API-Key."""
+    monkeypatch.setenv("API_KEY", "test-api-key")
+    from app.main import app
+    client = TestClient(app)
+    assert client.get("/health").status_code == 401
+    assert client.get("/health", headers={"X-API-Key": "wrong"}).status_code == 401
 
 def test_frontend():
     """Test the root endpoint serving frontend.html."""
@@ -47,3 +57,15 @@ def test_lifecycle_events():
     assert main_module._news_poll_task.cancelled() or main_module._news_poll_task.done()
     assert main_module._autostart_task.cancelled() or main_module._autostart_task.done()
     assert main_module._shadow_queue_task.cancelled() or main_module._shadow_queue_task.done()
+
+def test_cors_middleware():
+    """Test that CORS middleware is applied and returns correct headers."""
+    from app.main import app
+    client = TestClient(app)
+    response = client.options("/health", headers={
+        "Origin": "http://localhost:3000",
+        "Access-Control-Request-Method": "GET"
+    })
+    # Since CORS_ORIGINS is empty by default, a random origin like localhost:3000 will be rejected (400) by the preflight.
+    # We assert 400 to verify the middleware is active and correctly blocking unconfigured origins.
+    assert response.status_code == 400
