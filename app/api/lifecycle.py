@@ -8,6 +8,8 @@ import json
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+from sqlalchemy import func, cast, Integer
+from sqlalchemy.sql.expression import case
 
 from app.db import get_db
 from app.db.models import AgentLearningEvent, AgentReviewEvent, PaperOutcome, SignalCandidate
@@ -33,16 +35,18 @@ def lifecycle_summary(db: Session = Depends(get_db)) -> dict[str, Any]:
         .filter(SignalCandidate.status.in_(["created", "ai_reviewed", "paper_opened"]))
         .count()
     )
-    outcomes = db.query(PaperOutcome).all()
-    wins = sum(1 for outcome in outcomes if outcome.win)
-    losses = len(outcomes) - wins
-    total_pnl = sum(float(outcome.pnl or 0.0) for outcome in outcomes)
-    avg_r = (
-        sum(float(outcome.r_multiple or 0.0) for outcome in outcomes) / len(outcomes)
-        if outcomes else 0.0
-    )
-    from sqlalchemy import func
-    from sqlalchemy.sql.expression import case
+    stats = db.query(
+        func.count().label('total'),
+        func.sum(cast(PaperOutcome.win, Integer)).label('wins'),
+        func.sum(PaperOutcome.pnl).label('total_pnl'),
+        func.avg(PaperOutcome.r_multiple).label('avg_r')
+    ).first()
+
+    total_outcomes = stats.total or 0
+    wins = stats.wins or 0
+    losses = total_outcomes - wins
+    total_pnl = float(stats.total_pnl or 0.0)
+    avg_r = float(stats.avg_r or 0.0)
 
     learning_events = db.query(AgentLearningEvent).count()
     scout_accuracy: dict[str, dict[str, Any]] = {}
@@ -69,10 +73,10 @@ def lifecycle_summary(db: Session = Depends(get_db)) -> dict[str, Any]:
             "closed": db.query(SignalCandidate).filter(SignalCandidate.status == "paper_closed").count(),
         },
         "outcomes": {
-            "total": len(outcomes),
+            "total": total_outcomes,
             "wins": wins,
             "losses": losses,
-            "win_rate": wins / len(outcomes) if outcomes else 0.0,
+            "win_rate": wins / total_outcomes if total_outcomes else 0.0,
             "total_pnl": round(total_pnl, 8),
             "avg_r_multiple": round(avg_r, 4),
         },
