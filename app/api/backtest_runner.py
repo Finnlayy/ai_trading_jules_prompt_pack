@@ -108,6 +108,37 @@ def _record_historical_outcomes(executed_payloads: List) -> dict:
             except Exception:
                 pass
     return outcomes
+class BacktestCoordinate(BaseModel):
+    price: float
+    time: str
+
+class BacktestSignalResult(BaseModel):
+    signal_id: str
+    direction: str
+    entry_price: float
+    confluence_score: float
+    final_decision: str
+    reject_reason: Optional[str] = None
+    ai_trace: Optional[dict] = None
+    asset_class: Optional[str] = None
+    entry: BacktestCoordinate
+    exit: BacktestCoordinate
+    pnl_pct: Optional[float] = None
+
+class BacktestRunResponse(BaseModel):
+    status: str
+    symbol: str
+    timeframe: str
+    bars_analyzed: int
+    signals_generated: int
+    executed: int
+    rejected: int
+    longs: int
+    shorts: int
+    generation_summary: dict
+    results: List[BacktestSignalResult]
+    message: Optional[str] = None
+
 class BacktestRunRequest(BaseModel):
     symbol: str = "HYPEUSDT"
     timeframe: str = "1m"
@@ -120,7 +151,7 @@ class BacktestRunRequest(BaseModel):
     min_confluence: Optional[float] = None
 
 
-@router.post("/run")
+@router.post("/run", response_model=BacktestRunResponse)
 async def run_backtest(req: BacktestRunRequest):
     """
     Run a full backtest through the M8 pipeline on historical data.
