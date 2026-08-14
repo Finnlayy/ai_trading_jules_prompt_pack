@@ -98,7 +98,6 @@ class BybitDataFeed:
             chunk.sort(key=lambda x: x.ts)
             all_bars = chunk + all_bars
             end_ms = chunk[0].ts - tf_ms
-            time.sleep(0.08)
             if len(chunk) < limit:
                 break
 

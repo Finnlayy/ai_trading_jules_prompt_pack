@@ -28,3 +28,7 @@ app/data/trading.db
 data/*.json
 data/*.jsonl
 data/runtime_archive/
+
+# System-generated second-brain wiki (rewritten by the agent at runtime)
+wiki/second_brain.md
+wiki/second_brain_summaries.md

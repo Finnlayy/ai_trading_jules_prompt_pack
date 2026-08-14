@@ -10,11 +10,9 @@ logger = logging.getLogger(__name__)
 from pathlib import Path
 
 from fastapi import FastAPI, Depends
-from fastapi import FastAPI
-from fastapi.responses import RedirectResponse, Response
+from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import CORS_ORIGINS
-from fastapi.responses import FileResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from app.api.auth import router as auth_router, get_current_user
 from fastapi import Depends
@@ -47,6 +45,10 @@ from app.api.agentic import router as agentic_router
 from app.api.simulator import router as simulator_router
 from app.services.webhook_consumer import webhook_consumer_instance
 from app.services.position_monitor import paper_position_monitor_instance
+
+logger = logging.getLogger(__name__)
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Agent-Reflex Hybrid Trader API",
@@ -216,19 +218,19 @@ async def _shadow_queue_loop():
 
 @app.on_event("startup")
 def startup_event():
-    global _heartbeat_task, _news_poll_task, _autostart_task, _training_autostart_task, _price_poller_task, _shadow_queue_task
+    global _heartbeat_task, _news_poll_task, _autostart_task, _training_autostart_task, _shadow_queue_task
     # Create DB tables
     from app.db import Base, engine
     Base.metadata.create_all(bind=engine)
-    _heartbeat_task = asyncio.create_task(_heartbeat_loop())
-    _news_poll_task = asyncio.create_task(_news_poll_loop())
-    _autostart_task = asyncio.create_task(_autonomous_loop_auto_start())
-    _training_autostart_task = asyncio.create_task(_training_loop_auto_start())
+    global _heartbeat_task; _heartbeat_task = asyncio.create_task(_heartbeat_loop())
+    global _news_poll_task; _news_poll_task = asyncio.create_task(_news_poll_loop())
+    global _autostart_task; _autostart_task = asyncio.create_task(_autonomous_loop_auto_start())
+    global _training_autostart_task; _training_autostart_task = asyncio.create_task(_training_loop_auto_start())
     # Start price poller for live position monitoring
     from app.services.price_poller import price_poller
     price_poller.start()
     # Start shadow queue processor for rejected-trade feedback
-    _shadow_queue_task = asyncio.create_task(_shadow_queue_loop())
+    global _shadow_queue_task; _shadow_queue_task = asyncio.create_task(_shadow_queue_loop())
     # Start webhook consumer for autonomous signal → paper order execution
     webhook_consumer_instance.start()
     # Start position monitor for auto SL/TP
@@ -237,7 +239,6 @@ def startup_event():
 
 @app.on_event("shutdown")
 def shutdown_event():
-    global _heartbeat_task, _news_poll_task, _autostart_task, _training_autostart_task, _price_poller_task, _shadow_queue_task
     from app.services.autonomous_loop import autonomous_loop_instance
     from app.services.price_poller import price_poller
     from app.services.training_loop import training_loop

@@ -77,3 +77,11 @@ def mock_webhook_signature_check(monkeypatch, request):
             pass
 
         yield
+
+@pytest.fixture(autouse=True)
+def mock_auth(monkeypatch):
+    from app.main import app
+    from app.api.auth import get_current_user
+    app.dependency_overrides[get_current_user] = lambda: {"email": "test@example.com"}
+    yield
+    app.dependency_overrides.pop(get_current_user, None)
