@@ -48,6 +48,10 @@ from app.api.simulator import router as simulator_router
 from app.services.webhook_consumer import webhook_consumer_instance
 from app.services.position_monitor import paper_position_monitor_instance
 
+logger = logging.getLogger(__name__)
+
+logger = logging.getLogger(__name__)
+
 app = FastAPI(
     title="Agent-Reflex Hybrid Trader API",
     description="Simulation-first trading API. Open this UI to inspect health, backtest, and M8 webhook routes.",
@@ -216,7 +220,7 @@ async def _shadow_queue_loop():
 
 @app.on_event("startup")
 def startup_event():
-    global _heartbeat_task, _news_poll_task, _autostart_task, _training_autostart_task, _price_poller_task, _shadow_queue_task
+    global _heartbeat_task, _news_poll_task, _autostart_task, _training_autostart_task, _shadow_queue_task
     # Create DB tables
     from app.db import Base, engine
     Base.metadata.create_all(bind=engine)
@@ -237,7 +241,6 @@ def startup_event():
 
 @app.on_event("shutdown")
 def shutdown_event():
-    global _heartbeat_task, _news_poll_task, _autostart_task, _training_autostart_task, _price_poller_task, _shadow_queue_task
     from app.services.autonomous_loop import autonomous_loop_instance
     from app.services.price_poller import price_poller
     from app.services.training_loop import training_loop
