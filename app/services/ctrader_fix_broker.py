@@ -14,6 +14,7 @@ import threading
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+from dataclasses import dataclass
 from typing import Any, Optional
 
 from app.core.config import (
@@ -21,8 +22,10 @@ from app.core.config import (
     CTRADER_FIX_HOST,
     CTRADER_FIX_LIVE_TRADING_ENABLED,
     CTRADER_FIX_PASSWORD,
+    CTRADER_FIX_PORT,
     CTRADER_FIX_SENDER_COMP_ID,
     CTRADER_FIX_TARGET_COMP_ID,
+    CTRADER_FIX_SENDER_SUB_ID,
 )
 from app.schemas.ai_review import DecisionEnum as AIDecisionEnum
 from app.schemas.journal import DecisionEnum, FinalDecisionEnum, TradeJournalEntry, DirectionEnum
@@ -38,29 +41,23 @@ class CTraderFixError(RuntimeError):
     """Raised when FIX communication fails."""
 
 
+@dataclass
 class CTraderFixConfig:
     """Runtime settings for cTrader FIX API."""
 
-    def __init__(
-        self,
-        enabled: bool = CTRADER_FIX_ENABLED,
-        live_trading_enabled: bool = CTRADER_FIX_LIVE_TRADING_ENABLED,
-        host: str = "",
-        port: int = 5212,
-        sender_comp_id: str = "",
-        target_comp_id: str = "cServer",
-        password: str = "",
-        sender_sub_id: str = "",
-    ) -> None:
-        self.enabled = enabled
-        self.live_trading_enabled = live_trading_enabled
-        self.host = host or "demo-uk-eqx-01.p.c-trader.com"
-        self.port = port
-        self.sender_comp_id = sender_comp_id
-        self.target_comp_id = target_comp_id
-        self.password = password
-        self.sender_sub_id = sender_sub_id or ("TRADE" if port == 5212 or port == 5202 else "QUOTE")
-        self.fix_version = "FIX.4.4"
+    enabled: bool = CTRADER_FIX_ENABLED
+    live_trading_enabled: bool = CTRADER_FIX_LIVE_TRADING_ENABLED
+    host: str = CTRADER_FIX_HOST
+    port: int = CTRADER_FIX_PORT
+    sender_comp_id: str = CTRADER_FIX_SENDER_COMP_ID
+    target_comp_id: str = CTRADER_FIX_TARGET_COMP_ID
+    password: str = CTRADER_FIX_PASSWORD
+    sender_sub_id: str = CTRADER_FIX_SENDER_SUB_ID
+    fix_version: str = "FIX.4.4"
+
+    def __post_init__(self) -> None:
+        self.host = self.host or "demo-uk-eqx-01.p.c-trader.com"
+        self.sender_sub_id = self.sender_sub_id or ("TRADE" if self.port in (5212, 5202) else "QUOTE")
 
     def has_credentials(self) -> bool:
         return bool(self.sender_comp_id and self.password)
@@ -426,92 +423,88 @@ class CTraderFixBroker(BaseBroker):
         reject_reason: Optional[str] = None,
         ai_decision: AIDecisionEnum = AIDecisionEnum.PROCEED_TO_SIMULATION,
     ) -> TradeJournalEntry:
+        simulated_fill: dict[str, Any] = {}
+        result: dict[str, Any] = {}
+        final_decision: FinalDecisionEnum = FinalDecisionEnum.SKIPPED
+
         if decision != DecisionEnum.PROCEED_TO_SIMULATION:
-            return self._build_entry(
-                payload,
-                ai_decision,
-                FinalDecisionEnum.REJECTED,
-                simulated_fill={},
-                result={"status": "REJECTED", "reject_reason": reject_reason},
-            )
+            final_decision = FinalDecisionEnum.REJECTED
+            result = {"status": "REJECTED", "reject_reason": reject_reason}
+        elif not self.config.enabled:
+            final_decision = FinalDecisionEnum.EXECUTED_SIM
+            simulated_fill = {"mode": "CTRADER_FIX_DISABLED"}
+            result = {"status": "DRY_RUN_CTRADER_FIX_DISABLED", "reject_reason": None}
+        else:
+            side = "BUY" if payload.direction == "LONG" else "SELL"
+            lots = max(float(payload.execution_quantity or 0.01), 0.01)
+            cl_ord_id = f"metricfix-{payload.signal_id}"[:20]
 
-        if not self.config.enabled:
-            return self._build_entry(
-                payload,
-                ai_decision,
-                FinalDecisionEnum.EXECUTED_SIM,
-                simulated_fill={"mode": "CTRADER_FIX_DISABLED"},
-                result={"status": "DRY_RUN_CTRADER_FIX_DISABLED", "reject_reason": None},
-            )
+            result = {
+                "status": "DRY_RUN",
+                "reject_reason": None,
+                "cl_ord_id": cl_ord_id,
+                "symbol": payload.symbol,
+                "side": side,
+                "lots": lots,
+            }
 
-        side = "BUY" if payload.direction == "LONG" else "SELL"
-        lots = max(float(payload.execution_quantity or 0.01), 0.01)
-        cl_ord_id = f"metricfix-{payload.signal_id}"[:20]
-
-        result: dict[str, Any] = {
-            "status": "DRY_RUN",
-            "reject_reason": None,
-            "cl_ord_id": cl_ord_id,
-            "symbol": payload.symbol,
-            "side": side,
-            "lots": lots,
-        }
-
-        if not self.config.live_trading_enabled:
-            return self._build_entry(
-                payload,
-                ai_decision,
-                FinalDecisionEnum.EXECUTED_SIM,
-                simulated_fill={
+            if not self.config.live_trading_enabled:
+                final_decision = FinalDecisionEnum.EXECUTED_SIM
+                simulated_fill = {
                     "mode": "CTRADER_FIX_DRY_RUN",
                     "symbol": payload.symbol,
                     "side": side,
                     "lots": lots,
                     "cl_ord_id": cl_ord_id,
-                },
-                result=result,
-            )
+                }
+            else:
+                try:
+                    fix_result = self.client.send_market_order(
+                        symbol=payload.symbol,
+                        side=side,
+                        qty=lots,
+                        cl_ord_id=cl_ord_id,
+                    )
+                    result.update(fix_result)
+                    if result.get("status") == "FILLED":
+                        result["status"] = "EXECUTED"
 
-        try:
-            fix_result = self.client.send_market_order(
-                symbol=payload.symbol,
-                side=side,
-                qty=lots,
-                cl_ord_id=cl_ord_id,
-            )
-            result.update(fix_result)
-            if result.get("status") == "FILLED":
-                result["status"] = "EXECUTED"
-        except Exception as exc:
-            result["status"] = "FIX_ERROR"
-            result["error"] = str(exc)
-            return self._build_entry(
-                payload,
-                ai_decision,
-                FinalDecisionEnum.REJECTED,
-                simulated_fill={},
-                result=result,
-            )
-        finally:
-            try:
-                self.client.disconnect()
-            except Exception:
-                pass
+                    final_decision = FinalDecisionEnum.EXECUTED_SIM if result.get("status") == "DRY_RUN" else FinalDecisionEnum.EXECUTED_SIM
+                    simulated_fill = {
+                        "mode": "CTRADER_FIX",
+                        "symbol": payload.symbol,
+                        "side": side,
+                        "lots": lots,
+                        "cl_ord_id": cl_ord_id,
+                    }
+                except Exception as exc:
+                    result["status"] = "FIX_ERROR"
+                    result["error"] = str(exc)
+                    final_decision = FinalDecisionEnum.REJECTED
+                finally:
+                    try:
+                        self.client.disconnect()
+                    except Exception:
+                        pass
 
-        final = FinalDecisionEnum.EXECUTED_SIM if result.get("status") == "DRY_RUN" else FinalDecisionEnum.EXECUTED_SIM
-        return self._build_entry(
-            payload,
-            ai_decision,
-            final,
-            simulated_fill={
-                "mode": "CTRADER_FIX",
-                "symbol": payload.symbol,
-                "side": side,
-                "lots": lots,
-                "cl_ord_id": cl_ord_id,
-            },
+        entry = TradeJournalEntry(
+            trade_id=f"ctrader-fix-{payload.signal_id}",
+            timestamp=datetime.now(timezone.utc).isoformat(),
+            symbol=payload.symbol,
+            timeframe=payload.timeframe,
+            direction=DirectionEnum(payload.direction),
+            entry_price=payload.entry_price,
+            stop_price=payload.stop_price or 0.0,
+            target_price=payload.target_price or 0.0,
+            risk_reward=0.0,
+            m8_score=payload.confluence_score,
+            ai_decision=DecisionEnum(ai_decision.value),
+            final_decision=final_decision,
+            simulated_fill=simulated_fill,
             result=result,
         )
+        self.journal.append(entry)
+        return entry
 
     def get_positions(self) -> dict[str, Any]:
         return {"status": "not_implemented", "positions": []}
@@ -623,33 +616,3 @@ class CTraderFixBroker(BaseBroker):
             except Exception:
                 pass
 
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
-
-    def _build_entry(
-        self,
-        payload: M8Payload,
-        ai_decision: AIDecisionEnum,
-        final_decision: FinalDecisionEnum,
-        simulated_fill: dict[str, Any],
-        result: dict[str, Any],
-    ) -> TradeJournalEntry:
-        entry = TradeJournalEntry(
-            trade_id=f"ctrader-fix-{payload.signal_id}",
-            timestamp=datetime.now(timezone.utc).isoformat(),
-            symbol=payload.symbol,
-            timeframe=payload.timeframe,
-            direction=DirectionEnum(payload.direction),
-            entry_price=payload.entry_price,
-            stop_price=payload.stop_price or 0.0,
-            target_price=payload.target_price or 0.0,
-            risk_reward=0.0,
-            m8_score=payload.confluence_score,
-            ai_decision=DecisionEnum(ai_decision.value),
-            final_decision=final_decision,
-            simulated_fill=simulated_fill,
-            result=result,
-        )
-        self.journal.append(entry)
-        return entry
