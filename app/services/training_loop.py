@@ -1,19 +1,23 @@
 import asyncio
-import os
 import random
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Dict, Any, List
 
+from app.core.config import (
+    TRAINING_LOOP_AUTO_START,
+    TRAINING_LOOP_DRILLS_PER_HOUR,
+    TRAINING_LOOP_ENABLED,
+    TRAINING_LOOP_NIGHT_END,
+    TRAINING_LOOP_NIGHT_MODE,
+    TRAINING_LOOP_NIGHT_START,
+)
 from app.schemas.academy import DiversityMonitorStats
 from app.services.training_drills import training_drills
 from app.services.academy_curriculum import academy_curriculum
 from app.services.agent_registry import agent_registry
 from app.services.prompt_evolution import prompt_evolution
 from app.services.ab_testing import ab_testing
-
-# Configuration
-TRAINING_LOOP_ENABLED = os.getenv("TRAINING_LOOP_ENABLED", "true").lower() == "true"
-TRAINING_LOOP_NIGHT_MODE = os.getenv("TRAINING_LOOP_NIGHT_MODE", "true").lower() == "true"
+from app.services.academy_policy import ACADEMY_POLICY_SCOUT_NAMES, academy_policy_service
 
 class TrainingLoopService:
     def __init__(self):
@@ -22,55 +26,110 @@ class TrainingLoopService:
         self.diversity_stats = DiversityMonitorStats()
         self.last_run_time = None
         self.recent_drills = []
+        self.cycles_completed = 0
+        self.errors_last_5min = 0
+        self.last_error = None
+        self.last_skip_reason = None
+
+    def _parse_minutes(self, value: str, default: int) -> int:
+        try:
+            hour_raw, minute_raw = value.split(":", 1)
+            hour = int(hour_raw)
+            minute = int(minute_raw)
+            if 0 <= hour <= 23 and 0 <= minute <= 59:
+                return hour * 60 + minute
+        except (TypeError, ValueError):
+            pass
+        return default
 
     def _is_night_time(self) -> bool:
         if not TRAINING_LOOP_NIGHT_MODE:
             return True
-        hour = datetime.now(timezone.utc).hour
-        # Default 22:00 to 06:00
-        return hour >= 22 or hour < 6
+
+        now = datetime.now().astimezone()
+        now_minutes = now.hour * 60 + now.minute
+        start = self._parse_minutes(TRAINING_LOOP_NIGHT_START, 22 * 60)
+        end = self._parse_minutes(TRAINING_LOOP_NIGHT_END, 6 * 60)
+
+        if start == end:
+            return True
+        if start < end:
+            return start <= now_minutes < end
+        return now_minutes >= start or now_minutes < end
+
+    def _sleep_seconds(self) -> float:
+        drills_per_hour = max(float(TRAINING_LOOP_DRILLS_PER_HOUR or 12.0), 1.0)
+        return max(60.0, 3600.0 / drills_per_hour)
 
     async def start(self):
         if not TRAINING_LOOP_ENABLED:
-            return
+            self.last_skip_reason = "TRAINING_LOOP_DISABLED"
+            return {"started": False, "reason": self.last_skip_reason}
         if self.is_running:
-            return
+            return {"started": False, "reason": "ALREADY_RUNNING"}
 
         self.is_running = True
+        self.last_skip_reason = None
+        await self._run_cycle()
         self.task = asyncio.create_task(self._loop_routine())
+        return {"started": True, "reason": None}
 
     async def stop(self):
+        task = self.task
         self.is_running = False
-        if self.task:
+        self.task = None
+        if task and not task.done():
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+
+    def stop_now(self):
+        self.is_running = False
+        if self.task and not self.task.done():
             self.task.cancel()
-            self.task = None
+        self.task = None
 
     async def trigger_manual_cycle(self):
         await self._run_cycle()
 
     async def _loop_routine(self):
         while self.is_running:
-            if self._is_night_time():
-                await self._run_cycle()
-
-            # Sleep between drills to respect rate limits (simulated per hour limit)
-            # Default 12 drills per hour = 1 drill every 5 minutes
-            await asyncio.sleep(300)
+            try:
+                await asyncio.sleep(self._sleep_seconds())
+                if self._is_night_time():
+                    await self._run_cycle()
+                    self.last_skip_reason = None
+                else:
+                    self.last_skip_reason = "WAITING_FOR_NIGHT_WINDOW"
+            except asyncio.CancelledError:
+                break
+            except Exception as exc:
+                self.errors_last_5min += 1
+                self.last_error = str(exc)
+                await asyncio.sleep(60)
 
     async def _run_cycle(self):
-        self.last_run_time = datetime.now(timezone.utc).isoformat()
-        scouts = ["technical", "sentiment", "risk", "macro", "execution", "correlation"]
+        self.last_run_time = datetime.now().astimezone().isoformat()
+        policy_decisions = academy_policy_service.plan_cycle(
+            training_status=self._policy_training_status(),
+            count=len(ACADEMY_POLICY_SCOUT_NAMES),
+        )
+        await academy_policy_service.log_decisions(policy_decisions)
 
         # Track agreements for diversity monitor
         decisions = []
+        cycle_results = []
 
-        for scout in scouts:
+        for policy_decision in policy_decisions:
+            policy_action = policy_decision.action
+            scout = policy_action.scout_name
             # 1. Generate Drill
-            drill = training_drills.generate_random_drill(scout, difficulty=random.randint(1, 3))
+            drill = training_drills.generate_random_drill(scout, difficulty=policy_action.difficulty)
+            if policy_action.drill_profile != "default":
+                drill = drill.model_copy(update={"drill_type": policy_action.drill_profile})
 
-            # 2. Simulate AI decision (for MVP, we use simple random/weighted logic instead of full LLM call)
-            # In a real impl, we would call `ai_kimi.py` or similar
-            # We mock it based on their accuracy to keep it somewhat realistic
             identity = agent_registry.get_identity(scout)
             acc = identity.accuracy if identity and identity.accuracy > 0 else 0.5
 
@@ -83,21 +142,50 @@ class TrainingLoopService:
             decisions.append(scout_decision)
 
             # 3. Evaluate Drill
-            result = await training_drills.evaluate_drill(drill, scout_decision, confidence=random.uniform(0.5, 0.99))
+            result = await training_drills.evaluate_drill(
+                drill,
+                scout_decision,
+                confidence=random.uniform(0.5, 0.99),
+                persist=False,
+                save_registry=False,
+            )
+            cycle_results.append(result)
 
             # Update curriculum
-            academy_curriculum.record_drill_result(scout, "Beginner", result.is_correct, result.confidence)
+            academy_curriculum.record_drill_result(
+                scout,
+                "Beginner",
+                result.is_correct,
+                result.confidence,
+                save=False,
+            )
 
             # 4. Check for Auto-Prompt-Evolution
             await self._check_auto_evolution(scout)
 
             # Save for UI log
-            self.recent_drills.insert(0, result.model_dump())
+            drill_log = result.model_dump()
+            drill_log["policy_decision_id"] = policy_decision.decision_id
+            drill_log["policy_source"] = policy_decision.source
+            drill_log["policy_action"] = policy_action.model_dump()
+            self.recent_drills.insert(0, drill_log)
             if len(self.recent_drills) > 50:
                 self.recent_drills.pop()
 
         # 5. Update Diversity Monitor
         self._update_diversity(decisions)
+        await training_drills.write_results(cycle_results)
+        agent_registry.save_registry()
+        academy_curriculum.save_progress()
+        self.cycles_completed += 1
+
+    def _policy_training_status(self) -> Dict[str, Any]:
+        return {
+            "is_night_time": self._is_night_time(),
+            "cycles_completed": self.cycles_completed,
+            "errors_last_5min": self.errors_last_5min,
+            "diversity": self.diversity_stats.model_dump(),
+        }
 
     async def _check_auto_evolution(self, scout_name: str):
         # Trigger evolution if the scout has a bad streak (simulated using registry data)
@@ -152,10 +240,18 @@ class TrainingLoopService:
     def get_status(self) -> Dict[str, Any]:
         return {
             "is_running": self.is_running,
+            "auto_start_enabled": TRAINING_LOOP_AUTO_START,
+            "enabled": TRAINING_LOOP_ENABLED,
             "is_night_time": self._is_night_time(),
             "last_run_time": self.last_run_time,
+            "cycles_completed": self.cycles_completed,
+            "next_interval_seconds": self._sleep_seconds(),
+            "last_skip_reason": self.last_skip_reason,
+            "last_error": self.last_error,
+            "errors_last_5min": self.errors_last_5min,
             "recent_drills": self.recent_drills,
-            "diversity": self.diversity_stats.model_dump()
+            "diversity": self.diversity_stats.model_dump(),
+            "policy": academy_policy_service.get_status().model_dump()
         }
 
 training_loop = TrainingLoopService()

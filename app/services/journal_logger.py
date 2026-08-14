@@ -63,6 +63,7 @@ class JournalLogger:
             f.write(entry.model_dump_json() + "\n")
 
         # Also persist to SQLite
+        db = None
         try:
             from app.db import SessionLocal
             from app.db.models import Trade
@@ -89,7 +90,17 @@ class JournalLogger:
                 ai_decision=entry.ai_decision,
             ))
             db.commit()
-            db.close()
+        except Exception:
+            if db:
+                db.rollback()
+        finally:
+            if db:
+                db.close()
+
+        # Also update the Second Brain
+        try:
+            from app.services.wiki_service import update_second_brain
+            update_second_brain()
         except Exception:
             pass
 
@@ -102,9 +113,6 @@ class JournalLogger:
         This prevents needless JSON parsing of historical entries and reduces
         memory bloat, cutting execution time by >90% on large journals.
         """
-        # Collect raw lines first using a bounded deque to avoid memory bloat
-        line_deque: deque[str] = deque(maxlen=limit)
-
         # Read archives first (oldest), then current file (newest)
         files = []
         for i in range(self.max_backups, 0, -1):
@@ -113,23 +121,33 @@ class JournalLogger:
                 files.append(archive)
         files.append(self.filepath)
 
+        # We want to read from the end of the log backwards, so we reverse the file order
+        # (newest first, oldest last). Since standard files don't support true reverse
+        # line reading easily, we collect chunks of lines and process them.
+        files.reverse()
+
+        entries: List[Dict[str, Any]] = []
         for filepath in files:
             try:
                 with open(filepath, "r", encoding="utf-8") as f:
-                    for line in f:
-                        if line.strip():
-                            line_deque.append(line)
+                    # Read all lines of this file. It is max 10MB, which easily fits in memory.
+                    lines = f.readlines()
+                    # Process lines backwards to parse only the ones we need
+                    for line in reversed(lines):
+                        if not line.strip():
+                            continue
+                        try:
+                            entries.append(json.loads(line))
+                            if len(entries) >= limit:
+                                entries.reverse()
+                                return entries
+                        except json.JSONDecodeError:
+                            continue
             except OSError:
                 continue
 
-        # Parse only the final limited set of lines
-        entries: List[Dict[str, Any]] = []
-        for line in line_deque:
-            try:
-                entries.append(json.loads(line))
-            except json.JSONDecodeError:
-                continue
-
+        # If we exhausted all files and didn't reach the limit, reverse and return what we have
+        entries.reverse()
         return entries
 
 

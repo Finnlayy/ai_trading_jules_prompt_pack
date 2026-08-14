@@ -1,6 +1,0 @@
-🧹 [code health improvement description]
-
-🎯 **What:** The `detect_head_and_shoulders` function in `app/services/pattern_recognition.py` was overly long and complex, containing the logic for both standard and inverse head-and-shoulders. I split this logic into two helper functions (`_detect_standard_hs` and `_detect_inverse_hs`).
-💡 **Why:** This improves maintainability and readability by abstracting the complex sub-routines into specific private helper functions. It reduces function length and nesting.
-✅ **Verification:** Ran `tests/services/test_pattern_recognition.py` which fully passed (10 passed, 2 xfailed for known hard-to-mock synthetic scenarios).
-✨ **Result:** The `detect_head_and_shoulders` function is now much cleaner, serving purely as a dispatch/aggregation layer rather than implementing the deep logic itself.
