@@ -37,7 +37,7 @@ from app.schemas.journal import DecisionEnum, DirectionEnum, FinalDecisionEnum, 
 from app.schemas.m8_payload import M8Payload
 from app.services.broker_interface import BaseBroker
 from app.services.pionex_api import PionexAPIError, PionexClient, PionexCredentials
-from app.services.pionex_kelly_sizer import KellyConfig, KellySizer
+from app.services.pionex_kelly_sizer import KellyConfig, KellySizer, KellySizingResult
 from app.services.pionex_position_ledger import PositionLedger, LedgerEntry
 from app.services.telegram_notifier import TelegramConfig, TelegramNotifier
 from app.services.war_room_rules import classify_order
@@ -641,8 +641,7 @@ class PionexDirectBroker(BaseBroker):
                     payload=payload,
                     symbol=symbol,
                     account_mode=account_mode,
-                    size_base=sizing.size_base,
-                    order_value_usdt=sizing.order_value_usdt,
+                    sizing=sizing,
                     client_order_id=client_order_id,
                 )
                 result["status"] = "SENT_TO_PIONEX_DIRECT"
@@ -691,8 +690,7 @@ class PionexDirectBroker(BaseBroker):
         payload: M8Payload,
         symbol: str,
         account_mode: str,
-        size_base: float,
-        order_value_usdt: float,
+        sizing: KellySizingResult,
         client_order_id: Optional[str] = None,
     ) -> dict[str, Any]:
         assert self.client is not None
@@ -703,7 +701,7 @@ class PionexDirectBroker(BaseBroker):
             if payload.direction == "LONG":
                 return self.client.place_spot_market_buy(
                     symbol=symbol,
-                    amount_usdt=order_value_usdt,
+                    amount_usdt=sizing.order_value_usdt,
                     client_order_id=client_order_id,
                     stop_loss=stop_loss,
                     take_profit=take_profit,
@@ -718,7 +716,7 @@ class PionexDirectBroker(BaseBroker):
         return self.client.place_futures_market_order(
             symbol=symbol,
             side=side,
-            size=size_base,
+            size=sizing.size_base,
             reduce_only=False,
             position_side="BOTH",
             client_order_id=client_order_id,
