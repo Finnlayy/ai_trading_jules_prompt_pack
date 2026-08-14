@@ -1,3 +1,4 @@
+from app.services.pionex_position_ledger import LedgerEntry
 import pytest
 from app.services.pionex_direct_broker import PionexDirectBroker, PionexDirectConfig
 from app.schemas.journal import DecisionEnum, FinalDecisionEnum
@@ -38,14 +39,14 @@ def test_reconcile_ledger_detects_divergence():
             return [{"symbol": "BTC_USDT_PERP", "size": "0.5"}]
 
     broker.client = FakeClient()
-    broker.ledger.apply_entry(
+    broker.ledger.apply_entry(LedgerEntry(
         symbol="BTC_USDT_PERP",
         account_mode="FUTURES",
         direction="LONG",
         size_base=1.0,
         entry_price=100.0,
         risk_amount=10.0,
-    )
+    ))
 
     result = broker.reconcile_ledger()
     assert result["checked"] is True

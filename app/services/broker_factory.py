@@ -91,16 +91,7 @@ class BrokerFactory:
                 CTRADER_FIX_PASSWORD,
                 CTRADER_FIX_SENDER_SUB_ID,
             )
-            config = CTraderFixConfig(
-                enabled=CTRADER_FIX_ENABLED,
-                live_trading_enabled=CTRADER_FIX_LIVE_TRADING_ENABLED,
-                host=CTRADER_FIX_HOST,
-                port=CTRADER_FIX_PORT,
-                sender_comp_id=CTRADER_FIX_SENDER_COMP_ID,
-                target_comp_id=CTRADER_FIX_TARGET_COMP_ID,
-                password=CTRADER_FIX_PASSWORD,
-                sender_sub_id=CTRADER_FIX_SENDER_SUB_ID,
-            )
+            config = CTraderFixConfig()
             return CTraderFixBroker(config=config, journal_path=journal_path)
 
         if mode == "kraken":

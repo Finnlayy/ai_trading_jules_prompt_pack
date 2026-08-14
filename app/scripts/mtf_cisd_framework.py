@@ -14,6 +14,7 @@
 
 import pandas as pd
 import numpy as np
+import secrets
 from dataclasses import dataclass
 from typing import List, Dict, Tuple, Optional
 from datetime import datetime
@@ -113,7 +114,7 @@ class BinanceDataLoader:
         if start_time: params['startTime'] = start_time
         if end_time: params['endTime'] = end_time
 
-        response = requests.get(url, params=params)
+        response = requests.get(url, params=params, timeout=30)
         data = response.json()
 
         df = pd.DataFrame(data, columns=[
@@ -406,6 +407,7 @@ class WalkForwardOptimizer:
 class MonteCarloValidator:
     def __init__(self, n_simulations: int = 2000):
         self.n_simulations = n_simulations
+        self.rng = np.random.default_rng(secrets.randbits(128))
 
     def run(self, trades_df: pd.DataFrame, initial_capital: float = 100.0):
         trades = trades_df['pnl'].values
@@ -419,7 +421,7 @@ class MonteCarloValidator:
         sharpe_ratios = []
 
         for _ in range(self.n_simulations):
-            sampled_trades = np.random.choice(trades, size=n_trades, replace=True)
+            sampled_trades = self.rng.choice(trades, size=n_trades, replace=True)
 
             equity = initial_capital
             equity_curve = [equity]
@@ -485,17 +487,17 @@ if __name__ == "__main__":
 
     # Option D: Synthetische Testdaten
     print("\n[GEN] Generiere Testdaten...")
-    np.random.seed(42)
+    rng = np.random.default_rng(secrets.randbits(128))
     n = 3000
     dates = pd.date_range('2025-01-01', periods=n, freq='5min')
-    returns = np.random.normal(0.0001, 0.008, n)
+    returns = rng.normal(0.0001, 0.008, n)
     close = 3200 * np.exp(np.cumsum(returns))
     df = pd.DataFrame({
-        'open': close * (1 + np.random.normal(0, 0.003, n)),
-        'high': close * (1 + abs(np.random.normal(0, 0.005, n))),
-        'low': close * (1 - abs(np.random.normal(0, 0.005, n))),
+        'open': close * (1 + rng.normal(0, 0.003, n)),
+        'high': close * (1 + abs(rng.normal(0, 0.005, n))),
+        'low': close * (1 - abs(rng.normal(0, 0.005, n))),
         'close': close,
-        'volume': np.random.lognormal(10, 0.5, n)
+        'volume': rng.lognormal(10, 0.5, n)
     }, index=dates)
 
     # 2. BACKTEST
