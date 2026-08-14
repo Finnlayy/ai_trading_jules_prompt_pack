@@ -1,0 +1,10 @@
+def test_watchlist_item_defaults
+def test_watchlist_item_serialization
+def test_watchlist_manager_add_and_get
+def test_watchlist_manager_get_active
+def test_watchlist_manager_load_corrupt_data
+def test_watchlist_manager_persistence
+def test_watchlist_manager_remove
+def test_watchlist_manager_reset
+def test_watchlist_manager_update
+def test_watchlist_manager_update_nonexistent
