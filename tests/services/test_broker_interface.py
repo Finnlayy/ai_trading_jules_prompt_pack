@@ -1,4 +1,5 @@
 import pytest
+<<<<<<< HEAD
 import uuid
 from typing import Any, Optional
 
@@ -15,6 +16,24 @@ def test_base_broker_cannot_be_instantiated():
 
 class DummyBroker(BaseBroker):
     """A minimal implementation of BaseBroker for testing concrete methods."""
+=======
+from typing import Any, Optional
+
+from app.schemas.ai_review import DecisionEnum as AIDecisionEnum
+from app.schemas.journal import DecisionEnum, TradeJournalEntry
+from app.schemas.m8_payload import M8Payload
+from app.services.broker_interface import BaseBroker
+
+
+def test_base_broker_cannot_be_instantiated():
+    """Ensure that BaseBroker cannot be instantiated directly."""
+    with pytest.raises(TypeError):
+        BaseBroker()
+
+
+class DummyBroker(BaseBroker):
+    """A dummy implementation of BaseBroker for testing concrete methods."""
+>>>>>>> main
 
     def execute_trade(
         self,
@@ -24,6 +43,7 @@ class DummyBroker(BaseBroker):
         ai_decision: AIDecisionEnum = AIDecisionEnum.PROCEED_TO_SIMULATION,
     ) -> TradeJournalEntry:
         return TradeJournalEntry(
+<<<<<<< HEAD
             trade_id=str(uuid.uuid4()),
             timestamp=payload.timestamp,
             symbol=payload.symbol,
@@ -45,6 +65,23 @@ class DummyBroker(BaseBroker):
 
     def get_wallet_balances(self, account_mode: str = "SPOT") -> dict[str, Any]:
         return {"USDT": 1000.0}
+=======
+            signal_id=payload.id,
+            symbol=payload.symbol,
+            decision=decision,
+            ai_decision=ai_decision,
+            reject_reason=reject_reason,
+            position_size=0.0,
+            entry_price=0.0,
+            account_mode="SPOT"
+        )
+
+    def get_positions(self) -> dict[str, Any]:
+        return {"positions": []}
+
+    def get_wallet_balances(self, account_mode: str = "SPOT") -> dict[str, Any]:
+        return {"balances": []}
+>>>>>>> main
 
     def is_live_capable(self) -> bool:
         return False
@@ -52,6 +89,7 @@ class DummyBroker(BaseBroker):
     def is_ready(self) -> bool:
         return True
 
+<<<<<<< HEAD
 @pytest.fixture
 def dummy_broker() -> DummyBroker:
     return DummyBroker()
@@ -77,12 +115,46 @@ def test_health(dummy_broker):
     """Test the default health implementation."""
     health_data = dummy_broker.health()
     assert health_data == {
+=======
+
+def test_dummy_broker_can_be_instantiated():
+    """Ensure that a fully implemented subclass can be instantiated."""
+    broker = DummyBroker()
+    assert isinstance(broker, BaseBroker)
+
+
+def test_get_broker_name():
+    broker = DummyBroker()
+    assert broker.get_broker_name() == "DummyBroker"
+
+
+def test_get_broker_type():
+    broker = DummyBroker()
+    assert broker.get_broker_type() == "unknown"
+
+
+def test_get_broker_mode():
+    broker = DummyBroker()
+    assert broker.get_broker_mode() == "simulation"
+
+
+def test_reconcile_ledger():
+    broker = DummyBroker()
+    assert broker.reconcile_ledger() == {"checked": False, "reason": "not_supported"}
+
+
+def test_health():
+    broker = DummyBroker()
+    health_status = broker.health()
+    assert health_status == {
+>>>>>>> main
         "name": "DummyBroker",
         "type": "unknown",
         "mode": "simulation",
         "ready": True,
         "live_capable": False,
     }
+<<<<<<< HEAD
 
 def test_execute_trade_typing(dummy_broker):
     """Verify that execute_trade signature passes static typing tests implicitly."""
@@ -106,3 +178,5 @@ def test_execute_trade_typing(dummy_broker):
     assert isinstance(entry, TradeJournalEntry)
     assert entry.symbol == "BTCUSD"
     assert entry.result["status"] == "DUMMY_EXECUTED"
+=======
+>>>>>>> main

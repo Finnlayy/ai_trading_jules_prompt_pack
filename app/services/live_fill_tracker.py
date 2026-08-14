@@ -149,6 +149,7 @@ class LiveFillTracker:
                 pass
         # Fallback: load open positions from SQLite (restores after server restart)
         if not self._positions:
+            db = None
             try:
                 from app.db import SessionLocal
                 from app.db.models import Position as DBPosition
@@ -170,9 +171,11 @@ class LiveFillTracker:
                         target_price=dbp.target_price or 0.0,
                     )
                     self._positions[pos.trade_id] = pos
-                db.close()
             except Exception:
                 pass
+            finally:
+                if db:
+                    db.close()
 
     def _persist(self) -> None:
         try:
@@ -268,6 +271,7 @@ class LiveFillTracker:
         })
         self._persist()
         # Also persist to SQLite
+        db = None
         try:
             from app.db import SessionLocal
             from app.db.models import Position
@@ -288,9 +292,12 @@ class LiveFillTracker:
                 opened_at=fill_data.fill_time,
             ))
             db.commit()
-            db.close()
         except Exception:
-            pass
+            if db:
+                db.rollback()
+        finally:
+            if db:
+                db.close()
 
     def record_exit(self, trade_id: str, exit_price: float,
                     exit_time: datetime | None = None) -> None:
@@ -344,6 +351,7 @@ class LiveFillTracker:
         except Exception:
             pass
         # Also update SQLite
+        db = None
         try:
             from app.db import SessionLocal
             from app.db.models import Position
@@ -355,9 +363,12 @@ class LiveFillTracker:
                 db_pos.realized_pnl = pnl
                 db_pos.closed_at = exit
                 db.commit()
-            db.close()
         except Exception:
-            pass
+            if db:
+                db.rollback()
+        finally:
+            if db:
+                db.close()
 
     def update_price(self, trade_id: str, current_price: float) -> None:
         """Update current price and unrealized PnL for a position."""
