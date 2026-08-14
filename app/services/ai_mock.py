@@ -2,7 +2,7 @@ from app.schemas.m8_payload import M8Payload
 from app.schemas.ai_review import SignalReview, DecisionEnum
 from app.services.ai.gem_agents import GEM_AGENT_NAMES
 from app.services.ai_layer_memory import ai_layer_memory_instance
-from app.services.confidence_registry import confidence_registry
+from app.services.confidence_registry import confidence_registry, ScoutReviewParams
 
 
 class MockAIReviewLayer:
@@ -62,7 +62,7 @@ class MockAIReviewLayer:
         # Record in confidence registry (outcome = None for now)
         for scout_name, data in scout_reports.items():
             conf = self._extract_confidence(data["report"])
-            confidence_registry.record_scout_review(
+            params = ScoutReviewParams(
                 symbol=payload.symbol,
                 scout_name=scout_name,
                 direction=payload.direction,
@@ -70,6 +70,7 @@ class MockAIReviewLayer:
                 confidence=conf,
                 was_correct=None,
             )
+            confidence_registry.record_scout_review(params)
 
         confidence_registry.record_signal_review(
             symbol=payload.symbol,

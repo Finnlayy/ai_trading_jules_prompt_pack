@@ -50,6 +50,8 @@ logger = logging.getLogger(__name__)
 
 logger = logging.getLogger(__name__)
 
+logger = logging.getLogger(__name__)
+
 app = FastAPI(
     title="Agent-Reflex Hybrid Trader API",
     description="Simulation-first trading API. Open this UI to inspect health, backtest, and M8 webhook routes.",
