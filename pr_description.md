@@ -1,3 +1,8 @@
+<<<<<<< HEAD
+🎯 What: Added tests to cover `json_dumps` and its default handler `json_dumps_default` in `app/core/utils.py`.
+📊 Coverage: Covered standard data types, classes with `isoformat`, `to_dict`, and `model_dump` methods, fallback objects (to `str`), `kwargs` passing, and explicitly providing an overriding `default` argument.
+✨ Result: Improved test coverage significantly on a pure function handling JSON serialization, guarding against regression.
+=======
 🎯 **What:**
 <<<<<<< HEAD
 Added comprehensive testing for the schemas and utilities located in `app/schemas/ai_layer.py`. Prior to this change, the simple and stateless schema utilities lacked coverage, particularly the `utc_now` helper function and default value constraints.
@@ -23,4 +28,5 @@ Executed Pytest unit tests for the broker implementation. Also ran the extensive
 
 ✨ **Result:**
 The `_close_position` logic is now heavily reduced in statement count and reads straightforwardly. This aligns with standard python coding patterns for clean functions without changing the logical behavior or side effects of the code.
+>>>>>>> main
 >>>>>>> main
