@@ -15,7 +15,11 @@ class PerceptionEngine:
         Builds a normalized PerceptionContext by gathering data from various sources.
         """
         # Fetch latest price
-        current_price = 0.0
+        try:
+            latest_bar = market_data_service.get_latest_bar(symbol)
+            current_price = latest_bar['close'] if latest_bar else 0.0
+        except Exception:
+            current_price = 0.0
 
         # 1. Market Indicators (Mocked/Simplified for v1, in real scenario fetch from technicals)
         indicators = [

@@ -20,6 +20,13 @@ os.environ["ACADEMY_POLICY_CYCLE_DECISIONS"] = "16"
 import pytest
 
 
+# Force DB initialization using app.data.trading.db
+import os
+os.environ["DATABASE_URL"] = "sqlite:///./app/data/trading.db"
+from app.db import engine, Base
+Base.metadata.create_all(bind=engine)
+
+
 @pytest.fixture(autouse=True)
 def reset_webhook_secret_config():
     """Keep webhook auth config isolated between tests that mutate globals."""
