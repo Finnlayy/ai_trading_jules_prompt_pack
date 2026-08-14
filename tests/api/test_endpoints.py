@@ -47,18 +47,46 @@ def mock_kimi_api():
         yield mock_method
 
 @pytest.mark.asyncio
-async def test_health_check():
+async def test_health_check_requires_api_key(monkeypatch):
+    monkeypatch.setenv("API_KEY", "test_health_key")
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        # Without key -> 401
         response = await ac.get("/health")
-    assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+        assert response.status_code == 401
+
+        # With incorrect key -> 401
+        response = await ac.get("/health", headers={"X-API-Key": "wrong_key"})
+        assert response.status_code == 401
+
+        # With correct key -> 200
+        response = await ac.get("/health", headers={"X-API-Key": "test_health_key"})
+        assert response.status_code == 200
+        assert response.json() == {"status": "ok"}
+
+@pytest.mark.asyncio
+async def test_health_check_missing_api_key_server_error(monkeypatch):
+    # Test that 500 is returned when server is misconfigured (no API_KEY or WEBHOOK_SECRET)
+    monkeypatch.delenv("API_KEY", raising=False)
+    monkeypatch.delenv("WEBHOOK_SECRET", raising=False)
+    import app.core.config as config_module
+    original_secret = config_module.WEBHOOK_SECRET
+    config_module.WEBHOOK_SECRET = ""
+
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+            response = await ac.get("/health", headers={"X-API-Key": "any_key"})
+            assert response.status_code == 500
+    finally:
+        config_module.WEBHOOK_SECRET = original_secret
 
 @pytest.mark.asyncio
 async def test_root_serves_frontend():
+    """GET / serves the built Vite SPA shell (frontend/dist/index.html)."""
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         response = await ac.get("/")
     assert response.status_code == 200
-    assert "MetricFlow Bot Command Center" in response.text
+    assert "MetricFlow Command Center" in response.text
+    assert '<div id="root">' in response.text
     assert "Pine Script Studio" not in response.text
 
 @pytest.mark.asyncio

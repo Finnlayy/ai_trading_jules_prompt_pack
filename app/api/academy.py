@@ -5,6 +5,7 @@ import re
 import uuid
 from pathlib import Path as FsPath
 from typing import Any, Dict, List
+from collections import deque
 
 import pandas as pd
 from fastapi import APIRouter, HTTPException, Query
@@ -147,12 +148,13 @@ def get_recent_policy_actions(limit: int = Query(default=50, ge=1, le=500)):
 
     actions = []
     try:
+        line_deque = deque(maxlen=limit)
         with ACTION_LOG_FILE.open("r", encoding="utf-8") as handle:
-            lines = [line for line in handle if line.strip()]
-        for line in reversed(lines):
+            for line in handle:
+                if line.strip():
+                    line_deque.append(line)
+        for line in reversed(line_deque):
             actions.append(json.loads(line))
-            if len(actions) >= limit:
-                break
     except (OSError, json.JSONDecodeError) as exc:
         raise HTTPException(status_code=500, detail=f"Could not read academy policy actions: {exc}")
 
@@ -542,8 +544,10 @@ def get_onnx_policy_details():
 @router.post("/policy/onnx/open-folder")
 def open_onnx_folder():
     """Open the directory containing compiled ONNX policy models in the system file explorer."""
+    import sys
     import os
     import subprocess
+    import shutil
     from pathlib import Path
     from app.core.config import ACADEMY_POLICY_MODEL_DIR
     
@@ -552,13 +556,14 @@ def open_onnx_folder():
     abs_path = model_dir.resolve()
     
     try:
-        if os.name == 'nt':
+        if sys.platform == 'win32':
             os.startfile(abs_path)
-        elif os.name == 'posix':
-            subprocess.run(['xdg-open', str(abs_path)], check=True)
+        elif sys.platform == 'darwin':
+            open_cmd = shutil.which('open') or '/usr/bin/open'
+            subprocess.run([open_cmd, str(abs_path)], check=True)  # nosec B603
         else:
-            # Fallback for MacOS
-            subprocess.run(['open', str(abs_path)], check=True)
+            xdg_open = shutil.which('xdg-open') or '/usr/bin/xdg-open'
+            subprocess.run([xdg_open, str(abs_path)], check=True)  # nosec B603
         return {"status": "success", "path": str(abs_path)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to open folder: {e}")
