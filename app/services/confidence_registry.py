@@ -240,12 +240,14 @@ class ConfidenceRegistry:
         pnl_pct: float,
         rr: float,
         win: bool,
+        auto_save: bool = True,
     ) -> None:
         """Call when a trade closes to update direction stats."""
         stats = self.get_symbol_stats(symbol)
         dstats = stats.get_direction_stats(direction)
         dstats.record_trade(pnl_pct, rr, win)
-        self._save()
+        if auto_save:
+            self._save()
 
     def mark_scout_outcome(
         self,
@@ -253,6 +255,7 @@ class ConfidenceRegistry:
         scout_names: list[str],
         was_correct: bool,
         details: dict[str, Any] | None = None,
+        auto_save: bool = True,
     ) -> None:
         """
         Mark already-recorded scout calls as correct after a paper/live outcome is known.
@@ -294,8 +297,12 @@ class ConfidenceRegistry:
                 loop.create_task(agent_registry.log_career_event(career_entry))
             except RuntimeError:
                 asyncio.run(agent_registry.log_career_event(career_entry))
-        if changed:
+        if changed and auto_save:
             self._save()
+
+    def save(self) -> None:
+        """Public method to manually trigger save (useful for batching)."""
+        self._save()
 
     def get_symbol_context(self, symbol: str, direction: str) -> str:
         """
