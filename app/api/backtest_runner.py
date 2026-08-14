@@ -66,10 +66,11 @@ async def _execute_payloads(payloads: List):
             executed_payloads.append((payload, result))
     return results, executed_payloads
 
-def _record_historical_outcomes(executed_payloads: List):
+def _record_historical_outcomes(executed_payloads: List) -> dict:
     raw_bars = getattr(signal_generator_instance, "last_raw_bars", [])
+    outcomes = {}
     if not executed_payloads or not raw_bars:
-        return
+        return outcomes
     from app.services.shadow_paper_engine import ShadowPaperEngine
     engine = ShadowPaperEngine()
     for payload, result in executed_payloads:
@@ -79,6 +80,7 @@ def _record_historical_outcomes(executed_payloads: List):
         if entry_idx is not None and entry_idx < len(raw_bars) - 1:
             try:
                 outcome = engine.simulate_trade(payload, raw_bars, entry_idx, max_holding_bars=50)
+                outcomes[payload.signal_id] = outcome
                 win = outcome.win
                 pnl_pct = outcome.pnl_pct
                 rr = abs(outcome.r_multiple)
@@ -105,6 +107,38 @@ def _record_historical_outcomes(executed_payloads: List):
                     )
             except Exception:
                 pass
+    return outcomes
+class BacktestCoordinate(BaseModel):
+    price: float
+    time: str
+
+class BacktestSignalResult(BaseModel):
+    signal_id: str
+    direction: str
+    entry_price: float
+    confluence_score: float
+    final_decision: str
+    reject_reason: Optional[str] = None
+    ai_trace: Optional[dict] = None
+    asset_class: Optional[str] = None
+    entry: BacktestCoordinate
+    exit: BacktestCoordinate
+    pnl_pct: Optional[float] = None
+
+class BacktestRunResponse(BaseModel):
+    status: str
+    symbol: str
+    timeframe: str
+    bars_analyzed: int
+    signals_generated: int
+    executed: int
+    rejected: int
+    longs: int
+    shorts: int
+    generation_summary: dict
+    results: List[BacktestSignalResult]
+    message: Optional[str] = None
+
 class BacktestRunRequest(BaseModel):
     symbol: str = "HYPEUSDT"
     timeframe: str = "1m"
@@ -117,7 +151,7 @@ class BacktestRunRequest(BaseModel):
     min_confluence: Optional[float] = None
 
 
-@router.post("/run")
+@router.post("/run", response_model=BacktestRunResponse)
 async def run_backtest(req: BacktestRunRequest):
     """
     Run a full backtest through the M8 pipeline on historical data.
@@ -150,12 +184,31 @@ async def run_backtest(req: BacktestRunRequest):
             }
 
         results, executed_payloads = await _execute_payloads(payloads)
-        _record_historical_outcomes(executed_payloads)
+        outcomes = _record_historical_outcomes(executed_payloads)
 
-        executed = sum(1 for r in results if r["final_decision"] == "EXECUTED_SIM")
-        rejected = sum(1 for r in results if r["final_decision"] == "REJECTED")
-        longs = sum(1 for r in results if r["direction"] == "LONG")
-        shorts = sum(1 for r in results if r["direction"] == "SHORT")
+        for res in results:
+            if res["signal_id"] in outcomes:
+                outcome = outcomes[res["signal_id"]]
+                res["entry"] = {"price": outcome.entry_price, "time": outcome.entry_time}
+                res["exit"] = {"price": outcome.exit_price, "time": outcome.exit_time}
+                res["pnl_pct"] = outcome.pnl_pct
+
+        executed = 0
+        rejected = 0
+        longs = 0
+        shorts = 0
+        for r in results:
+            fd = r.get("final_decision")
+            d = r.get("direction")
+            if fd == "EXECUTED_SIM":
+                executed += 1
+            elif fd == "REJECTED":
+                rejected += 1
+
+            if d == "LONG":
+                longs += 1
+            elif d == "SHORT":
+                shorts += 1
 
         return {
             "status": "success",
@@ -426,24 +479,31 @@ async def backtest_report(symbol: str = "SOLUSD", days: int = 7):
             },
         }
 
-    wins = sum(1 for t in trades if (t.pnl or 0) > 0)
-    losses = sum(1 for t in trades if (t.pnl or 0) < 0)
-    winrate = (wins / total * 100) if total > 0 else 0.0
-
-    # Max drawdown from equity curve
+    wins = 0
+    losses = 0
+    gross_profit = 0.0
+    gross_loss = 0.0
     peak = 0.0
     max_dd = 0.0
     equity = 0.0
+
     for t in trades:
-        equity += (t.pnl or 0) - t.fee
+        pnl = t.pnl or 0.0
+        if pnl > 0:
+            wins += 1
+            gross_profit += pnl
+        elif pnl < 0:
+            losses += 1
+            gross_loss += abs(pnl)
+
+        equity += pnl - t.fee
         if equity > peak:
             peak = equity
         dd = peak - equity
         if dd > max_dd:
             max_dd = dd
 
-    gross_profit = sum((t.pnl or 0) for t in trades if (t.pnl or 0) > 0)
-    gross_loss = abs(sum((t.pnl or 0) for t in trades if (t.pnl or 0) < 0))
+    winrate = (wins / total * 100) if total > 0 else 0.0
     profit_factor = gross_profit / gross_loss if gross_loss > 0 else float("inf")
 
     # Avg slippage: simplified (no backtest reference, use 0 as placeholder)
