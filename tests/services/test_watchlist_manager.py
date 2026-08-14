@@ -1,3 +1,4 @@
+from pathlib import Path
 import pytest
 from app.services.watchlist_manager import WatchlistItem, WatchlistManager
 import json
