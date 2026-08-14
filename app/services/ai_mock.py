@@ -1,47 +1,44 @@
 from app.schemas.m8_payload import M8Payload
 from app.schemas.ai_review import SignalReview, DecisionEnum
+from app.services.ai.gem_agents import GEM_AGENT_NAMES
 from app.services.ai_layer_memory import ai_layer_memory_instance
 from app.services.confidence_registry import confidence_registry, ScoutReviewParams
 
 
 class MockAIReviewLayer:
     """
-    Mock AI Review Layer that simulates a 4-scout swarm.
+    Mock AI Review Layer that simulates the backend-native Gem10 swarm.
     In mock mode, scouts use deterministic heuristics instead of LLM calls.
     """
 
-    SCOUT_NAMES = ["technical", "sentiment", "risk", "macro", "execution", "correlation"]
+    SCOUT_NAMES = list(GEM_AGENT_NAMES)
 
     def review_signal(self, payload: M8Payload) -> SignalReview:
         # Simulate scouts with deterministic heuristics
         scout_reports = {}
         for name in self.SCOUT_NAMES:
-            method_name = f"_mock_{name}"
-            if hasattr(self, method_name):
-                report = getattr(self, method_name)(payload)
-            else:
-                report = "Confidence: 0.75\nmocked report"
+            report = self._mock_report_for_scout(name, payload)
             individual_decision = self._derive_scout_decision(name, payload)
             scout_reports[name] = {
                 "report": report,
                 "decision": individual_decision,
             }
 
-        # Orchestrator synthesizes majority vote
-        approvals = sum(1 for s in scout_reports.values() if s["decision"] == DecisionEnum.PROCEED_TO_SIMULATION.value)
-        rejections = len(scout_reports) - approvals
+        weighted_vote = self._weighted_scout_vote(payload, scout_reports)
+        approvals = weighted_vote["approval_score"]
+        rejections = weighted_vote["rejection_score"]
 
         if rejections > approvals:
             decision = DecisionEnum.REJECT
-            confidence = 0.85
-            reason_codes = ["SCOUT_MAJORITY_REJECT"]
+            confidence = weighted_vote["weighted_confidence"]
+            reason_codes = ["WEIGHTED_SCOUT_REJECT"]
             risk_flags = []
             requires_human_review = True
-            reject_reason = f"{rejections}/{len(scout_reports)} scouts rejected"
+            reject_reason = "Weighted scout vote rejected the candidate"
         else:
             decision = DecisionEnum.PROCEED_TO_SIMULATION
-            confidence = 0.85
-            reason_codes = ["FAVORABLE_SETUP"]
+            confidence = weighted_vote["weighted_confidence"]
+            reason_codes = ["FAVORABLE_SETUP", "WEIGHTED_SCOUT_APPROVE"]
             risk_flags = []
             requires_human_review = False
             reject_reason = None
@@ -105,6 +102,8 @@ class MockAIReviewLayer:
                     name: confidence_registry.get_scout_weight(payload.symbol, name)
                     for name in self.SCOUT_NAMES
                 },
+                "weighted_scout_vote": weighted_vote,
+                "confidence_recorded": True,
                 "final_summary": {
                     "decision": decision.value,
                     "confidence": confidence,
@@ -115,21 +114,77 @@ class MockAIReviewLayer:
             },
         )
 
+    def _mock_report_for_scout(self, scout_name: str, payload: M8Payload) -> str:
+        if scout_name in {"market_dna", "structural_architect", "harmony_coordinator", "indicator_fusion", "pine_core"}:
+            return self._mock_technical(payload)
+        if scout_name == "macro_sentinel":
+            return self._mock_macro(payload)
+        if scout_name == "risk_kernel":
+            return self._mock_risk(payload)
+        if scout_name in {"payload_qa", "execution_watchdog"}:
+            return self._mock_execution(payload)
+        if scout_name == "evolution_optimizer":
+            return "Confidence: 0.70\nLearning feedback profile is neutral. No decay signal detected."
+        return "Confidence: 0.75\nmocked report"
+
     def _derive_scout_decision(self, scout_name: str, payload: M8Payload) -> str:
         """Derive individual scout decision from payload heuristics."""
-        if scout_name == "technical":
+        if scout_name in {"technical", "market_dna", "structural_architect", "harmony_coordinator", "indicator_fusion", "pine_core"}:
             return DecisionEnum.PROCEED_TO_SIMULATION.value if payload.confluence_score >= 70 else DecisionEnum.REJECT.value
-        if scout_name == "sentiment":
+        if scout_name in {"sentiment", "macro_sentinel"}:
             return DecisionEnum.PROCEED_TO_SIMULATION.value if not payload.macro_event_risk else DecisionEnum.REJECT.value
-        if scout_name == "risk":
+        if scout_name in {"risk", "risk_kernel"}:
             return DecisionEnum.PROCEED_TO_SIMULATION.value if payload.crisis_score <= 20 else DecisionEnum.REJECT.value
         if scout_name == "macro":
             return DecisionEnum.PROCEED_TO_SIMULATION.value if payload.market_regime in {"GREEN", "YELLOW"} else DecisionEnum.REJECT.value
-        if scout_name == "execution":
+        if scout_name in {"execution", "payload_qa", "execution_watchdog"}:
             return DecisionEnum.PROCEED_TO_SIMULATION.value if payload.spread < 50 else DecisionEnum.REJECT.value
-        if scout_name == "correlation":
+        if scout_name in {"correlation", "evolution_optimizer"}:
             return DecisionEnum.PROCEED_TO_SIMULATION.value
         return DecisionEnum.PROCEED_TO_SIMULATION.value
+
+    def _weighted_scout_vote(self, payload: M8Payload, scout_reports: dict) -> dict:
+        rows = {}
+        approval_score = 0.0
+        rejection_score = 0.0
+        total_weight = 0.0
+        weighted_confidence = 0.0
+
+        for scout_name, data in scout_reports.items():
+            weight = confidence_registry.get_scout_weight(payload.symbol, scout_name)
+            confidence = self._extract_confidence(data["report"])
+            decision = data["decision"]
+            score = weight * confidence
+            if decision == DecisionEnum.REJECT.value:
+                rejection_score += score
+            else:
+                approval_score += score
+            total_weight += weight
+            weighted_confidence += score
+            rows[scout_name] = {
+                "decision": decision,
+                "confidence": round(confidence, 4),
+                "weight": round(weight, 4),
+                "score": round(score, 4),
+            }
+
+        total_score = approval_score + rejection_score
+        approval_ratio = approval_score / total_score if total_score else 0.5
+        if approval_ratio >= 0.62:
+            decision_hint = DecisionEnum.PROCEED_TO_SIMULATION.value
+        elif approval_ratio <= 0.38:
+            decision_hint = DecisionEnum.REJECT.value
+        else:
+            decision_hint = DecisionEnum.HUMAN_REVIEW.value
+
+        return {
+            "approval_score": round(approval_score, 4),
+            "rejection_score": round(rejection_score, 4),
+            "approval_ratio": round(approval_ratio, 4),
+            "weighted_confidence": round(weighted_confidence / total_weight, 4) if total_weight else 0.5,
+            "decision_hint": decision_hint,
+            "scouts": rows,
+        }
 
     def _mock_technical(self, payload: M8Payload) -> str:
         conf = min(1.0, payload.confluence_score / 100 + 0.1)
@@ -172,6 +227,11 @@ class MockAIReviewLayer:
             f"Macro regime: {regime}. Tailwind for {payload.direction}: {tailwind}. "
             f"No structural headwinds detected."
         )
+
+    def _mock_execution(self, payload: M8Payload) -> str:
+        conf = 0.8 if payload.spread < 50 else 0.45
+        quality = "acceptable" if payload.spread < 50 else "wide spread"
+        return f"Confidence: {conf:.2f}\nExecution quality: {quality}. Spread {payload.spread}bps."
 
     @staticmethod
     def _extract_confidence(report: str) -> float:

@@ -8,6 +8,8 @@ from typing import Any, Optional
 from app.schemas.ai_review import DecisionEnum as AIDecisionEnum, SignalReview
 from app.schemas.journal import DecisionEnum
 from app.schemas.m8_payload import M8Payload
+from app.schemas.paper import PaperReplayRequest
+from app.services.ai.gem_agents import DEFAULT_AGENT_NAMES
 from app.services.confidence_registry import confidence_registry
 from app.services.risk_engine import RiskEngine
 from app.services.signal_generator import OHLCV, signal_generator_instance
@@ -58,32 +60,26 @@ class ShadowPaperEngine:
     feedback for the AI confidence registry. It never places broker orders.
     """
 
-    SCOUT_NAMES = ["technical", "sentiment", "risk", "macro", "execution", "correlation"]
+    SCOUT_NAMES = list(DEFAULT_AGENT_NAMES)
 
     def __init__(self) -> None:
         self.last_replay: dict[str, Any] | None = None
 
     async def replay(
         self,
-        symbol: str = "HYPEUSDT",
-        timeframe: str = "1m",
-        bars: int = 500,
-        max_signals: Optional[int] = 50,
-        min_confluence: Optional[float] = None,
-        max_holding_bars: int = 50,
-        use_ai: bool = True,
+        request: PaperReplayRequest,
     ) -> dict[str, Any]:
         payloads = signal_generator_instance.generate_payloads(
-            symbol=symbol,
-            timeframe=timeframe,
-            bars=bars,
-            min_confluence=min_confluence,
+            symbol=request.symbol,
+            timeframe=request.timeframe,
+            bars=request.bars,
+            min_confluence=request.min_confluence,
         )
         generation_summary = getattr(signal_generator_instance, "last_generation_summary", {})
         raw_bars = getattr(signal_generator_instance, "last_raw_bars", [])
 
-        if max_signals:
-            payloads = payloads[:max_signals]
+        if request.max_signals:
+            payloads = payloads[:request.max_signals]
 
         bar_index = {self._bar_time(bar): index for index, bar in enumerate(raw_bars)}
         live_risk = RiskEngine()
@@ -95,7 +91,7 @@ class ShadowPaperEngine:
                 results.append(self._missing_bar_result(payload))
                 continue
 
-            ai_review = await self._review_payload(payload, use_ai=use_ai)
+            ai_review = await self._review_payload(payload, use_ai=request.use_ai)
             live_risk.current_bar = entry_index
             live_decision = live_risk.evaluate(payload, ai_review)
             if live_decision["decision"] == DecisionEnum.PROCEED_TO_SIMULATION:
@@ -106,7 +102,7 @@ class ShadowPaperEngine:
             outcome: PaperTradeOutcome | None = None
             if paper_decision == PAPER_EXECUTED:
                 try:
-                    outcome = self.simulate_trade(payload, raw_bars, entry_index, max_holding_bars)
+                    outcome = self.simulate_trade(payload, raw_bars, entry_index, request.max_holding_bars)
                     self._record_learning(payload, ai_review, outcome)
                 except ValueError as exc:
                     paper_decision = PAPER_REJECTED
@@ -139,11 +135,11 @@ class ShadowPaperEngine:
         response = {
             "status": "ok",
             "mode": "shadow_paper",
-            "symbol": symbol,
-            "timeframe": timeframe,
+            "symbol": request.symbol,
+            "timeframe": request.timeframe,
             "bars_analyzed": len(raw_bars),
             "signals_generated": len(payloads),
-            "max_holding_bars": max_holding_bars,
+            "max_holding_bars": request.max_holding_bars,
             "generation_summary": generation_summary,
             **summary,
             "results": results,
@@ -260,9 +256,10 @@ class ShadowPaperEngine:
             was_correct = not outcome.win
 
         if was_correct is not None:
+            scout_names = list((ai_review.audit_trace or {}).get("scouts", {}).keys()) or self.SCOUT_NAMES
             confidence_registry.mark_scout_outcome(
                 symbol=payload.symbol,
-                scout_names=self.SCOUT_NAMES,
+                scout_names=scout_names,
                 was_correct=was_correct,
             )
 
@@ -319,12 +316,36 @@ class ShadowPaperEngine:
 
     @staticmethod
     def _summary(results: list[dict[str, Any]]) -> dict[str, Any]:
-        paper_executed = sum(1 for row in results if row.get("paper_decision") == PAPER_EXECUTED)
-        paper_rejected = sum(1 for row in results if row.get("paper_decision") == PAPER_REJECTED)
-        live_rejected = sum(1 for row in results if row.get("live_decision") == DecisionEnum.REJECT.value)
-        wins = sum(1 for row in results if (row.get("outcome") or {}).get("win") is True)
-        losses = sum(1 for row in results if (row.get("outcome") or {}).get("win") is False)
-        total_r = sum(float((row.get("outcome") or {}).get("r_multiple") or 0.0) for row in results)
+        # ⚡ Bolt Optimization: Calculate all summary metrics in a single O(N) unrolled loop
+        # instead of 6 separate O(N) generator expressions.
+        paper_executed = 0
+        paper_rejected = 0
+        live_rejected = 0
+        wins = 0
+        losses = 0
+        total_r = 0.0
+
+        for row in results:
+            pd = row.get("paper_decision")
+            if pd == PAPER_EXECUTED:
+                paper_executed += 1
+            elif pd == PAPER_REJECTED:
+                paper_rejected += 1
+
+            if row.get("live_decision") == DecisionEnum.REJECT.value:
+                live_rejected += 1
+
+            outcome = row.get("outcome") or {}
+            win = outcome.get("win")
+            if win is True:
+                wins += 1
+            elif win is False:
+                losses += 1
+
+            rmult = outcome.get("r_multiple")
+            if rmult:
+                total_r += float(rmult)
+
         return {
             "paper_executed": paper_executed,
             "paper_rejected": paper_rejected,

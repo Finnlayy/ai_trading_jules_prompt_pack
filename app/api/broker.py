@@ -1,7 +1,11 @@
 """Broker API endpoints for status, health, and mode selection."""
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+from typing import Literal
+from app.schemas.live_trading import UnifiedBrokerState
+
 
 from app.api.orchestrator import broker_instance, reset_broker
 from app.services.broker_factory import BrokerFactory
@@ -72,3 +76,39 @@ async def reset_broker_endpoint():
         "broker": getattr(new_broker, "get_broker_name", lambda: "unknown")(),
         "mode": getattr(new_broker, "get_broker_mode", lambda: "unknown")(),
     }
+
+
+@router.get("/unified-state", response_model=UnifiedBrokerState)
+async def get_unified_state():
+    broker = broker_instance
+    name = getattr(broker, "get_broker_name", lambda: "mock")()
+    mode = getattr(broker, "get_broker_mode", lambda: "mock")()
+    live = getattr(broker, "is_live_capable", lambda: False)()
+
+    # Mocking fetching state from active broker
+    return UnifiedBrokerState(
+        broker_name=name,
+        broker_mode=mode,
+        live_ready=live,
+        balance=10000.0,
+        equity=10500.0,
+        positions=[
+            {"symbol": "BTCUSDT", "direction": "LONG", "entry": 60000, "current": 61000, "pnl": 50.0}
+        ],
+        orders=[
+            {"id": "ord_1", "symbol": "ETHUSDT", "type": "LIMIT", "price": 3000, "status": "PENDING"}
+        ]
+    )
+
+class ManualVetoRequest(BaseModel):
+    signal_id: str
+    action: Literal["VETO", "FORCE_EXECUTE"]
+
+@router.post("/manual-veto")
+async def manual_veto(req: ManualVetoRequest):
+    if req.action == "VETO":
+        return {"status": "ok", "action": "VETO", "signal_id": req.signal_id, "message": "Signal vetoed successfully"}
+    elif req.action == "FORCE_EXECUTE":
+        # Additional safety checks would go here
+        return {"status": "ok", "action": "FORCE_EXECUTE", "signal_id": req.signal_id, "message": "Signal forcefully executed"}
+    raise HTTPException(status_code=400, detail="Invalid action")

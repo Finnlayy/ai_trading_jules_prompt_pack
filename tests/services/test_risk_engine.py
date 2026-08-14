@@ -85,11 +85,13 @@ def test_risk_engine_high_dispersion():
     assert result["reject_reason"] == "HIGH_DISPERSION"
 
 def test_risk_engine_cooldown():
+    from unittest.mock import patch
     engine = RiskEngine()
     payload = create_valid_payload()
     engine.last_trade_bar = 0
     engine.current_bar = 1 # Cooldown active (COOLDOWN_BARS = 3)
-    result = engine.evaluate(payload)
+    with patch("app.services.risk_engine.COOLDOWN_BARS", 3):
+        result = engine.evaluate(payload)
     assert result["decision"] == DecisionEnum.REJECT
     assert result["reject_reason"] == "COOLDOWN_ACTIVE"
 

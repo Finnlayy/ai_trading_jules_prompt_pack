@@ -22,8 +22,6 @@ from app.core.config import (
     GLINT_LIVE_TRADING_ENABLED,
     GLINT_TELEGRAM_CHAT_ID,
     GLINT_BOT_USERNAME,
-    PIONEX_DIRECT_MIN_ORDER_USDT,
-    PIONEX_DIRECT_MAX_ORDER_USDT,
 )
 from app.schemas.ai_review import DecisionEnum as AIDecisionEnum
 from app.schemas.journal import DecisionEnum, FinalDecisionEnum, TradeJournalEntry, DirectionEnum
@@ -150,8 +148,6 @@ class GlintBroker(BaseBroker):
             )
             return self._build_entry(
                 payload=payload,
-                decision=decision,
-                reject_reason=reject_reason,
                 ai_decision=ai_decision,
                 final_decision=FinalDecisionEnum.REJECTED,
                 simulated_fill={},
@@ -161,8 +157,6 @@ class GlintBroker(BaseBroker):
         if not self.config.enabled:
             return self._build_entry(
                 payload=payload,
-                decision=decision,
-                reject_reason=None,
                 ai_decision=ai_decision,
                 final_decision=FinalDecisionEnum.EXECUTED_SIM,
                 simulated_fill={"mode": "GLINT_DISABLED"},
@@ -203,8 +197,6 @@ class GlintBroker(BaseBroker):
 
         return self._build_entry(
             payload=payload,
-            decision=decision,
-            reject_reason=None,
             ai_decision=ai_decision,
             final_decision=final_decision,
             simulated_fill=simulated_fill,
@@ -262,8 +254,6 @@ class GlintBroker(BaseBroker):
     def _build_entry(
         self,
         payload: M8Payload,
-        decision: DecisionEnum,
-        reject_reason: Optional[str],
         ai_decision: AIDecisionEnum,
         final_decision: FinalDecisionEnum,
         simulated_fill: dict[str, Any],
