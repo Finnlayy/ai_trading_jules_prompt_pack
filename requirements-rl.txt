@@ -1,0 +1,11 @@
+# Academy PPO meta-policy stack.
+# Install only into a Python 3.11 environment, e.g.:
+#   py -3.11 -m venv .venv-rl
+#   .venv-rl\Scripts\python.exe -m pip install -r requirements-rl.txt
+torch
+gymnasium
+stable-baselines3
+numpy
+pandas
+onnx
+onnxruntime
