@@ -377,6 +377,44 @@ def detect_flag(
     return best
 
 
+
+
+# ---------------------------------------------------------------------------
+# Trendline Helpers
+# ---------------------------------------------------------------------------
+
+def _fit_trendline(indices: np.ndarray, prices: np.ndarray) -> tuple[float, float]:
+    """Fit a linear trendline to the given indices and prices."""
+    x = indices.astype(float)
+    y = prices[indices]
+    slope, intercept = np.polyfit(x, y, 1)
+    return slope, intercept
+
+
+def _count_touches(
+    indices: np.ndarray,
+    prices: np.ndarray,
+    slope: float,
+    intercept: float,
+    max_range: float,
+    threshold_pct: float = 0.02,
+) -> int:
+    """Count how many points touch the trendline within a threshold."""
+    threshold = max_range * threshold_pct
+    expected_y = slope * indices + intercept
+    touches = np.sum(np.abs(prices[indices] - expected_y) < threshold)
+    return int(touches)
+
+
+def _find_intersection(
+    slope1: float, intercept1: float, slope2: float, intercept2: float
+) -> float | None:
+    """Find the x-coordinate where two lines intersect."""
+    if abs(slope1 - slope2) < 1e-9:
+        return None
+    return (intercept2 - intercept1) / (slope1 - slope2)
+
+
 # ---------------------------------------------------------------------------
 # Triangles
 # ---------------------------------------------------------------------------
@@ -411,33 +449,28 @@ def detect_triangle(
 
         # Fit upper trendline through peaks (descending: negative slope)
         if len(w_peaks) >= min_touches:
-            x_up = w_peaks.astype(float)
-            y_up = highs[w_peaks]
-            slope_up, intercept_up = np.polyfit(x_up, y_up, 1)
+            slope_up, intercept_up = _fit_trendline(w_peaks, highs)
         else:
             continue
 
         # Fit lower trendline through troughs (ascending: positive slope)
-        x_lo = w_troughs.astype(float)
-        y_lo = lows[w_troughs]
-        slope_lo, intercept_lo = np.polyfit(x_lo, y_lo, 1)
+        slope_lo, intercept_lo = _fit_trendline(w_troughs, lows)
 
         # Triangles require convergence (slopes with opposite signs or one flat)
         if slope_up >= 0 or slope_lo <= 0:
             continue
 
         # Check touches
-        up_touches = np.sum(np.abs(highs[w_peaks] - (slope_up * w_peaks + intercept_up)) < (np.max(highs) - np.min(lows)) * 0.02)
-        lo_touches = np.sum(np.abs(lows[w_troughs] - (slope_lo * w_troughs + intercept_lo)) < (np.max(highs) - np.min(lows)) * 0.02)
+        max_range = float(np.max(highs) - np.min(lows))
+        up_touches = _count_touches(w_peaks, highs, slope_up, intercept_up, max_range)
+        lo_touches = _count_touches(w_troughs, lows, slope_lo, intercept_lo, max_range)
 
         if up_touches < min_touches or lo_touches < min_touches:
             continue
 
         # Apex (where lines cross)
-        if abs(slope_up - slope_lo) < 1e-9:
-            continue
-        apex_x = (intercept_lo - intercept_up) / (slope_up - slope_lo)
-        if apex_x < window_end or apex_x > window_end + 20:
+        apex_x = _find_intersection(slope_up, intercept_up, slope_lo, intercept_lo)
+        if apex_x is None or apex_x < window_end or apex_x > window_end + 20:
             continue
 
         # Breakout detection
@@ -515,13 +548,8 @@ def detect_wedge(
         if len(w_peaks) < 3 or len(w_troughs) < 3:
             continue
 
-        x_up = w_peaks.astype(float)
-        y_up = highs[w_peaks]
-        slope_up, intercept_up = np.polyfit(x_up, y_up, 1)
-
-        x_lo = w_troughs.astype(float)
-        y_lo = lows[w_troughs]
-        slope_lo, intercept_lo = np.polyfit(x_lo, y_lo, 1)
+        slope_up, intercept_up = _fit_trendline(w_peaks, highs)
+        slope_lo, intercept_lo = _fit_trendline(w_troughs, lows)
 
         # Wedges: same direction slopes, converging
         both_rising = slope_up > 0.001 and slope_lo > 0.001 and slope_up > slope_lo
@@ -531,8 +559,9 @@ def detect_wedge(
             continue
 
         # Check touches
-        up_touches = np.sum(np.abs(highs[w_peaks] - (slope_up * w_peaks + intercept_up)) < (np.max(highs) - np.min(lows)) * 0.02)
-        lo_touches = np.sum(np.abs(lows[w_troughs] - (slope_lo * w_troughs + intercept_lo)) < (np.max(highs) - np.min(lows)) * 0.02)
+        max_range = float(np.max(highs) - np.min(lows))
+        up_touches = _count_touches(w_peaks, highs, slope_up, intercept_up, max_range)
+        lo_touches = _count_touches(w_troughs, lows, slope_lo, intercept_lo, max_range)
 
         if up_touches < 2 or lo_touches < 2:
             continue

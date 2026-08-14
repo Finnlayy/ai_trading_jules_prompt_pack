@@ -1,3 +1,4 @@
+from app.core.utils import write_json_async
 import uuid
 import random
 import asyncio
@@ -7,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 DRILL_RESULTS_FILE = Path('data/drill_results.jsonl')
 from app.schemas.academy import SyntheticDrill, DrillResult, CareerEntry
+from app.services.ai.gem_agents import get_agent_definition
 from app.services.agent_registry import agent_registry
 
 
@@ -22,7 +24,8 @@ class TrainingDrillsService:
             "macro": "regime_identification"
         }
 
-        drill_type = drill_types.get(scout_name, "pattern_recognition")
+        definition = get_agent_definition(scout_name)
+        drill_type = drill_types.get(scout_name, definition.drill_type if definition else "pattern_recognition")
 
         scenario_data = {
             "symbol": "BTCUSDT",
@@ -51,7 +54,15 @@ class TrainingDrillsService:
     def generate_drills(self, scout_name: str, count: int = 5) -> List[SyntheticDrill]:
         return [self.generate_random_drill(scout_name, difficulty=random.randint(1, 3)) for _ in range(count)]
 
-    async def evaluate_drill(self, drill: SyntheticDrill, scout_decision: str, confidence: float) -> DrillResult:
+    async def evaluate_drill(
+        self,
+        drill: SyntheticDrill,
+        scout_decision: str,
+        confidence: float,
+        *,
+        persist: bool = True,
+        save_registry: bool = True,
+    ) -> DrillResult:
         # A simple string comparison for the MVP
         is_correct = (scout_decision.upper() == drill.expected_outcome.upper())
 
@@ -76,16 +87,27 @@ class TrainingDrillsService:
                 "drill_id": drill.drill_id
             }
         )
-        await agent_registry.log_career_event(career_entry)
+        await agent_registry.log_career_event(
+            career_entry,
+            save_registry=save_registry,
+            write_log=persist,
+        )
 
-        # Log specific drill result
-        def _write_drill():
-            with open(DRILL_RESULTS_FILE, "a", encoding="utf-8") as f:
-                f.write(result.model_dump_json() + "\n")
-
-        await asyncio.to_thread(_write_drill)
+        if persist:
+            await self.write_results([result])
 
 
         return result
+
+    async def write_results(self, results: List[DrillResult]) -> None:
+        if not results:
+            return
+
+        def _write_drills():
+            with open(DRILL_RESULTS_FILE, "a", encoding="utf-8") as f:
+                for result in results:
+                    f.write(result.model_dump_json() + "\n")
+
+        await asyncio.to_thread(_write_drills)
 
 training_drills = TrainingDrillsService()
