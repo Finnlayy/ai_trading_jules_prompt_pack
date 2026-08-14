@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
 from app.api.ctrader import router as ctrader_router
+from app.schemas.ctrader import CTraderOrderRequest
 from app.services.ctrader_broker import CTraderBroker, CTraderConfig
 
 
@@ -29,7 +30,12 @@ def test_ctrader_broker_dry_run_allows_default_ui_symbol_without_cache(tmp_path)
         )
     )
 
-    result = broker.place_direct_order("EURUSD", "BUY", 0.01)
+    req = CTraderOrderRequest(
+        symbol="EURUSD",
+        direction="BUY",
+        volume_lots=0.01
+    )
+    result = broker.place_direct_order(req)
 
     assert result["status"] == "DRY_RUN"
     assert result["symbol"] == "EURUSD"
@@ -114,50 +120,50 @@ class FakeCTraderBrokerWithOrder:
             },
         )
 
-    def place_direct_order(self, symbol, direction, volume_lots, stop_loss=None, take_profit=None, label=None, comment="MetricFlow cTrader"):
+    def place_direct_order(self, req: CTraderOrderRequest):
         self.orders.append({
-            "symbol": symbol,
-            "direction": direction,
-            "volume_lots": volume_lots,
+            "symbol": req.symbol,
+            "direction": req.direction,
+            "volume_lots": req.volume_lots,
         })
-        symbol_name = symbol.upper().replace("/", "").replace("_", "").replace("-", "")
+        symbol_name = req.symbol.upper().replace("/", "").replace("_", "").replace("-", "")
         if symbol_name not in self.get_symbols():
             return {
                 "status": "REJECTED",
                 "error": f"CTRADER_SYMBOL_NOT_FOUND:{symbol_name}",
-                "symbol": symbol,
-                "direction": direction,
-                "volume_lots": volume_lots,
+                "symbol": req.symbol,
+                "direction": req.direction,
+                "volume_lots": req.volume_lots,
                 "margin_checked": False,
             }
-        trade_side = "BUY" if direction.upper() in {"BUY", "LONG"} else "SELL"
+        trade_side = "BUY" if req.direction.upper() in {"BUY", "LONG"} else "SELL"
         if self.live:
             return {
                 "status": "SENT_TO_CTRADER",
                 "order_id": "order-1",
                 "position_id": "pos-1",
-                "symbol": symbol,
+                "symbol": req.symbol,
                 "direction": trade_side,
-                "volume_lots": volume_lots,
+                "volume_lots": req.volume_lots,
                 "fill_price": None,
                 "margin_checked": True,
                 "free_margin_before": 9900.0,
-                "estimated_margin_required": volume_lots * 1000.0,
+                "estimated_margin_required": req.volume_lots * 1000.0,
                 "error": None,
             }
         return {
             "status": "DRY_RUN",
             "order_id": None,
             "position_id": None,
-            "symbol": symbol,
+            "symbol": req.symbol,
             "direction": trade_side,
-            "volume_lots": volume_lots,
+            "volume_lots": req.volume_lots,
             "fill_price": None,
             "margin_checked": True,
             "free_margin_before": 9900.0,
-            "estimated_margin_required": volume_lots * 1000.0,
+            "estimated_margin_required": req.volume_lots * 1000.0,
             "error": None,
-            "preview": {"symbol_id": 1, "trade_side": trade_side, "volume_lots": volume_lots},
+            "preview": {"symbol_id": 1, "trade_side": trade_side, "volume_lots": req.volume_lots},
         }
 
     def is_ready(self):
