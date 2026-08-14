@@ -550,8 +550,7 @@ class PionexDirectBroker(BaseBroker):
             return self._close_position(payload, symbol, account_mode, ai_decision)
         return self._open_position(payload, symbol, account_mode, ai_decision)
 
-    def _open_position(self, payload: M8Payload, symbol: str, account_mode: str, ai_decision: AIDecisionEnum) -> TradeJournalEntry:
-        war_room = classify_order(payload)
+    def _validate_open_position(self, payload, symbol: str, account_mode: str, ai_decision, war_room) -> "TradeJournalEntry | None":
         if war_room.reject_reason:
             self.notifier.send_reject(symbol, war_room.reject_reason, f"pionex-direct-{payload.signal_id}", payload.intent)
             return self._build_entry(
@@ -580,7 +579,9 @@ class PionexDirectBroker(BaseBroker):
                 simulated_fill={},
                 result={"status": "REJECTED", "reject_reason": reason},
             )
+        return None
 
+    def _get_balance_for_sizing(self, account_mode: str) -> float:
         if self.client is None:
             balance = 0.0
         else:
@@ -592,6 +593,16 @@ class PionexDirectBroker(BaseBroker):
         if balance <= 0:
             # Keep deterministic minimum sizing in dry/limited environments.
             balance = 100.0
+        return balance
+
+    def _open_position(self, payload: M8Payload, symbol: str, account_mode: str, ai_decision: AIDecisionEnum) -> TradeJournalEntry:
+        war_room = classify_order(payload)
+
+        rejection_entry = self._validate_open_position(payload, symbol, account_mode, ai_decision, war_room)
+        if rejection_entry:
+            return rejection_entry
+
+        balance = self._get_balance_for_sizing(account_mode)
 
         sizing = self.sizer.size_trade(
             payload,
