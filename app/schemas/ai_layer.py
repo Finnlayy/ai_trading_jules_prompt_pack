@@ -50,5 +50,6 @@ class AIChatResponse(BaseModel):
     profile: AIBehaviorProfile
     memory: list[AIChatMessage]
     raw_profile_patch: dict[str, Any] = Field(default_factory=dict)
+    recommended_action: dict[str, Any] | None = Field(default=None, description="Action recommended by the assistant (e.g., run_backtest, trigger_drill, etc.)")
     generated_prompt: str | None = Field(default=None, description="The full prompt that was sent to the LLM.")
     system_prompt: str | None = Field(default=None, description="The system prompt used for the LLM call.")

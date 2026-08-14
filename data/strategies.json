@@ -1,9 +1,0 @@
-{
-  "active_strategy_id": "generator_default",
-  "last_switch": "2026-06-01T10:45:26.770256+00:00",
-  "available": [
-    "default",
-    "pattern_enhanced",
-    "generator_default"
-  ]
-}

@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>MetricFlow ENV Cheatsheet</title>
+<style>
+@page { size: A4; margin: 18mm 14mm; }
+* { box-sizing: border-box; }
+body {
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-size: 9.5pt;
+  line-height: 1.35;
+  color: #1a1a1a;
+  background: #fff;
+  margin: 0;
+  padding: 0;
+}
+h1 {
+  font-size: 18pt;
+  margin: 0 0 6px 0;
+  color: #0f172a;
+  border-bottom: 2.5px solid #0f172a;
+  padding-bottom: 4px;
+}
+h2 {
+  font-size: 11pt;
+  margin: 14px 0 6px 0;
+  color: #fff;
+  background: #0f172a;
+  padding: 3px 8px;
+  border-radius: 4px;
+  display: inline-block;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 10px;
+}
+th {
+  text-align: left;
+  font-size: 8pt;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+  border-bottom: 1.5px solid #cbd5e1;
+  padding: 4px 6px;
+}
+td {
+  padding: 3px 6px;
+  border-bottom: 0.5px solid #e2e8f0;
+  vertical-align: top;
+}
+td:first-child {
+  font-family: "JetBrains Mono", "Consolas", monospace;
+  font-size: 8.5pt;
+  color: #0f172a;
+  font-weight: 600;
+  white-space: nowrap;
+  width: 38%;
+}
+td:nth-child(2) {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 8pt;
+  color: #475569;
+  white-space: nowrap;
+  width: 22%;
+}
+td:nth-child(3) {
+  color: #334155;
+  font-size: 8.5pt;
+}
+tr:hover td { background: #f8fafc; }
+.danger {
+  color: #dc2626;
+  font-weight: 700;
+  background: #fef2f2;
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+.note {
+  font-size: 8pt;
+  color: #64748b;
+  margin-top: 8px;
+  padding: 6px 8px;
+  background: #f1f5f9;
+  border-radius: 4px;
+  border-left: 3px solid #0f172a;
+}
+.page-break { break-after: page; }
+.two-col {
+  column-count: 2;
+  column-gap: 18px;
+}
+.badge {
+  display: inline-block;
+  font-size: 7pt;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.badge-live {
+  background: #dc2626;
+  color: #fff;
+}
+</style>
+</head>
+<body>
+
+<h1>MetricFlow Bot — ENV Cheatsheet</h1>
+
+<h2>🤖 AI Layer</h2>
+<table>
+<tr><th>Variable</th><th>Default</th><th>Beschreibung</th></tr>
+<tr><td>AI_PROVIDER</td><td>moonshot</td><td>Default: moonshot | openai | gemini | mock</td></tr>
+<tr><td>AI_PROVIDER_TECHNICAL</td><td>gemini</td><td>Technical Scout</td></tr>
+<tr><td>AI_PROVIDER_SENTIMENT</td><td>moonshot</td><td>Sentiment Scout</td></tr>
+<tr><td>AI_PROVIDER_RISK</td><td>openai</td><td>Risk Scout</td></tr>
+<tr><td>AI_PROVIDER_MACRO</td><td>gemini</td><td>Macro Scout</td></tr>
+<tr><td>AI_PROVIDER_EXECUTION</td><td>moonshot</td><td>Execution Scout</td></tr>
+<tr><td>AI_PROVIDER_CORRELATION</td><td>openai</td><td>Correlation Scout</td></tr>
+<tr><td>AI_FAILURE_POLICY</td><td>reject_live</td><td>reject_live | allow_paper | allow_all</td></tr>
+<tr><td>AI_TELEGRAM_ADVISORS_ENABLED</td><td>false</td><td>AI-Advisor über Telegram</td></tr>
+<tr><td>AI_TELEGRAM_ADVISOR_TIMEOUT_SECONDS</td><td>20</td><td>Timeout Sekunden</td></tr>
+</table>
+
+<h2>🔑 AI Keys</h2>
+<table>
+<tr><th>Variable</th><th>Default / Beispiel</th><th>Beschreibung</th></tr>
+<tr><td>MOONSHOT_API_KEY</td><td>—</td><td>Kimi K2.6 API Key</td></tr>
+<tr><td>MOONSHOT_BASE_URL</td><td>https://api.moonshot.ai/v1</td><td>Endpoint</td></tr>
+<tr><td>MOONSHOT_MODEL</td><td>kimi-k2.6</td><td>Modell-Name</td></tr>
+<tr><td>OPENAI_API_KEY</td><td>—</td><td>OpenAI API Key</td></tr>
+<tr><td>OPENAI_BASE_URL</td><td>https://api.openai.com/v1</td><td>Endpoint</td></tr>
+<tr><td>OPENAI_MODEL</td><td>gpt-5.2</td><td>Modell-Name</td></tr>
+<tr><td>GEMINI_API_KEY</td><td>—</td><td>Google Gemini API Key</td></tr>
+<tr><td>GEMINI_BASE_URL</td><td>https://generativelanguage.googleapis.com/v1beta/openai/</td><td>Endpoint</td></tr>
+<tr><td>GEMINI_MODEL</td><td>gemini-2.5-pro</td><td>Modell-Name</td></tr>
+</table>
+
+<div class="page-break"></div>
+
+<h2>🏦 Broker Mode</h2>
+<table>
+<tr><th>Variable</th><th>Default</th><th>Beschreibung</th></tr>
+<tr><td>BROKER_MODE</td><td>simulation</td><td>simulation | paper | pionex_relay | pionex_direct | glint | ctrader</td></tr>
+</table>
+
+<h2>📡 Pionex Relay</h2>
+<table>
+<tr><th>Variable</th><th>Default</th><th>Beschreibung</th></tr>
+<tr><td>PIONEX_RELAY_ENABLED</td><td>false</td><td>Relay aktivieren</td></tr>
+<tr><td>PIONEX_RELAY_URL</td><td>http://127.0.0.1:5000/webhook</td><td>Local Relay Endpoint</td></tr>
+<tr><td>PIONEX_SIGNAL_BOT_UUID</td><td>—</td><td>Signal Bot UUID</td></tr>
+<tr><td>PIONEX_RELAY_CONTRACTS</td><td>1</td><td>Anzahl Contracts</td></tr>
+<tr><td>PIONEX_RELAY_TIMEOUT_SECONDS</td><td>10</td><td>Timeout</td></tr>
+</table>
+
+<h2>⚡ Pionex Direct (REST)</h2>
+<table>
+<tr><th>Variable</th><th>Default</th><th>Beschreibung</th></tr>
+<tr><td>PIONEX_DIRECT_ENABLED</td><td>false</td><td>Direct Broker aktivieren</td></tr>
+<tr><td>PIONEX_DIRECT_LIVE_TRADING_ENABLED</td><td>false</td><td><span class="badge badge-live">LIVE</span> <b>Hard-Switch für echte Orders!</b></td></tr>
+<tr><td>PIONEX_API_KEY</td><td>—</td><td>API Key</td></tr>
+<tr><td>PIONEX_API_SECRET</td><td>—</td><td>API Secret</td></tr>
+<tr><td>PIONEX_DIRECT_BASE_URL</td><td>https://api.pionex.com</td><td>Endpoint</td></tr>
+<tr><td>PIONEX_DIRECT_TIMEOUT_SECONDS</td><td>10</td><td>Timeout</td></tr>
+<tr><td>PIONEX_ALLOWED_SYMBOLS</td><td>CSV-Liste</td><td>Erlaubte Symbole</td></tr>
+<tr><td>PIONEX_DIRECT_DEFAULT_SPOT_SYMBOL</td><td>BTC_USDT</td><td>Default Spot</td></tr>
+<tr><td>PIONEX_DIRECT_DEFAULT_FUTURES_SYMBOL</td><td>BTC_USDT_PERP</td><td>Default Futures</td></tr>
+<tr><td>PIONEX_DIRECT_FUTURES_ENABLED</td><td>true</td><td>Futures erlaubt</td></tr>
+<tr><td>PIONEX_DIRECT_FUTURES_MODE</td><td>mode1</td><td>Futures Modus</td></tr>
+<tr><td>PIONEX_DIRECT_ALLOW_PAYLOAD_LEVERAGE</td><td>false</td><td>Leverage aus Payload</td></tr>
+<tr><td>PIONEX_DIRECT_MIN_ORDER_USDT</td><td>5</td><td>Min Ordergröße</td></tr>
+<tr><td>PIONEX_DIRECT_MAX_ORDER_USDT</td><td>200</td><td>Max Ordergröße</td></tr>
+<tr><td>PIONEX_DIRECT_MIN_BASE_SIZE</td><td>0.0001</td><td>Min Base Size</td></tr>
+<tr><td>PIONEX_DIRECT_MAX_BASE_SIZE</td><td>10</td><td>Max Base Size</td></tr>
+</table>
+
+<div class="page-break"></div>
+
+<h2>📊 cTrader</h2>
+<table>
+<tr><th>Variable</th><th>Default</th><th>Beschreibung</th></tr>
+<tr><td>CTRADER_ENABLED</td><td>false</td><td>cTrader aktivieren</td></tr>
+<tr><td>CTRADER_LIVE_TRADING_ENABLED</td><td>false</td><td><span class="badge badge-live">LIVE</span> Echte Orders</td></tr>
+<tr><td>CTRADER_CLIENT_ID</td><td>—</td><td>OAuth Client ID</td></tr>
+<tr><td>CTRADER_CLIENT_SECRET</td><td>—</td><td>OAuth Client Secret</td></tr>
+<tr><td>CTRADER_ACCESS_TOKEN</td><td>—</td><td>Access Token</td></tr>
+<tr><td>CTRADER_ACCOUNT_ID</td><td>0</td><td>Account ID</td></tr>
+<tr><td>CTRADER_HOST</td><td>demo.ctraderapi.com</td><td>Host</td></tr>
+<tr><td>CTRADER_PORT</td><td>5035</td><td>Port</td></tr>
+<tr><td>CTRADER_SYMBOL_MAP_PATH</td><td>ctrader_symbols.json</td><td>Symbol Mapping Datei</td></tr>
+<tr><td>CTRADER_FIX_ENABLED</td><td>false</td><td>FIX API aktivieren</td></tr>
+<tr><td>CTRADER_FIX_HOST</td><td>—</td><td>FIX Host</td></tr>
+<tr><td>CTRADER_FIX_PORT</td><td>5212</td><td>FIX Port</td></tr>
+<tr><td>CTRADER_FIX_SENDER_COMP_ID</td><td>—</td><td>Sender Comp ID</td></tr>
+<tr><td>CTRADER_FIX_TARGET_COMP_ID</td><td>cServer</td><td>Target Comp ID</td></tr>
+<tr><td>CTRADER_FIX_PASSWORD</td><td>—</td><td>FIX Password</td></tr>
+</table>
+
+<h2>💬 GLINT (Hyperliquid via Telegram)</h2>
+<table>
+<tr><th>Variable</th><th>Default</th><th>Beschreibung</th></tr>
+<tr><td>GLINT_ENABLED</td><td>false</td><td>GLINT aktivieren</td></tr>
+<tr><td>GLINT_LIVE_TRADING_ENABLED</td><td>false</td><td><span class="badge badge-live">LIVE</span> Echte Orders</td></tr>
+<tr><td>GLINT_TELEGRAM_CHAT_ID</td><td>—</td><td>Telegram Chat ID</td></tr>
+<tr><td>GLINT_BOT_USERNAME</td><td>—</td><td>Bot Username</td></tr>
+</table>
+
+<h2>🦑 Kraken</h2>
+<table>
+<tr><th>Variable</th><th>Default</th><th>Beschreibung</th></tr>
+<tr><td>KRAKEN_ENABLED</td><td>false</td><td>Kraken aktivieren</td></tr>
+<tr><td>KRAKEN_LIVE_TRADING_ENABLED</td><td>false</td><td><span class="badge badge-live">LIVE</span> Echte Orders</td></tr>
+<tr><td>KRAKEN_API_KEY</td><td>—</td><td>API Key</td></tr>
+<tr><td>KRAKEN_API_SECRET</td><td>—</td><td>API Secret</td></tr>
+<tr><td>KRAKEN_TIMEOUT_SECONDS</td><td>20</td><td>Timeout</td></tr>
+<tr><td>KRAKEN_DEMO_MODE</td><td>true</td><td>Demo Modus</td></tr>
+<tr><td>KRAKEN_SPOT_ONLY</td><td>true</td><td>Nur Spot-Trading</td></tr>
+<tr><td>KRAKEN_MAX_ORDER_USD</td><td>100</td><td>Max Order USD</td></tr>
+<tr><td>KRAKEN_MIN_ORDER_USD</td><td>10</td><td>Min Order USD</td></tr>
+</table>
+
+<h2>🔗 Hyperliquid (zukünftig)</h2>
+<table>
+<tr><th>Variable</th><th>Default</th><th>Beschreibung</th></tr>
+<tr><td>HYPERLIQUID_WALLET_ADDRESS</td><td>—</td><td>Wallet Address</td></tr>
+<tr><td>HYPERLIQUID_PRIVATE_KEY</td><td>—</td><td><b>Niemals committen!</b></td></tr>
+</table>
+
+<div class="page-break"></div>
+
+<h2>🎯 Kelly Sizing</h2>
+<table>
+<tr><th>Variable</th><th>Default</th><th>Beschreibung</th></tr>
+<tr><td>KELLY_DEPLOY_MODE</td><td>half</td><td>half | full | fixed</td></tr>
+<tr><td>KELLY_LOOKBACK_TRADES</td><td>50</td><td>Lookback für Kelly</td></tr>
+<tr><td>KELLY_MIN_TRADES</td><td>20</td><td>Min Trades für Kelly</td></tr>
+<tr><td>KELLY_FIXED_RISK_PCT</td><td>1.0</td><td>Fixed Risk %</td></tr>
+<tr><td>KELLY_MIN_RISK_PCT</td><td>0.2</td><td>Min Risk %</td></tr>
+<tr><td>KELLY_MAX_RISK_PCT</td><td>2.0</td><td>Max Risk %</td></tr>
+<tr><td>KELLY_PAYOFF_BUFFER</td><td>0.0</td><td>Payoff Buffer</td></tr>
+</table>
+
+<h2>🛡️ War Room (Risk Gates)</h2>
+<table>
+<tr><th>Variable</th><th>Default</th><th>Beschreibung</th></tr>
+<tr><td>WAR_ROOM_ENABLED</td><td>true</td><td>War Room aktivieren</td></tr>
+<tr><td>WAR_ROOM_CHOP_STANDBY_THRESHOLD</td><td>61.8</td><td>Chop Index Standby</td></tr>
+<tr><td>WAR_ROOM_HURST_HAZARD_THRESHOLD</td><td>0.45</td><td>Hurst Hazard</td></tr>
+<tr><td>WAR_ROOM_HARD_KILL_DRAWDOWN_PCT</td><td>25.0</td><td>Hard Kill Drawdown %</td></tr>
+<tr><td>WAR_ROOM_ORANGE_MAX_RISK_PCT</td><td>1.0</td><td>Orange Risk Cap %</td></tr>
+<tr><td>WAR_ROOM_AI_MIN_CONFIDENCE</td><td>0.55</td><td>Min AI Confidence</td></tr>
+<tr><td>WAR_ROOM_PENDING_ORDER_MAX_AGE_SECONDS</td><td>300</td><td>Max Pending Order Alter</td></tr>
+<tr><td>WAR_ROOM_VIP_CONFLUENCE_SCORE</td><td>85.0</td><td>VIP Confluence Score</td></tr>
+<tr><td>WAR_ROOM_VIP_RELATIVE_VOLUME</td><td>1.5</td><td>VIP Relative Volume</td></tr>
+<tr><td>WAR_ROOM_VIP_MAX_CRISIS_SCORE</td><td>15.0</td><td>VIP Max Crisis</td></tr>
+<tr><td>WAR_ROOM_VIP_MAX_MC_DISPERSION</td><td>2.5</td><td>VIP Max MC Dispersion</td></tr>
+</table>
+
+<h2>📡 Webhook & Signal</h2>
+<table>
+<tr><th>Variable</th><th>Default</th><th>Beschreibung</th></tr>
+<tr><td>WEBHOOK_SECRET</td><td>—</td><td>HMAC-Secret für TV Webhooks</td></tr>
+<tr><td>SIGNAL_MIN_CONFLUENCE_OVERRIDE</td><td>—</td><td>Min Confluence Override</td></tr>
+</table>
+
+<div class="page-break"></div>
+
+<h2>💬 Telegram</h2>
+<table>
+<tr><th>Variable</th><th>Default</th><th>Beschreibung</th></tr>
+<tr><td>TELEGRAM_NOTIFICATIONS_ENABLED</td><td>false</td><td>Notifikationen aktivieren</td></tr>
+<tr><td>TELEGRAM_BOT_TOKEN</td><td>—</td><td>Bot Token</td></tr>
+<tr><td>TELEGRAM_CHAT_ID</td><td>—</td><td>Chat ID</td></tr>
+<tr><td>MANUS_ENABLED</td><td>false</td><td>Manus Advisor aktivieren</td></tr>
+<tr><td>MANUS_TELEGRAM_CHAT_ID</td><td>—</td><td>Manus Chat ID</td></tr>
+<tr><td>MANUS_BOT_USERNAME</td><td>—</td><td>Manus Bot Username</td></tr>
+</table>
+
+<h2>🎓 AI Training Academy</h2>
+<table>
+<tr><th>Variable</th><th>Default</th><th>Beschreibung</th></tr>
+<tr><td>TRAINING_LOOP_ENABLED</td><td>true</td><td>Training Loop aktiv</td></tr>
+<tr><td>TRAINING_LOOP_NIGHT_MODE</td><td>true</td><td>Nachtmodus</td></tr>
+<tr><td>TRAINING_LOOP_NIGHT_START</td><td>22:00</td><td>Nacht-Startzeit</td></tr>
+<tr><td>TRAINING_LOOP_NIGHT_END</td><td>06:00</td><td>Nacht-Endzeit</td></tr>
+<tr><td>TRAINING_LOOP_DRILLS_PER_HOUR</td><td>12</td><td>Drills pro Stunde</td></tr>
+</table>
+
+<div class="note">
+<b>Sicherheitsregel:</b> Die Variablen <code>PIONEX_DIRECT_LIVE_TRADING_ENABLED</code>, <code>CTRADER_LIVE_TRADING_ENABLED</code>, <code>GLINT_LIVE_TRADING_ENABLED</code> und <code>KRAKEN_LIVE_TRADING_ENABLED</code> sind die einzigen Schalter, die echtes Geld riskieren. Solange diese auf <code>false</code> bleiben, läuft alles als Paper/Simulation.
+</div>
+
+</body>
+</html>
