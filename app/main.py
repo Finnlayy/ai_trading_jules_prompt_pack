@@ -10,10 +10,9 @@ logger = logging.getLogger(__name__)
 from pathlib import Path
 
 from fastapi import FastAPI, Depends
-from fastapi.responses import RedirectResponse, Response
+from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import CORS_ORIGINS
-from fastapi.responses import FileResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from app.api.auth import router as auth_router, get_current_user
 from fastapi import Depends
