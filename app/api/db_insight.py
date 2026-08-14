@@ -240,11 +240,19 @@ def get_second_brain():
 def get_second_brain_doc(filename: str):
     """Fetch raw text content of a specified project document file from root."""
     from pathlib import Path
-    # Security gates to prevent path traversal
-    if not filename.endswith(".md") or "/" in filename or "\\" in filename or ".." in filename:
+
+    if not filename.endswith(".md"):
+        raise HTTPException(status_code=400, detail="Invalid filename parameter")
+
+    base_dir = Path(".").resolve()
+    try:
+        doc_path = (base_dir / filename).resolve()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid filename parameter")
+
+    if doc_path.parent != base_dir:
         raise HTTPException(status_code=400, detail="Invalid filename parameter")
     
-    doc_path = Path(filename)
     if not doc_path.exists() or not doc_path.is_file():
         raise HTTPException(status_code=404, detail="Document not found")
         

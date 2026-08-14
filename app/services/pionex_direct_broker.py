@@ -38,7 +38,7 @@ from app.schemas.m8_payload import M8Payload
 from app.services.broker_interface import BaseBroker
 from app.services.pionex_api import PionexAPIError, PionexClient, PionexCredentials
 from app.services.pionex_kelly_sizer import KellyConfig, KellySizer, KellySizingResult
-from app.services.pionex_position_ledger import PositionLedger
+from app.services.pionex_position_ledger import PositionLedger, LedgerEntry
 from app.services.telegram_notifier import TelegramConfig, TelegramNotifier
 from app.services.war_room_rules import classify_order
 
@@ -658,14 +658,14 @@ class PionexDirectBroker(BaseBroker):
                     result={"status": "API_ERROR", "reject_reason": exc.message},
                 )
 
-        self.ledger.apply_entry(
+        self.ledger.apply_entry(LedgerEntry(
             symbol=symbol,
             account_mode=account_mode,
             direction=entry_side,
             size_base=sizing.size_base,
             entry_price=payload.entry_price,
             risk_amount=sizing.risk_amount,
-        )
+        ))
         self.notifier.send_execution(
             symbol=symbol,
             account_mode=account_mode,
@@ -724,21 +724,114 @@ class PionexDirectBroker(BaseBroker):
             take_profit=take_profit,
         )
 
+    def _build_reject_close_entry(
+        self,
+        payload: M8Payload,
+        symbol: str,
+        reason: str,
+        ai_decision: AIDecisionEnum,
+        trade_id: str,
+        simulated_fill: Optional[dict[str, Any]] = None,
+    ) -> TradeJournalEntry:
+        self.notifier.send_reject(symbol, reason, trade_id, payload.intent)
+        return self._build_entry(
+            payload=payload,
+            decision=DecisionEnum.PROCEED_TO_SIMULATION,
+            reject_reason=reason,
+            ai_decision=ai_decision,
+            final_decision=FinalDecisionEnum.REJECTED,
+            simulated_fill=simulated_fill or {},
+            result={"status": "REJECTED", "reject_reason": reason},
+        )
+
+    def _calculate_close_pnl_and_side(
+        self,
+        direction: str,
+        entry_price: float,
+        close_price: float,
+        size: float,
+    ) -> tuple[float, str]:
+        if direction == "LONG":
+            return (close_price - entry_price) * size, "SELL"
+        return (entry_price - close_price) * size, "BUY"
+
+    def _record_trade_metrics(
+        self,
+        symbol: str,
+        direction: str,
+        realized_pnl: float,
+        risk_amount: float,
+    ) -> None:
+        if risk_amount and risk_amount > 0:
+            rr_achieved = abs(realized_pnl / risk_amount)
+            pnl_pct = (realized_pnl / risk_amount) * 100.0
+        else:
+            rr_achieved = 0.0
+            pnl_pct = 0.0
+        from app.services.confidence_registry import confidence_registry
+        from app.services.portfolio_circuit_breaker import circuit_breaker_instance
+        confidence_registry.record_trade_outcome(
+            symbol=symbol,
+            direction=direction,
+            pnl_pct=pnl_pct,
+            rr=rr_achieved,
+            win=realized_pnl > 0,
+        )
+        circuit_breaker_instance.record_trade_pnl(realized_pnl)
+
+    def _execute_live_close_or_rollback(
+        self,
+        payload: M8Payload,
+        symbol: str,
+        account_mode: str,
+        close_side: str,
+        closed_size_base: float,
+        client_order_id: str,
+        direction: str,
+        entry_price: float,
+        risk_amount: float,
+        simulated_fill: dict[str, Any],
+        ai_decision: AIDecisionEnum,
+        result: dict[str, Any],
+    ) -> Optional[TradeJournalEntry]:
+        try:
+            order = self._send_live_close(
+                symbol=symbol,
+                account_mode=account_mode,
+                close_side=close_side,
+                size_base=closed_size_base,
+                client_order_id=client_order_id,
+            )
+            result["status"] = "CLOSED_LIVE"
+            result["order"] = order
+            return None
+        except PionexAPIError as exc:
+            # Rollback local ledger close when live close fails.
+            self.ledger.apply_entry(
+                symbol=symbol,
+                account_mode=account_mode,
+                direction=direction,
+                size_base=closed_size_base,
+                client_order_id=client_order_id,
+                entry_price=entry_price,
+                risk_amount=risk_amount,
+            )
+            self.notifier.send_error("CLOSE", exc.message)
+            return self._build_entry(
+                payload=payload,
+                decision=DecisionEnum.PROCEED_TO_SIMULATION,
+                reject_reason=exc.message,
+                ai_decision=ai_decision,
+                final_decision=FinalDecisionEnum.REJECTED,
+                simulated_fill=simulated_fill,
+                result={"status": "API_ERROR", "reject_reason": exc.message},
+            )
+
     def _close_position(self, payload: M8Payload, symbol: str, account_mode: str, ai_decision: AIDecisionEnum) -> TradeJournalEntry:
         trade_id = f"pionex-direct-{payload.signal_id}"
         position = self.ledger.get(symbol=symbol, account_mode=account_mode)
         if not position:
-            reason = "NO_OPEN_POSITION"
-            self.notifier.send_reject(symbol, reason, trade_id, payload.intent)
-            return self._build_entry(
-                payload=payload,
-                decision=DecisionEnum.PROCEED_TO_SIMULATION,
-                reject_reason=reason,
-                ai_decision=ai_decision,
-                final_decision=FinalDecisionEnum.REJECTED,
-                simulated_fill={},
-                result={"status": "REJECTED", "reject_reason": reason},
-            )
+            return self._build_reject_close_entry(payload, symbol, "NO_OPEN_POSITION", ai_decision, trade_id)
 
         close_size = payload.execution_quantity if payload.execution_quantity and payload.execution_quantity > 0 else None
         close_info = self.ledger.apply_close(symbol=symbol, account_mode=account_mode, close_size_base=close_size)
@@ -748,28 +841,13 @@ class PionexDirectBroker(BaseBroker):
         direction = str(close_info["direction"])
 
         if closed_size_base <= 0:
-            reason = "ZERO_CLOSE_SIZE"
-            self.notifier.send_reject(symbol, reason, trade_id, payload.intent)
-            return self._build_entry(
-                payload=payload,
-                decision=DecisionEnum.PROCEED_TO_SIMULATION,
-                reject_reason=reason,
-                ai_decision=ai_decision,
-                final_decision=FinalDecisionEnum.REJECTED,
-                simulated_fill={},
-                result={"status": "REJECTED", "reject_reason": reason},
-            )
+            return self._build_reject_close_entry(payload, symbol, "ZERO_CLOSE_SIZE", ai_decision, trade_id)
 
-        if direction == "LONG":
-            realized_pnl = (payload.entry_price - entry_price) * closed_size_base
-            close_side = "SELL"
-        else:
-            realized_pnl = (entry_price - payload.entry_price) * closed_size_base
-            close_side = "BUY"
+        realized_pnl, close_side = self._calculate_close_pnl_and_side(direction, entry_price, payload.entry_price, closed_size_base)
 
         live_mode = self.config.live_trading_enabled and self.client is not None
         client_order_id = self._client_order_id(payload, symbol, account_mode, close_side)
-        simulated_fill = {
+        simulated_fill: dict[str, Any] = {
             "mode": "PIONEX_DIRECT",
             "live_mode": live_mode,
             "symbol": symbol,
@@ -795,23 +873,7 @@ class PionexDirectBroker(BaseBroker):
             },
         }
 
-        # Record trade outcome in confidence registry (before potential rollback)
-        if risk_amount and risk_amount > 0:
-            rr_achieved = abs(realized_pnl / risk_amount)
-            pnl_pct = (realized_pnl / risk_amount) * 100.0
-        else:
-            rr_achieved = 0.0
-            pnl_pct = 0.0
-        from app.services.confidence_registry import confidence_registry
-        from app.services.portfolio_circuit_breaker import circuit_breaker_instance
-        confidence_registry.record_trade_outcome(
-            symbol=symbol,
-            direction=direction,
-            pnl_pct=pnl_pct,
-            rr=rr_achieved,
-            win=realized_pnl > 0,
-        )
-        circuit_breaker_instance.record_trade_pnl(realized_pnl)
+        self._record_trade_metrics(symbol, direction, realized_pnl, risk_amount)
 
         if live_mode and self.client:
             try:
@@ -826,15 +888,14 @@ class PionexDirectBroker(BaseBroker):
                 result["order"] = order
             except PionexAPIError as exc:
                 # Rollback local ledger close when live close fails.
-                self.ledger.apply_entry(
+                self.ledger.apply_entry(LedgerEntry(
                     symbol=symbol,
                     account_mode=account_mode,
                     direction=direction,
                     size_base=closed_size_base,
-                    client_order_id=client_order_id,
                     entry_price=entry_price,
                     risk_amount=risk_amount,
-                )
+                ))
                 self.notifier.send_error("CLOSE", exc.message)
                 return self._build_entry(
                     payload=payload,
@@ -845,6 +906,13 @@ class PionexDirectBroker(BaseBroker):
                     simulated_fill=simulated_fill,
                     result={"status": "API_ERROR", "reject_reason": exc.message},
                 )
+            rollback_err = self._execute_live_close_or_rollback(
+                payload, symbol, account_mode, close_side, closed_size_base,
+                client_order_id, direction, entry_price, risk_amount,
+                simulated_fill, ai_decision, result
+            )
+            if rollback_err:
+                return rollback_err
 
         self.notifier.send_execution(
             symbol=symbol,
@@ -864,7 +932,6 @@ class PionexDirectBroker(BaseBroker):
             simulated_fill=simulated_fill,
             result=result,
         )
-
     def _send_live_close(
         self,
         symbol: str,

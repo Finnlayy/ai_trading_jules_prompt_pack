@@ -1,3 +1,0 @@
-🧹 [code health improvement description]
-
-Refactor `_send_live_entry` to reduce parameter count
