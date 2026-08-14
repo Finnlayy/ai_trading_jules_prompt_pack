@@ -9,7 +9,7 @@ import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 
 import requests
 
@@ -147,18 +147,7 @@ class SignalGenerator:
     def _ohlcv_to_cisd_candles(self, bars: List[OHLCV]) -> List[CISDScorerCandle]:
         return [CISDScorerCandle(ts=b.ts, o=b.o, h=b.h, l=b.l, c=b.c, v=b.v) for b in bars]
 
-    def generate_payloads(
-        self,
-        symbol: str = "HYPEUSDT",
-        timeframe: str = "1m",
-        bars: int = 200,
-        min_confluence: Optional[float] = None,
-    ) -> List[M8Payload]:
-        """
-        Fetch historical data, score every bar, and emit M8Payloads
-        for bars that exceed the confidence threshold.
-        """
-        # Get asset calibration for thresholds
+    def _resolve_trade_plan(self, symbol: str, min_confluence: Optional[float]) -> tuple[dict, float, float, float]:
         cal = get_calibration(symbol)
         cal_params = cal.get("calibration", {})
         min_conf = (
@@ -170,6 +159,195 @@ class SignalGenerator:
         )
         sl_atr_mul = cal_params.get("sl_atr_mul", 1.4)
         tp_atr_mul = cal_params.get("tp_atr_mul", 2.8)
+        return cal, float(min_conf), float(sl_atr_mul), float(tp_atr_mul)
+
+    @staticmethod
+    def _latest_closed_bar_index(
+        bars: List[OHLCV],
+        timeframe: str,
+        now_ms: int | None = None,
+    ) -> int | None:
+        if not bars:
+            return None
+        now = now_ms if now_ms is not None else int(time.time() * 1000)
+        tf_ms = BybitDataFeed._tf_to_ms(timeframe)
+        closed_indexes = [
+            index for index, bar in enumerate(bars)
+            if bar.ts + tf_ms <= now
+        ]
+        return closed_indexes[-1] if closed_indexes else None
+
+    @staticmethod
+    def _pattern_payload_result(strategy_score, fallback: dict[str, Any] | None = None) -> dict[str, Any]:
+        metadata = getattr(strategy_score, "metadata", {}) or {}
+        if metadata.get("pattern_type") or metadata.get("pattern_score") is not None:
+            return {
+                "pattern_type": metadata.get("pattern_type"),
+                "pattern_score": metadata.get("pattern_score", 0.0) or 0.0,
+                "pattern_confidence": metadata.get("pattern_confidence", 0.0) or 0.0,
+            }
+        return fallback or {"pattern_type": None, "pattern_score": 0.0, "pattern_confidence": 0.0}
+
+    def _payload_from_score(
+        self,
+        *,
+        symbol: str,
+        timeframe: str,
+        bar: OHLCV,
+        score,
+        pattern_result: dict[str, Any],
+        raw_bars: List[OHLCV],
+        cisd_candles: List[CISDScorerCandle],
+        index: int,
+        sl_atr_mul: float,
+        tp_atr_mul: float,
+        strategy_id: str,
+        signal_prefix: str,
+    ) -> M8Payload | None:
+        if index < 14:
+            return None
+
+        atr_window = cisd_candles[index - 13 : index + 1]
+        atr_val = self._simple_atr(atr_window)
+
+        direction = score.direction
+        entry = bar.c
+        if direction == "LONG":
+            sl = entry - atr_val * sl_atr_mul
+            tp = entry + atr_val * tp_atr_mul
+        else:
+            sl = entry + atr_val * sl_atr_mul
+            tp = entry - atr_val * tp_atr_mul
+
+        atr_pct = (atr_val / entry) * 100.0
+        crisis = min(100.0, max(0.0, (atr_pct - 1.0) * 15.0))
+        spread = (bar.h - bar.l) / entry * 10000.0
+        avg_volume_window = raw_bars[max(0, index - 20): index + 1]
+
+        return M8Payload(
+            signal_id=f"{signal_prefix}-{symbol}-{timeframe}-{strategy_id}-{bar.ts}",
+            symbol=symbol,
+            timeframe=timeframe,
+            direction=direction,
+            timestamp=datetime.fromtimestamp(bar.ts / 1000.0, tz=timezone.utc).isoformat(),
+            entry_price=round(entry, 4),
+            stop_price=round(sl, 4),
+            target_price=round(tp, 4),
+            confluence_score=round(score.confluence_score, 2),
+            strategy_id=strategy_id,
+            pattern_detected=pattern_result["pattern_type"],
+            pattern_score=round(pattern_result["pattern_score"], 2),
+            relative_volume=round(bar.v / self._avg_volume(avg_volume_window), 2) if index > 0 else 1.0,
+            crisis_score=round(crisis, 2),
+            mc_dispersion=round((score.metadata or {}).get("alignment_count", 0) / 3.0 * 5.0, 2),
+            spread=round(spread, 2),
+            bar_confirmed=True,
+        )
+
+    def generate_latest_candidate(
+        self,
+        symbol: str = "HYPEUSDT",
+        timeframe: str = "1m",
+        bars: int = 200,
+        min_confluence: Optional[float] = None,
+        last_processed_ts: int | None = None,
+        now_ms: int | None = None,
+    ) -> M8Payload | None:
+        """
+        Fetch recent data, score only the latest closed candle, and return one
+        live-paper candidate when it passes the active strategy threshold.
+        """
+        cal, min_conf, sl_atr_mul, tp_atr_mul = self._resolve_trade_plan(symbol, min_confluence)
+        raw_bars = self.feed.fetch(symbol, bars, timeframe)
+        self.last_raw_bars = raw_bars
+
+        latest_index = self._latest_closed_bar_index(raw_bars, timeframe, now_ms=now_ms)
+        latest_ts = raw_bars[latest_index].ts if latest_index is not None else None
+        base_summary = {
+            "mode": "latest_candidate",
+            "symbol": symbol,
+            "asset_class": str(cal.get("asset_class")),
+            "timeframe": timeframe,
+            "bars_requested": bars,
+            "bars_loaded": len(raw_bars),
+            "min_confluence": min_conf,
+            "last_processed_ts": last_processed_ts,
+            "last_closed_bar_ts": latest_ts,
+            "candidate_generated": False,
+        }
+
+        if latest_index is None:
+            self.last_generation_summary = {**base_summary, "message": "No closed candle available"}
+            return None
+
+        if last_processed_ts is not None and latest_ts is not None and latest_ts <= last_processed_ts:
+            self.last_generation_summary = {**base_summary, "message": "Latest closed candle already processed"}
+            return None
+
+        closed_bars = raw_bars[: latest_index + 1]
+        if len(closed_bars) < 50:
+            self.last_generation_summary = {
+                **base_summary,
+                "scores_count": 0,
+                "message": "Insufficient closed bars for live candidate scoring",
+            }
+            return None
+
+        strategy = strategy_registry.get_active_strategy()
+        strategy_scores = strategy.score_bars(closed_bars)
+        latest_score = strategy_scores[-1]
+        cisd_candles = self._ohlcv_to_cisd_candles(closed_bars)
+
+        self.last_generation_summary = {
+            **base_summary,
+            "scores_count": len(strategy_scores),
+            "max_confluence_score": round(max((s.confluence_score for s in strategy_scores), default=0.0), 2),
+            "directional_scores": sum(1 for s in strategy_scores if s.direction != "NEUTRAL"),
+            "active_strategy": strategy.strategy_id,
+            "latest_confluence_score": round(latest_score.confluence_score, 2),
+            "latest_direction": latest_score.direction,
+        }
+
+        if latest_score.confluence_score < min_conf or latest_score.direction == "NEUTRAL":
+            self.last_generation_summary["message"] = "Latest closed candle did not meet signal criteria"
+            return None
+
+        payload = self._payload_from_score(
+            symbol=symbol,
+            timeframe=timeframe,
+            bar=closed_bars[-1],
+            score=latest_score,
+            pattern_result=self._pattern_payload_result(latest_score),
+            raw_bars=closed_bars,
+            cisd_candles=cisd_candles,
+            index=len(closed_bars) - 1,
+            sl_atr_mul=sl_atr_mul,
+            tp_atr_mul=tp_atr_mul,
+            strategy_id=strategy.strategy_id,
+            signal_prefix="live",
+        )
+        if payload is None:
+            self.last_generation_summary["message"] = "Insufficient ATR window for latest closed candle"
+            return None
+
+        self.last_generation_summary.update({
+            "candidate_generated": True,
+            "payload_signal_id": payload.signal_id,
+        })
+        return payload
+
+    def generate_payloads(
+        self,
+        symbol: str = "HYPEUSDT",
+        timeframe: str = "1m",
+        bars: int = 200,
+        min_confluence: Optional[float] = None,
+    ) -> List[M8Payload]:
+        """
+        Fetch historical data, score every bar, and emit M8Payloads
+        for bars that exceed the confidence threshold.
+        """
+        cal, min_conf, sl_atr_mul, tp_atr_mul = self._resolve_trade_plan(symbol, min_confluence)
 
         raw_bars = self.feed.fetch(symbol, bars, timeframe)
         self.last_raw_bars = raw_bars
