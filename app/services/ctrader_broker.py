@@ -31,6 +31,7 @@ from app.schemas.ai_review import DecisionEnum as AIDecisionEnum
 from app.schemas.journal import DecisionEnum, DirectionEnum, FinalDecisionEnum, TradeJournalEntry
 from app.schemas.m8_payload import M8Payload
 from app.services.broker_interface import BaseBroker
+from app.schemas.ctrader import CTraderOrderRequest
 
 logger = logging.getLogger(__name__)
 
@@ -639,13 +640,7 @@ class CTraderBroker(BaseBroker):
 
     def place_direct_order(
         self,
-        symbol: str,
-        direction: str,
-        volume_lots: float,
-        stop_loss: float | None = None,
-        take_profit: float | None = None,
-        label: str | None = None,
-        comment: str = "MetricFlow cTrader",
+        req: CTraderOrderRequest
     ) -> dict[str, Any]:
         """
         Place a market order directly via cTrader Open API.
@@ -656,13 +651,13 @@ class CTraderBroker(BaseBroker):
             return {
                 "status": "ERROR",
                 "error": "CTRADER_DISABLED",
-                "symbol": symbol,
-                "direction": direction,
-                "volume_lots": volume_lots,
+                "symbol": req.symbol,
+                "direction": req.direction,
+                "volume_lots": req.volume_lots,
                 "margin_checked": False,
             }
 
-        symbol_name = _compact_symbol(symbol)
+        symbol_name = _compact_symbol(req.symbol)
         symbol_id = self._resolve_symbol_id(symbol_name, refresh=self.config.live_trading_enabled)
         if symbol_id is None and not self.config.live_trading_enabled:
             symbol_id = DRY_RUN_SYMBOL_IDS.get(symbol_name)
@@ -670,48 +665,48 @@ class CTraderBroker(BaseBroker):
             return {
                 "status": "REJECTED",
                 "error": f"CTRADER_SYMBOL_NOT_FOUND:{symbol_name}",
-                "symbol": symbol,
-                "direction": direction,
-                "volume_lots": volume_lots,
+                "symbol": req.symbol,
+                "direction": req.direction,
+                "volume_lots": req.volume_lots,
                 "margin_checked": False,
             }
 
         # Margin pre-check
-        margin_check = self._check_margin(symbol_id, volume_lots)
+        margin_check = self._check_margin(symbol_id, req.volume_lots)
         if not margin_check["sufficient"]:
             return {
                 "status": "REJECTED",
                 "error": f"INSUFFICIENT_MARGIN: need ~{margin_check['estimated']:.2f}, have {margin_check['free']:.2f}",
-                "symbol": symbol,
-                "direction": direction,
-                "volume_lots": volume_lots,
+                "symbol": req.symbol,
+                "direction": req.direction,
+                "volume_lots": req.volume_lots,
                 "margin_checked": True,
                 "free_margin_before": margin_check["free"],
                 "estimated_margin_required": margin_check["estimated"],
             }
 
-        volume = self._lots_to_protocol_volume(volume_lots)
-        trade_side = "BUY" if direction.upper() in {"BUY", "LONG"} else "SELL"
-        order_label = (label or f"metricflow-direct-{datetime.now(timezone.utc).strftime('%H%M%S')}")[:50]
+        volume = self._lots_to_protocol_volume(req.volume_lots)
+        trade_side = "BUY" if req.direction.upper() in {"BUY", "LONG"} else "SELL"
+        order_label = (req.label or f"metricflow-direct-{datetime.now(timezone.utc).strftime('%H%M%S')}")[:50]
 
         order = {
             "symbol": symbol_name,
             "symbol_id": symbol_id,
             "trade_side": trade_side,
             "volume": volume,
-            "lots": volume_lots,
-            "base_units": volume_lots * LOTS_TO_UNITS,
+            "lots": req.volume_lots,
+            "base_units": req.volume_lots * LOTS_TO_UNITS,
             "label": order_label,
             "client_order_id": order_label,
-            "comment": comment,
+            "comment": req.comment,
         }
 
-        if stop_loss is not None:
+        if req.stop_loss is not None:
             # Relative distance in cents for cTrader protocol
             # We'll use a placeholder; real SL calculation needs current price
-            order["relative_stop_loss"] = int(round(abs(stop_loss) * 100_000))
-        if take_profit is not None:
-            order["relative_take_profit"] = int(round(abs(take_profit) * 100_000))
+            order["relative_stop_loss"] = int(round(abs(req.stop_loss) * 100_000))
+        if req.take_profit is not None:
+            order["relative_take_profit"] = int(round(abs(req.take_profit) * 100_000))
 
         if self.config.live_trading_enabled:
             try:
@@ -721,9 +716,9 @@ class CTraderBroker(BaseBroker):
                     "status": "SENT_TO_CTRADER",
                     "order_id": str(response.get("orderId", "") or response.get("order_id", "")),
                     "position_id": str(response.get("positionId", "") or response.get("position_id", "")),
-                    "symbol": symbol,
+                    "symbol": req.symbol,
                     "direction": trade_side,
-                    "volume_lots": volume_lots,
+                    "volume_lots": req.volume_lots,
                     "fill_price": None,
                     "margin_checked": True,
                     "free_margin_before": margin_check["free"],
@@ -734,9 +729,9 @@ class CTraderBroker(BaseBroker):
                 return {
                     "status": "CTRADER_API_ERROR",
                     "error": str(exc),
-                    "symbol": symbol,
+                    "symbol": req.symbol,
                     "direction": trade_side,
-                    "volume_lots": volume_lots,
+                    "volume_lots": req.volume_lots,
                     "margin_checked": True,
                     "free_margin_before": margin_check["free"],
                     "estimated_margin_required": margin_check["estimated"],
@@ -747,9 +742,9 @@ class CTraderBroker(BaseBroker):
             "status": "DRY_RUN",
             "order_id": None,
             "position_id": None,
-            "symbol": symbol,
+            "symbol": req.symbol,
             "direction": trade_side,
-            "volume_lots": volume_lots,
+            "volume_lots": req.volume_lots,
             "fill_price": None,
             "margin_checked": True,
             "free_margin_before": margin_check["free"],
@@ -1079,9 +1074,9 @@ class CTraderBroker(BaseBroker):
         return {
             "trade_id": f"ctrader-position-{getattr(position, 'positionId', '')}",
             "position_id": int(getattr(position, "positionId", 0) or 0),
-            "symbol": symbol,
+            "symbol": req.symbol,
             "symbol_id": symbol_id,
-            "direction": direction,
+            "direction": req.direction,
             "entry_price": price,
             "current_price": price,
             "size": size,
@@ -1115,9 +1110,9 @@ class CTraderBroker(BaseBroker):
         return {
             "trade_id": str(position.get("trade_id") or f"ctrader-position-{position.get('position_id') or position.get('positionId') or ''}"),
             "position_id": int(position.get("position_id") or position.get("positionId") or 0),
-            "symbol": symbol,
+            "symbol": req.symbol,
             "symbol_id": symbol_id,
-            "direction": direction,
+            "direction": req.direction,
             "entry_price": price,
             "current_price": float(position.get("current_price") or price),
             "size": float(position.get("size") or (volume / CTRADER_VOLUME_CENTS if volume else 0.0)),
@@ -1125,7 +1120,7 @@ class CTraderBroker(BaseBroker):
             "unrealized_pnl": float(position.get("unrealized_pnl") or 0.0),
             "unrealized_pnl_pct": float(position.get("unrealized_pnl_pct") or 0.0),
             "open_time": open_time,
-            "strategy_id": position.get("strategy_id") or label or None,
+            "strategy_id": position.get("strategy_id") or req.label or None,
             "label": label,
             "stop_price": float(position.get("stop_price") or position.get("stopLoss") or 0.0),
             "target_price": float(position.get("target_price") or position.get("takeProfit") or 0.0),
