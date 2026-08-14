@@ -1,9 +1,11 @@
 {
-  "active_strategy_id": "generator_default",
-  "last_switch": "2026-07-04T10:52:51.387080+00:00",
+  "active_strategy_id": "default",
+  "last_switch": null,
   "available": [
     "default",
     "pattern_enhanced",
-    "generator_default"
+    "Top2_HYPEUSDT_GA_CrossAlgo_Optimized",
+    "Top1_HYPEUSDT_GA_CrossAlgo_Optimized",
+    "Top3_HYPEUSDT_GA_CrossAlgo_Optimized"
   ]
 }

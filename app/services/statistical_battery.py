@@ -1,6 +1,6 @@
 """
-Pure-Python Statistical Test Battery for Regime Detection.
-No scipy dependency — uses only numpy + stdlib math.
+NumPy-backed Statistical Test Battery for Regime Detection.
+Uses NumPy + stdlib math. No SciPy dependency.
 
 Tests:
   1. Hurst R/S Analysis          — long-term memory
