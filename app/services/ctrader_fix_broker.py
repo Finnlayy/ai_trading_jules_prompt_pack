@@ -14,6 +14,7 @@ import threading
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+from dataclasses import dataclass
 from typing import Any, Optional
 
 from app.core.config import (
@@ -21,8 +22,10 @@ from app.core.config import (
     CTRADER_FIX_HOST,
     CTRADER_FIX_LIVE_TRADING_ENABLED,
     CTRADER_FIX_PASSWORD,
+    CTRADER_FIX_PORT,
     CTRADER_FIX_SENDER_COMP_ID,
     CTRADER_FIX_TARGET_COMP_ID,
+    CTRADER_FIX_SENDER_SUB_ID,
 )
 from app.schemas.ai_review import DecisionEnum as AIDecisionEnum
 from app.schemas.journal import DecisionEnum, FinalDecisionEnum, TradeJournalEntry, DirectionEnum
@@ -38,29 +41,23 @@ class CTraderFixError(RuntimeError):
     """Raised when FIX communication fails."""
 
 
+@dataclass
 class CTraderFixConfig:
     """Runtime settings for cTrader FIX API."""
 
-    def __init__(
-        self,
-        enabled: bool = CTRADER_FIX_ENABLED,
-        live_trading_enabled: bool = CTRADER_FIX_LIVE_TRADING_ENABLED,
-        host: str = "",
-        port: int = 5212,
-        sender_comp_id: str = "",
-        target_comp_id: str = "cServer",
-        password: str = "",
-        sender_sub_id: str = "",
-    ) -> None:
-        self.enabled = enabled
-        self.live_trading_enabled = live_trading_enabled
-        self.host = host or "demo-uk-eqx-01.p.c-trader.com"
-        self.port = port
-        self.sender_comp_id = sender_comp_id
-        self.target_comp_id = target_comp_id
-        self.password = password
-        self.sender_sub_id = sender_sub_id or ("TRADE" if port == 5212 or port == 5202 else "QUOTE")
-        self.fix_version = "FIX.4.4"
+    enabled: bool = CTRADER_FIX_ENABLED
+    live_trading_enabled: bool = CTRADER_FIX_LIVE_TRADING_ENABLED
+    host: str = CTRADER_FIX_HOST
+    port: int = CTRADER_FIX_PORT
+    sender_comp_id: str = CTRADER_FIX_SENDER_COMP_ID
+    target_comp_id: str = CTRADER_FIX_TARGET_COMP_ID
+    password: str = CTRADER_FIX_PASSWORD
+    sender_sub_id: str = CTRADER_FIX_SENDER_SUB_ID
+    fix_version: str = "FIX.4.4"
+
+    def __post_init__(self) -> None:
+        self.host = self.host or "demo-uk-eqx-01.p.c-trader.com"
+        self.sender_sub_id = self.sender_sub_id or ("TRADE" if self.port in (5212, 5202) else "QUOTE")
 
     def has_credentials(self) -> bool:
         return bool(self.sender_comp_id and self.password)
