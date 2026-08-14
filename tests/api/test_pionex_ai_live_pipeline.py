@@ -15,21 +15,44 @@ app = FastAPI()
 app.include_router(router)
 client = TestClient(app)
 
+
 @pytest.fixture
 def mock_dependencies():
-    with patch("app.api.orchestrator.regime_engine_instance.should_trade") as mock_regime, \
-         patch("app.api.orchestrator.ai_review_instance.review_signal") as mock_ai, \
-         patch("app.api.orchestrator.BybitDataFeed.fetch") as mock_fetch, \
-         patch("app.services.journal_logger.journal_logger_instance.log", new_callable=MagicMock) as mock_journal, \
-         patch("app.services.pionex_api.PionexClient") as MockPionexClient:
+    with patch(
+        "app.api.orchestrator.regime_engine_instance.should_trade"
+    ) as mock_regime, patch(
+        "app.api.orchestrator.ai_review_instance.review_signal"
+    ) as mock_ai, patch(
+        "app.api.orchestrator.BybitDataFeed.fetch"
+    ) as mock_fetch, patch(
+        "app.services.journal_logger.journal_logger_instance.log",
+        new_callable=MagicMock,
+    ) as mock_journal, patch(
+        "app.services.pionex_api.PionexClient"
+    ) as MockPionexClient:
 
-        mock_regime.return_value = {"trade_allowed": True, "regime": "GREEN", "reason": "OK"}
+        mock_regime.return_value = {
+            "trade_allowed": True,
+            "regime": "GREEN",
+            "reason": "OK",
+        }
 
         # Async mock for AI review
         async def async_ai_review(*args, **kwargs):
             from app.schemas.journal import DecisionEnum
             from app.services.ai_kimi import SignalReview
-            return SignalReview(schema_version="1.0", signal_id="test", confidence=0.95, reason_codes=[], requires_human_review=False, decision=DecisionEnum.PROCEED_TO_SIMULATION, risk_flags=[], audit_trace={"confidence": 0.95})
+
+            return SignalReview(
+                schema_version="1.0",
+                signal_id="test",
+                confidence=0.95,
+                reason_codes=[],
+                requires_human_review=False,
+                decision=DecisionEnum.PROCEED_TO_SIMULATION,
+                risk_flags=[],
+                audit_trace={"confidence": 0.95},
+            )
+
         mock_ai.side_effect = async_ai_review
 
         # Async mock for fetch
@@ -37,21 +60,38 @@ def mock_dependencies():
             class Bar:
                 def __init__(self, close):
                     self.close = close
+
             return [Bar(i) for i in range(50)]
+
         mock_fetch.side_effect = async_fetch
 
         mock_client_instance = MockPionexClient.return_value
-        mock_client_instance.get_account_balance.return_value = {"data": [{"coin": "USDT", "free": "100.0"}]}
-        mock_client_instance.place_spot_market_buy.return_value = {"data": {"orderId": "12345"}}
-        mock_client_instance.get_order_status.return_value = {"data": {"status": "CLOSED", "filledSize": "100", "filledAmount": "0.05", "feeAmount": "0.001", "feeCoin": "ETH"}}
-        mock_client_instance.get_market_price.return_value = {"data": {"price": "2000.0"}}
+        mock_client_instance.get_account_balance.return_value = {
+            "data": [{"coin": "USDT", "free": "100.0"}]
+        }
+        mock_client_instance.place_spot_market_buy.return_value = {
+            "data": {"orderId": "12345"}
+        }
+        mock_client_instance.get_order_status.return_value = {
+            "data": {
+                "status": "CLOSED",
+                "filledSize": "100",
+                "filledAmount": "0.05",
+                "feeAmount": "0.001",
+                "feeCoin": "ETH",
+            }
+        }
+        mock_client_instance.get_market_price.return_value = {
+            "data": {"price": "2000.0"}
+        }
 
         yield {
             "regime": mock_regime,
             "ai": mock_ai,
             "journal": mock_journal,
-            "pionex_client": mock_client_instance
+            "pionex_client": mock_client_instance,
         }
+
 
 @pytest.fixture
 def setup_live_env():
@@ -60,17 +100,26 @@ def setup_live_env():
     app_core_config_module.BROKER_MODE = "pionex_direct"
     app_core_config_module.AI_FAILURE_POLICY = "allow_live"
 
-    with patch("app.services.pionex_direct_broker.PionexDirectBroker._has_credentials", return_value=True), \
-         patch("app.services.pionex_direct_broker.PionexDirectConfig.enabled", new=True), \
-         patch("app.services.pionex_direct_broker.PionexDirectConfig.live_trading_enabled", new=True), \
-         patch("app.services.pionex_direct_broker.PionexDirectConfig.api_key", new="fake"), \
-         patch("app.services.pionex_direct_broker.PionexDirectConfig.api_secret", new="fake"):
+    with patch(
+        "app.services.pionex_direct_broker.PionexDirectBroker._has_credentials",
+        return_value=True,
+    ), patch(
+        "app.services.pionex_direct_broker.PionexDirectConfig.enabled", new=True
+    ), patch(
+        "app.services.pionex_direct_broker.PionexDirectConfig.live_trading_enabled",
+        new=True,
+    ), patch(
+        "app.services.pionex_direct_broker.PionexDirectConfig.api_key", new="fake"
+    ), patch(
+        "app.services.pionex_direct_broker.PionexDirectConfig.api_secret", new="fake"
+    ):
         reset_broker()
         yield
 
     app_core_config_module.BROKER_MODE = original_mode
     app_core_config_module.AI_FAILURE_POLICY = original_policy
     reset_broker()
+
 
 def test_pionex_ai_live_pipeline_spot(mock_dependencies, setup_live_env):
     payload = {
@@ -87,22 +136,64 @@ def test_pionex_ai_live_pipeline_spot(mock_dependencies, setup_live_env):
         "confluence_score": 95.0,
         "crisis_score": 5.0,
         "mc_dispersion": 0.5,
-        "spread": 0.1
+        "spread": 0.1,
     }
 
-    response = client.post("/m8", json=payload)
+    import app.core.config as config_module
+
+    import app.api.endpoints as endpoints
+
+    import json, hashlib, hmac
+
+    original_secret = config_module.WEBHOOK_SECRET
+
+    config_module.WEBHOOK_SECRET = "test-secret-123"
+
+    endpoints.WEBHOOK_SECRET = "test-secret-123"
+
+    try:
+
+        body_bytes = json.dumps(payload).encode("utf-8")
+
+        valid_sig = hmac.new(
+            "test-secret-123".encode("utf-8"), body_bytes, hashlib.sha256
+        ).hexdigest()
+
+        response = client.post(
+            "/m8", content=body_bytes, headers={"x-m8-signature": valid_sig}
+        )
+
+    except Exception as e:
+
+        config_module.WEBHOOK_SECRET = original_secret
+
+        endpoints.WEBHOOK_SECRET = original_secret
+
+        raise e
+
+    config_module.WEBHOOK_SECRET = original_secret
+
+    endpoints.WEBHOOK_SECRET = original_secret
     assert response.status_code == 200, response.json()
     data = response.json()
     assert data["status"] == "success"
 
     result = data["result"]
     assert result["execution_mode"] in ("live", "simulation")
-    assert result["broker_result"]["status"] in ("OPEN", "SENT_TO_PIONEX_DIRECT", "REJECTED")
-    pass # assert "size_base" in result["broker_result"].get("ledger_delta", {}) or "size_base" in result["broker_result"]
-    pass # assert float(result["broker_result"].get("ledger_delta", {}).get("size_base", result["broker_result"].get("size_base", 0))) > 0
+    assert result["broker_result"]["status"] in (
+        "OPEN",
+        "SENT_TO_PIONEX_DIRECT",
+        "REJECTED",
+    )
+    pass  # assert "size_base" in result["broker_result"].get("ledger_delta", {}) or "size_base" in result["broker_result"]
+    pass  # assert float(result["broker_result"].get("ledger_delta", {}).get("size_base", result["broker_result"].get("size_base", 0))) > 0
 
     journal = mock_dependencies["journal"]
     assert journal.call_count == 1, "Should only write one journal entry"
 
     called_entry = journal.call_args[0][0]
-    assert called_entry.result["status"] in ("OPEN", "SENT_TO_PIONEX_DIRECT", "REJECTED")
+    assert called_entry.result["status"] in (
+        "OPEN",
+        "SENT_TO_PIONEX_DIRECT",
+        "REJECTED",
+    )
