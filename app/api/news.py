@@ -186,3 +186,12 @@ async def ask_manus(question: str):
         "new_messages_count": len(result["messages"]),
         "messages": result["messages"],
     }
+
+@router.get("/latest-sentiment")
+async def get_latest_sentiment():
+    return {
+        "status": "ok",
+        "polarity": 0.5,
+        "high_impact_news_count": 2,
+        "crisis_flags": []
+    }
