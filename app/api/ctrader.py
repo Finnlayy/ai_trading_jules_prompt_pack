@@ -119,13 +119,7 @@ async def place_ctrader_order(req: CTraderOrderRequest):
     broker = _get_ctrader_broker()
     result = await asyncio.to_thread(
         broker.place_direct_order,
-        symbol=req.symbol,
-        direction=req.direction,
-        volume_lots=req.volume_lots,
-        stop_loss=req.stop_loss,
-        take_profit=req.take_profit,
-        label=req.label,
-        comment=req.comment or "MetricFlow cTrader",
+        req=req,
     )
     return CTraderOrderResponse(**result)
 

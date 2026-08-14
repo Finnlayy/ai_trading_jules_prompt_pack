@@ -450,4 +450,4 @@ PAPER_TRADING_RELAX_RISK = _as_bool(os.getenv("PAPER_TRADING_RELAX_RISK"), True)
 
 
 # CORS configuration
-CORS_ORIGINS = _as_csv_list(os.getenv("CORS_ORIGINS", "*"))
+CORS_ORIGINS = _as_csv_list(os.getenv("CORS_ORIGINS", ""))
