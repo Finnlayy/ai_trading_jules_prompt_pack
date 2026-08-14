@@ -4,6 +4,7 @@ import pytest
 
 from app.schemas.ai_review import DecisionEnum as AIDecisionEnum, SignalReview
 from app.schemas.m8_payload import M8Payload
+from app.schemas.paper import PaperReplayRequest
 from app.services.confidence_registry import confidence_registry
 from app.services.portfolio_circuit_breaker import circuit_breaker_instance
 from app.services.shadow_paper_engine import PAPER_EXECUTED, ShadowPaperEngine
@@ -101,13 +102,14 @@ async def test_shadow_paper_executes_live_rejected_candidate(monkeypatch):
     monkeypatch.setattr(signal_generator_instance, "generate_payloads", fake_generate_payloads)
     monkeypatch.setattr("app.services.risk_engine.MIN_CONFLUENCE_SCORE", 70.0)
 
-    replay = await engine.replay(
+    req = PaperReplayRequest(
         symbol="BTCUSDT",
         timeframe="1m",
         bars=2,
         max_signals=1,
         use_ai=False,
     )
+    replay = await engine.replay(req)
 
     row = replay["results"][0]
     assert row["live_decision"] == "REJECT"

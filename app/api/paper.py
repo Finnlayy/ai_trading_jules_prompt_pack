@@ -81,7 +81,7 @@ class PaperSessionStore:
         while True:
             try:
                 session["status"] = "running"
-                replay = await shadow_paper_engine.replay(
+                req = PaperReplayRequest(
                     symbol=session["symbol"],
                     timeframe=session["timeframe"],
                     bars=session["bars"],
@@ -90,6 +90,7 @@ class PaperSessionStore:
                     max_holding_bars=session["max_holding_bars"],
                     use_ai=session["use_ai"],
                 )
+                replay = await shadow_paper_engine.replay(req)
                 seen = session["seen_signal_ids"]
                 fresh = []
                 for row in replay.get("results", []):
@@ -153,15 +154,7 @@ def _pionex_context() -> dict[str, Any]:
 @router.post("/replay")
 async def replay_paper(req: PaperReplayRequest) -> dict[str, Any]:
     try:
-        replay = await shadow_paper_engine.replay(
-            symbol=req.symbol,
-            timeframe=req.timeframe,
-            bars=req.bars,
-            max_signals=req.max_signals,
-            min_confluence=req.min_confluence,
-            max_holding_bars=req.max_holding_bars,
-            use_ai=req.use_ai,
-        )
+        replay = await shadow_paper_engine.replay(req)
         replay["pionex_context"] = _pionex_context()
         return replay
     except Exception as exc:
