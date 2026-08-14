@@ -6,6 +6,16 @@ from pathlib import Path
 from typing import Optional
 
 
+
+@dataclass
+class LedgerEntry:
+    symbol: str
+    account_mode: str
+    direction: str
+    size_base: float
+    entry_price: float
+    risk_amount: float
+
 @dataclass
 class PositionState:
     symbol: str
@@ -26,28 +36,20 @@ class PositionLedger:
     def get(self, symbol: str, account_mode: str) -> Optional[PositionState]:
         return self._positions.get(self._key(symbol, account_mode))
 
-    def apply_entry(
-        self,
-        symbol: str,
-        account_mode: str,
-        direction: str,
-        size_base: float,
-        entry_price: float,
-        risk_amount: float,
-    ) -> PositionState:
-        key = self._key(symbol, account_mode)
-        direction = direction.upper()
-        size_base = max(float(size_base), 0.0)
-        risk_amount = max(float(risk_amount), 0.0)
+    def apply_entry(self, entry: LedgerEntry) -> PositionState:
+        key = self._key(entry.symbol, entry.account_mode)
+        direction = entry.direction.upper()
+        size_base = max(float(entry.size_base), 0.0)
+        risk_amount = max(float(entry.risk_amount), 0.0)
         current = self._positions.get(key)
 
         if current is None:
             state = PositionState(
-                symbol=symbol.upper(),
-                account_mode=account_mode.upper(),
+                symbol=entry.symbol.upper(),
+                account_mode=entry.account_mode.upper(),
                 direction=direction,
                 size_base=size_base,
-                avg_entry_price=float(entry_price),
+                avg_entry_price=float(entry.entry_price),
                 risk_amount=risk_amount,
             )
             self._positions[key] = state
@@ -59,7 +61,7 @@ class PositionLedger:
                 total_size = 0.0
             if total_size > 0:
                 current.avg_entry_price = (
-                    (current.avg_entry_price * current.size_base) + (float(entry_price) * size_base)
+                    (current.avg_entry_price * current.size_base) + (float(entry.entry_price) * size_base)
                 ) / total_size
             current.size_base = total_size
             current.risk_amount += risk_amount
@@ -77,17 +79,17 @@ class PositionLedger:
         if leftover <= 0:
             self._positions.pop(key, None)
             return PositionState(
-                symbol=symbol.upper(),
-                account_mode=account_mode.upper(),
+                symbol=entry.symbol.upper(),
+                account_mode=entry.account_mode.upper(),
                 direction=direction,
                 size_base=0.0,
-                avg_entry_price=float(entry_price),
+                avg_entry_price=float(entry.entry_price),
                 risk_amount=0.0,
             )
 
         current.direction = direction
         current.size_base = leftover
-        current.avg_entry_price = float(entry_price)
+        current.avg_entry_price = float(entry.entry_price)
         current.risk_amount = risk_amount
         return current
 
@@ -169,14 +171,14 @@ class PositionLedger:
                     continue
 
                 if action == "ENTRY":
-                    self.apply_entry(
+                    self.apply_entry(LedgerEntry(
                         symbol=symbol,
                         account_mode=account_mode,
                         direction=str(delta.get("direction", entry.get("direction", "LONG"))).upper(),
                         size_base=float(delta.get("size_base", 0.0) or 0.0),
                         entry_price=float(delta.get("entry_price", entry.get("entry_price", 0.0)) or 0.0),
                         risk_amount=float(delta.get("risk_amount", 0.0) or 0.0),
-                    )
+                    ))
                 elif action == "CLOSE":
                     close_size = delta.get("closed_size_base")
                     self.apply_close(

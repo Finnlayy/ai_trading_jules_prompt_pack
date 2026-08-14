@@ -38,7 +38,7 @@ from app.schemas.m8_payload import M8Payload
 from app.services.broker_interface import BaseBroker
 from app.services.pionex_api import PionexAPIError, PionexClient, PionexCredentials
 from app.services.pionex_kelly_sizer import KellyConfig, KellySizer
-from app.services.pionex_position_ledger import PositionLedger
+from app.services.pionex_position_ledger import PositionLedger, LedgerEntry
 from app.services.telegram_notifier import TelegramConfig, TelegramNotifier
 from app.services.war_room_rules import classify_order
 
@@ -659,14 +659,14 @@ class PionexDirectBroker(BaseBroker):
                     result={"status": "API_ERROR", "reject_reason": exc.message},
                 )
 
-        self.ledger.apply_entry(
+        self.ledger.apply_entry(LedgerEntry(
             symbol=symbol,
             account_mode=account_mode,
             direction=entry_side,
             size_base=sizing.size_base,
             entry_price=payload.entry_price,
             risk_amount=sizing.risk_amount,
-        )
+        ))
         self.notifier.send_execution(
             symbol=symbol,
             account_mode=account_mode,
@@ -878,6 +878,36 @@ class PionexDirectBroker(BaseBroker):
         self._record_trade_metrics(symbol, direction, realized_pnl, risk_amount)
 
         if live_mode and self.client:
+            try:
+                order = self._send_live_close(
+                    symbol=symbol,
+                    account_mode=account_mode,
+                    close_side=close_side,
+                    size_base=closed_size_base,
+                    client_order_id=client_order_id,
+                )
+                result["status"] = "CLOSED_LIVE"
+                result["order"] = order
+            except PionexAPIError as exc:
+                # Rollback local ledger close when live close fails.
+                self.ledger.apply_entry(LedgerEntry(
+                    symbol=symbol,
+                    account_mode=account_mode,
+                    direction=direction,
+                    size_base=closed_size_base,
+                    entry_price=entry_price,
+                    risk_amount=risk_amount,
+                ))
+                self.notifier.send_error("CLOSE", exc.message)
+                return self._build_entry(
+                    payload=payload,
+                    decision=DecisionEnum.PROCEED_TO_SIMULATION,
+                    reject_reason=exc.message,
+                    ai_decision=ai_decision,
+                    final_decision=FinalDecisionEnum.REJECTED,
+                    simulated_fill=simulated_fill,
+                    result={"status": "API_ERROR", "reject_reason": exc.message},
+                )
             rollback_err = self._execute_live_close_or_rollback(
                 payload, symbol, account_mode, close_side, closed_size_base,
                 client_order_id, direction, entry_price, risk_amount,
