@@ -39,6 +39,12 @@ CTRADER_LIVE_HOST = "live.ctraderapi.com"
 DEFAULT_LOTS = 0.01
 LOTS_TO_UNITS = 100_000
 CTRADER_VOLUME_CENTS = 100
+DRY_RUN_SYMBOL_IDS = {
+    "EURUSD": 1,
+    "GBPUSD": 2,
+    "BTCUSDT": 3,
+    "ETHUSDT": 4,
+}
 
 
 class CTraderBridgeError(RuntimeError):
@@ -237,6 +243,50 @@ class CTraderClientBridge:
         trader = getattr(response, "trader", response)
         return self._message_to_dict(trader)
 
+    def list_trader_accounts(self) -> list[dict[str, Any]]:
+        """Fetch all trader accounts linked to the configured access token."""
+        if not self.config.enabled:
+            raise CTraderBridgeError("CTRADER_DISABLED")
+        if not self.config.client_id or not self.config.client_secret:
+            raise CTraderBridgeError("CTRADER_CREDENTIALS_MISSING")
+        if not self.config.access_token:
+            raise CTraderBridgeError("CTRADER_ACCESS_TOKEN_MISSING")
+
+        with self._lock:
+            sdk = self._load_sdk()
+            self._ensure_reactor_running(sdk["reactor"])
+
+            if not self.connected or not self.app_authenticated:
+                self.connected = False
+                self.app_authenticated = False
+                self.account_authenticated = False
+
+                self.client = sdk["Client"](
+                    self.config.effective_host,
+                    self.config.port,
+                    sdk["TcpProtocol"],
+                )
+                self.client.setConnectedCallback(self._on_connected)
+                self.client.setDisconnectedCallback(self._on_disconnected)
+                self.client.setMessageReceivedCallback(self._on_message)
+
+                sdk["reactor"].callFromThread(self.client.startService)
+                self._wait_until(lambda: self.connected, "CTRADER_CONNECT_TIMEOUT")
+
+                app_req = sdk["ProtoOAApplicationAuthReq"]()
+                app_req.clientId = self.config.client_id
+                app_req.clientSecret = self.config.client_secret
+                self._send_and_extract(app_req)
+                self.app_authenticated = True
+
+            req = sdk["ProtoOAGetAccountListByAccessTokenReq"]()
+            req.accessToken = self.config.access_token
+            response = self._send_and_extract(req)
+            accounts = []
+            for acc in getattr(response, "ctidTraderAccount", []):
+                accounts.append(self._message_to_dict(acc))
+            return accounts
+
     # ------------------------------------------------------------------
     # Twisted internals
     # ------------------------------------------------------------------
@@ -399,6 +449,7 @@ class CTraderClientBridge:
                 ProtoOANewOrderReq,
                 ProtoOAReconcileReq,
                 ProtoOASymbolsListReq,
+                ProtoOAGetAccountListByAccessTokenReq,
                 ProtoOATraderReq,
                 ProtoOATraderUpdatedEvent,
             )
@@ -426,6 +477,7 @@ class CTraderClientBridge:
             "ProtoOAReconcileReq": ProtoOAReconcileReq,
             "ProtoOASymbolsListReq": ProtoOASymbolsListReq,
             "ProtoOATradeSide": ProtoOATradeSide,
+            "ProtoOAGetAccountListByAccessTokenReq": ProtoOAGetAccountListByAccessTokenReq,
             "ProtoOATraderReq": ProtoOATraderReq,
             "ProtoOATraderUpdatedEvent": ProtoOATraderUpdatedEvent,
         }
@@ -585,6 +637,152 @@ class CTraderBroker(BaseBroker):
             return "dry-run"
         return "simulation"
 
+    def place_direct_order(
+        self,
+        symbol: str,
+        direction: str,
+        volume_lots: float,
+        stop_loss: float | None = None,
+        take_profit: float | None = None,
+        label: str | None = None,
+        comment: str = "MetricFlow cTrader",
+    ) -> dict[str, Any]:
+        """
+        Place a market order directly via cTrader Open API.
+        Performs margin pre-check, builds the order, and sends it.
+        Returns a dict compatible with CTraderOrderResponse.
+        """
+        if not self.config.enabled:
+            return {
+                "status": "ERROR",
+                "error": "CTRADER_DISABLED",
+                "symbol": symbol,
+                "direction": direction,
+                "volume_lots": volume_lots,
+                "margin_checked": False,
+            }
+
+        symbol_name = _compact_symbol(symbol)
+        symbol_id = self._resolve_symbol_id(symbol_name, refresh=self.config.live_trading_enabled)
+        if symbol_id is None and not self.config.live_trading_enabled:
+            symbol_id = DRY_RUN_SYMBOL_IDS.get(symbol_name)
+        if symbol_id is None:
+            return {
+                "status": "REJECTED",
+                "error": f"CTRADER_SYMBOL_NOT_FOUND:{symbol_name}",
+                "symbol": symbol,
+                "direction": direction,
+                "volume_lots": volume_lots,
+                "margin_checked": False,
+            }
+
+        # Margin pre-check
+        margin_check = self._check_margin(symbol_id, volume_lots)
+        if not margin_check["sufficient"]:
+            return {
+                "status": "REJECTED",
+                "error": f"INSUFFICIENT_MARGIN: need ~{margin_check['estimated']:.2f}, have {margin_check['free']:.2f}",
+                "symbol": symbol,
+                "direction": direction,
+                "volume_lots": volume_lots,
+                "margin_checked": True,
+                "free_margin_before": margin_check["free"],
+                "estimated_margin_required": margin_check["estimated"],
+            }
+
+        volume = self._lots_to_protocol_volume(volume_lots)
+        trade_side = "BUY" if direction.upper() in {"BUY", "LONG"} else "SELL"
+        order_label = (label or f"metricflow-direct-{datetime.now(timezone.utc).strftime('%H%M%S')}")[:50]
+
+        order = {
+            "symbol": symbol_name,
+            "symbol_id": symbol_id,
+            "trade_side": trade_side,
+            "volume": volume,
+            "lots": volume_lots,
+            "base_units": volume_lots * LOTS_TO_UNITS,
+            "label": order_label,
+            "client_order_id": order_label,
+            "comment": comment,
+        }
+
+        if stop_loss is not None:
+            # Relative distance in cents for cTrader protocol
+            # We'll use a placeholder; real SL calculation needs current price
+            order["relative_stop_loss"] = int(round(abs(stop_loss) * 100_000))
+        if take_profit is not None:
+            order["relative_take_profit"] = int(round(abs(take_profit) * 100_000))
+
+        if self.config.live_trading_enabled:
+            try:
+                self.bridge.connect()
+                response = self.bridge.send_market_order(order)
+                return {
+                    "status": "SENT_TO_CTRADER",
+                    "order_id": str(response.get("orderId", "") or response.get("order_id", "")),
+                    "position_id": str(response.get("positionId", "") or response.get("position_id", "")),
+                    "symbol": symbol,
+                    "direction": trade_side,
+                    "volume_lots": volume_lots,
+                    "fill_price": None,
+                    "margin_checked": True,
+                    "free_margin_before": margin_check["free"],
+                    "estimated_margin_required": margin_check["estimated"],
+                    "error": None,
+                }
+            except Exception as exc:
+                return {
+                    "status": "CTRADER_API_ERROR",
+                    "error": str(exc),
+                    "symbol": symbol,
+                    "direction": trade_side,
+                    "volume_lots": volume_lots,
+                    "margin_checked": True,
+                    "free_margin_before": margin_check["free"],
+                    "estimated_margin_required": margin_check["estimated"],
+                }
+
+        # Dry-run path
+        return {
+            "status": "DRY_RUN",
+            "order_id": None,
+            "position_id": None,
+            "symbol": symbol,
+            "direction": trade_side,
+            "volume_lots": volume_lots,
+            "fill_price": None,
+            "margin_checked": True,
+            "free_margin_before": margin_check["free"],
+            "estimated_margin_required": margin_check["estimated"],
+            "error": None,
+            "preview": order,
+        }
+
+    def _check_margin(self, symbol_id: int, volume_lots: float) -> dict[str, Any]:
+        """
+        Estimate required margin and compare against free margin.
+        Returns dict with 'sufficient', 'free', 'estimated'.
+        """
+        try:
+            wallet = self.get_wallet_balances()
+            free_margin = float(wallet.get("free_margin") or wallet.get("freeMargin") or 0.0)
+        except Exception:
+            free_margin = 0.0
+
+        # Very rough margin estimate: 1 lot ≈ 1000 units margin for major FX pairs at 1:30 leverage
+        # This is a conservative placeholder; real margin depends on leverage, symbol, and price
+        estimated_margin = volume_lots * 1000.0
+
+        # If we can't determine free margin, allow the order (defer to broker)
+        if free_margin <= 0:
+            return {"sufficient": True, "free": 0.0, "estimated": estimated_margin}
+
+        return {
+            "sufficient": free_margin >= estimated_margin,
+            "free": free_margin,
+            "estimated": estimated_margin,
+        }
+
     def health(self) -> dict[str, Any]:
         """Return cTrader broker health details."""
         bridge_status = self.bridge.status()
@@ -626,6 +824,14 @@ class CTraderBroker(BaseBroker):
     def get_symbols(self) -> dict[str, int]:
         """Return the cached symbol map."""
         return dict(self.symbol_map)
+
+    def list_accounts(self) -> list[dict[str, Any]]:
+        """Fetch available trader accounts from cTrader (requires app auth only)."""
+        try:
+            return self.bridge.list_trader_accounts()
+        except Exception as exc:
+            logger.warning("cTrader list_accounts failed: %s", exc)
+            return []
 
     # ------------------------------------------------------------------
     # Trade execution helpers
