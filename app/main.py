@@ -222,15 +222,15 @@ def startup_event():
     # Create DB tables
     from app.db import Base, engine
     Base.metadata.create_all(bind=engine)
-    _heartbeat_task = asyncio.create_task(_heartbeat_loop())
-    _news_poll_task = asyncio.create_task(_news_poll_loop())
-    _autostart_task = asyncio.create_task(_autonomous_loop_auto_start())
-    _training_autostart_task = asyncio.create_task(_training_loop_auto_start())
+    global _heartbeat_task; _heartbeat_task = asyncio.create_task(_heartbeat_loop())
+    global _news_poll_task; _news_poll_task = asyncio.create_task(_news_poll_loop())
+    global _autostart_task; _autostart_task = asyncio.create_task(_autonomous_loop_auto_start())
+    global _training_autostart_task; _training_autostart_task = asyncio.create_task(_training_loop_auto_start())
     # Start price poller for live position monitoring
     from app.services.price_poller import price_poller
     price_poller.start()
     # Start shadow queue processor for rejected-trade feedback
-    _shadow_queue_task = asyncio.create_task(_shadow_queue_loop())
+    global _shadow_queue_task; _shadow_queue_task = asyncio.create_task(_shadow_queue_loop())
     # Start webhook consumer for autonomous signal → paper order execution
     webhook_consumer_instance.start()
     # Start position monitor for auto SL/TP

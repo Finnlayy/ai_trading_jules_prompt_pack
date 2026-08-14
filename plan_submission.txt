@@ -1,3 +1,0 @@
-🎯 What: Addressed the missing test coverage for `app/services/dashboard_sse.py`.
-📊 Coverage: Added tests for SSE event serialization, manager singleton instantiation, connection and disconnection management, broadcasting and receiving events using an asynchronous generator, queue fullness logic, and the various `broadcast_*` helper methods.
-✨ Result: Successfully added `tests/services/test_dashboard_sse.py` giving confidence and verifying the expected behavior of the SSE management singleton, with 100% test passing success across the SSE specific and the larger suite.

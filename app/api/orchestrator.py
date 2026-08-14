@@ -15,6 +15,7 @@ from app.schemas.journal import DecisionEnum, FinalDecisionEnum
 from app.schemas.ai_review import SignalReview
 from app.services.confidence_registry import confidence_registry
 from app.core.config import AI_FAILURE_POLICY, BROKER_MODE, PAPER_TRADING_RELAX_RISK
+from app.services.confidence_registry import confidence_registry
 
 
 def _build_broker():
