@@ -62,21 +62,28 @@ def _upper_items(values: Iterable[str]) -> tuple[str, ...]:
     return tuple(str(value).upper() for value in values)
 
 
-def classify_order(payload: M8Payload) -> WarRoomDecision:
+
+def _check_system_enabled(payload: M8Payload) -> WarRoomDecision | None:
     if not WAR_ROOM_ENABLED:
         return WarRoomDecision(
             color=WarRoomColor.GREEN,
             command=WarRoomCommand.GO,
             reason_codes=("WAR_ROOM_DISABLED",),
         )
+    return None
 
+
+def _check_close_intent(payload: M8Payload) -> WarRoomDecision | None:
     if payload.intent == "CLOSE":
         return WarRoomDecision(
             color=WarRoomColor.GREEN,
             command=WarRoomCommand.GO,
             reason_codes=("CLOSE_INTENT_PRIORITY",),
         )
+    return None
 
+
+def _check_explicit_command(payload: M8Payload) -> WarRoomDecision | None:
     explicit_command = WarRoomCommand(payload.order_command)
     if explicit_command == WarRoomCommand.KILL:
         return WarRoomDecision(
@@ -90,7 +97,10 @@ def classify_order(payload: M8Payload) -> WarRoomDecision:
             command=WarRoomCommand.HOLD,
             reason_codes=("WAR_ROOM_HOLD_COMMAND",),
         )
+    return None
 
+
+def _check_explicit_regime(payload: M8Payload) -> WarRoomDecision | None:
     explicit_regime = WarRoomColor(payload.market_regime) if payload.market_regime else None
     if explicit_regime == WarRoomColor.RED:
         return WarRoomDecision(
@@ -104,21 +114,30 @@ def classify_order(payload: M8Payload) -> WarRoomDecision:
             command=WarRoomCommand.HOLD,
             reason_codes=("WAR_ROOM_YELLOW_STANDBY",),
         )
+    return None
 
+
+def _check_bar_confirmed(payload: M8Payload) -> WarRoomDecision | None:
     if not payload.bar_confirmed:
         return WarRoomDecision(
             color=WarRoomColor.YELLOW,
             command=WarRoomCommand.HOLD,
             reason_codes=("BAR_NOT_CONFIRMED",),
         )
+    return None
 
+
+def _check_drawdown(payload: M8Payload) -> WarRoomDecision | None:
     if payload.drawdown_pct is not None and payload.drawdown_pct >= WAR_ROOM_HARD_KILL_DRAWDOWN_PCT:
         return WarRoomDecision(
             color=WarRoomColor.RED,
             command=WarRoomCommand.KILL,
             reason_codes=("DRAWDOWN_HARD_KILL",),
         )
+    return None
 
+
+def _check_pending_order_age(payload: M8Payload) -> WarRoomDecision | None:
     max_age = payload.max_pending_order_age_seconds or WAR_ROOM_PENDING_ORDER_MAX_AGE_SECONDS
     if payload.pending_order_age_seconds is not None and payload.pending_order_age_seconds > max_age:
         return WarRoomDecision(
@@ -126,19 +145,26 @@ def classify_order(payload: M8Payload) -> WarRoomDecision:
             command=WarRoomCommand.KILL,
             reason_codes=("PENDING_ORDER_EXPIRED",),
         )
+    return None
 
+
+def _check_chop_index(payload: M8Payload) -> WarRoomDecision | None:
     if payload.chop_index is not None and payload.chop_index > WAR_ROOM_CHOP_STANDBY_THRESHOLD:
         return WarRoomDecision(
             color=WarRoomColor.YELLOW,
             command=WarRoomCommand.HOLD,
             reason_codes=("CHOP_STANDBY",),
         )
+    return None
 
+
+def _check_hazards(payload: M8Payload) -> WarRoomDecision | None:
     hazard_reasons: list[str] = []
     if payload.hurst_exponent is not None and payload.hurst_exponent < WAR_ROOM_HURST_HAZARD_THRESHOLD:
         hazard_reasons.append("HURST_HAZARD")
     if payload.macro_event_risk:
         hazard_reasons.append("MACRO_EVENT_RISK")
+    explicit_regime = WarRoomColor(payload.market_regime) if payload.market_regime else None
     if explicit_regime == WarRoomColor.ORANGE:
         hazard_reasons.append("WAR_ROOM_ORANGE_REGIME")
 
@@ -150,7 +176,10 @@ def classify_order(payload: M8Payload) -> WarRoomDecision:
             risk_cap_pct=WAR_ROOM_ORANGE_MAX_RISK_PCT,
             kelly_mode_hint="orange_base_risk_cap",
         )
+    return None
 
+
+def _get_vip_decision(payload: M8Payload) -> WarRoomDecision:
     vip_reasons = ["WAR_ROOM_GREEN_GO"]
     if (
         payload.confluence_score >= WAR_ROOM_VIP_CONFLUENCE_SCORE
@@ -169,6 +198,27 @@ def classify_order(payload: M8Payload) -> WarRoomDecision:
         reason_codes=tuple(vip_reasons),
         kelly_mode_hint="half_kelly_capped",
     )
+
+
+def classify_order(payload: M8Payload) -> WarRoomDecision:
+    rules = [
+        _check_system_enabled,
+        _check_close_intent,
+        _check_explicit_command,
+        _check_explicit_regime,
+        _check_bar_confirmed,
+        _check_drawdown,
+        _check_pending_order_age,
+        _check_chop_index,
+        _check_hazards,
+    ]
+
+    for rule in rules:
+        decision = rule(payload)
+        if decision is not None:
+            return decision
+
+    return _get_vip_decision(payload)
 
 
 def ai_rule_violation(ai_review: SignalReview) -> str | None:

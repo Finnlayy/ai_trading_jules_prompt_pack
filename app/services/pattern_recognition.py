@@ -59,17 +59,9 @@ def _local_extrema(
 # Head and Shoulders
 # ---------------------------------------------------------------------------
 
-def detect_head_and_shoulders(
-    closes: np.ndarray, highs: np.ndarray, lows: np.ndarray, order: int = 5
+def _detect_standard_hs(
+    closes: np.ndarray, highs: np.ndarray, lows: np.ndarray, peaks: np.ndarray, troughs: np.ndarray, order: int
 ) -> PatternMatch | None:
-    """
-    Detect classic Head-and-Shoulders (bearish reversal) and
-    Inverse Head-and-Shoulders (bullish reversal).
-    """
-    peaks, troughs = _local_extrema(highs, lows, order)
-    if len(peaks) < 3 or len(troughs) < 2:
-        return None
-
     best: PatternMatch | None = None
     best_score = 0.0
 
@@ -129,7 +121,14 @@ def detect_head_and_shoulders(
                 target_price=round(target, 4),
             )
 
-    # Inverse H&S (bullish) — scan troughs
+    return best
+
+def _detect_inverse_hs(
+    closes: np.ndarray, highs: np.ndarray, lows: np.ndarray, peaks: np.ndarray, troughs: np.ndarray, order: int
+) -> PatternMatch | None:
+    best: PatternMatch | None = None
+    best_score = 0.0
+
     if len(troughs) >= 3 and len(peaks) >= 2:
         for i in range(len(troughs) - 2):
             ls_idx = troughs[i]
@@ -182,6 +181,30 @@ def detect_head_and_shoulders(
                 )
 
     return best
+
+def detect_head_and_shoulders(
+    closes: np.ndarray, highs: np.ndarray, lows: np.ndarray, order: int = 5
+) -> PatternMatch | None:
+    """
+    Detect classic Head-and-Shoulders (bearish reversal) and
+    Inverse Head-and-Shoulders (bullish reversal).
+    """
+    peaks, troughs = _local_extrema(highs, lows, order)
+    if len(peaks) < 3 and len(troughs) < 3:
+        return None
+
+    best_match: PatternMatch | None = None
+
+    if len(peaks) >= 3 and len(troughs) >= 2:
+        best_match = _detect_standard_hs(closes, highs, lows, peaks, troughs, order)
+
+    if len(troughs) >= 3 and len(peaks) >= 2:
+        inv_match = _detect_inverse_hs(closes, highs, lows, peaks, troughs, order)
+        if inv_match is not None:
+            if best_match is None or inv_match.confidence > best_match.confidence:
+                best_match = inv_match
+
+    return best_match
 
 
 # ---------------------------------------------------------------------------
@@ -377,6 +400,44 @@ def detect_flag(
     return best
 
 
+
+
+# ---------------------------------------------------------------------------
+# Trendline Helpers
+# ---------------------------------------------------------------------------
+
+def _fit_trendline(indices: np.ndarray, prices: np.ndarray) -> tuple[float, float]:
+    """Fit a linear trendline to the given indices and prices."""
+    x = indices.astype(float)
+    y = prices[indices]
+    slope, intercept = np.polyfit(x, y, 1)
+    return slope, intercept
+
+
+def _count_touches(
+    indices: np.ndarray,
+    prices: np.ndarray,
+    slope: float,
+    intercept: float,
+    max_range: float,
+    threshold_pct: float = 0.02,
+) -> int:
+    """Count how many points touch the trendline within a threshold."""
+    threshold = max_range * threshold_pct
+    expected_y = slope * indices + intercept
+    touches = np.sum(np.abs(prices[indices] - expected_y) < threshold)
+    return int(touches)
+
+
+def _find_intersection(
+    slope1: float, intercept1: float, slope2: float, intercept2: float
+) -> float | None:
+    """Find the x-coordinate where two lines intersect."""
+    if abs(slope1 - slope2) < 1e-9:
+        return None
+    return (intercept2 - intercept1) / (slope1 - slope2)
+
+
 # ---------------------------------------------------------------------------
 # Triangles
 # ---------------------------------------------------------------------------
@@ -411,33 +472,28 @@ def detect_triangle(
 
         # Fit upper trendline through peaks (descending: negative slope)
         if len(w_peaks) >= min_touches:
-            x_up = w_peaks.astype(float)
-            y_up = highs[w_peaks]
-            slope_up, intercept_up = np.polyfit(x_up, y_up, 1)
+            slope_up, intercept_up = _fit_trendline(w_peaks, highs)
         else:
             continue
 
         # Fit lower trendline through troughs (ascending: positive slope)
-        x_lo = w_troughs.astype(float)
-        y_lo = lows[w_troughs]
-        slope_lo, intercept_lo = np.polyfit(x_lo, y_lo, 1)
+        slope_lo, intercept_lo = _fit_trendline(w_troughs, lows)
 
         # Triangles require convergence (slopes with opposite signs or one flat)
         if slope_up >= 0 or slope_lo <= 0:
             continue
 
         # Check touches
-        up_touches = np.sum(np.abs(highs[w_peaks] - (slope_up * w_peaks + intercept_up)) < (np.max(highs) - np.min(lows)) * 0.02)
-        lo_touches = np.sum(np.abs(lows[w_troughs] - (slope_lo * w_troughs + intercept_lo)) < (np.max(highs) - np.min(lows)) * 0.02)
+        max_range = float(np.max(highs) - np.min(lows))
+        up_touches = _count_touches(w_peaks, highs, slope_up, intercept_up, max_range)
+        lo_touches = _count_touches(w_troughs, lows, slope_lo, intercept_lo, max_range)
 
         if up_touches < min_touches or lo_touches < min_touches:
             continue
 
         # Apex (where lines cross)
-        if abs(slope_up - slope_lo) < 1e-9:
-            continue
-        apex_x = (intercept_lo - intercept_up) / (slope_up - slope_lo)
-        if apex_x < window_end or apex_x > window_end + 20:
+        apex_x = _find_intersection(slope_up, intercept_up, slope_lo, intercept_lo)
+        if apex_x is None or apex_x < window_end or apex_x > window_end + 20:
             continue
 
         # Breakout detection
@@ -515,13 +571,8 @@ def detect_wedge(
         if len(w_peaks) < 3 or len(w_troughs) < 3:
             continue
 
-        x_up = w_peaks.astype(float)
-        y_up = highs[w_peaks]
-        slope_up, intercept_up = np.polyfit(x_up, y_up, 1)
-
-        x_lo = w_troughs.astype(float)
-        y_lo = lows[w_troughs]
-        slope_lo, intercept_lo = np.polyfit(x_lo, y_lo, 1)
+        slope_up, intercept_up = _fit_trendline(w_peaks, highs)
+        slope_lo, intercept_lo = _fit_trendline(w_troughs, lows)
 
         # Wedges: same direction slopes, converging
         both_rising = slope_up > 0.001 and slope_lo > 0.001 and slope_up > slope_lo
@@ -531,8 +582,9 @@ def detect_wedge(
             continue
 
         # Check touches
-        up_touches = np.sum(np.abs(highs[w_peaks] - (slope_up * w_peaks + intercept_up)) < (np.max(highs) - np.min(lows)) * 0.02)
-        lo_touches = np.sum(np.abs(lows[w_troughs] - (slope_lo * w_troughs + intercept_lo)) < (np.max(highs) - np.min(lows)) * 0.02)
+        max_range = float(np.max(highs) - np.min(lows))
+        up_touches = _count_touches(w_peaks, highs, slope_up, intercept_up, max_range)
+        lo_touches = _count_touches(w_troughs, lows, slope_lo, intercept_lo, max_range)
 
         if up_touches < 2 or lo_touches < 2:
             continue

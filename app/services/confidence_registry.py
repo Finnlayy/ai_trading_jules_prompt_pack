@@ -9,9 +9,21 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from datetime import datetime, timezone
 from dataclasses import dataclass, field, asdict
+
+@dataclass
+class ScoutReviewParams:
+    symbol: str
+    scout_name: str
+    direction: str
+    decision: str
+    confidence: float
+    was_correct: bool | None = None
+
 from typing import Any
 from app.schemas.academy import CareerEntry
+from app.services.ai.gem_agents import DEFAULT_AGENT_NAMES
 from app.services.agent_registry import agent_registry
 import asyncio
 
@@ -137,7 +149,7 @@ class ConfidenceRegistry:
     File: logs/confidence_registry.json
     """
 
-    SCOUT_NAMES = ["technical", "sentiment", "risk", "macro", "execution", "correlation"]
+    SCOUT_NAMES = list(DEFAULT_AGENT_NAMES)
 
     def __init__(self, filepath: str = "logs/confidence_registry.json") -> None:
         self.filepath = Path(filepath)
@@ -203,20 +215,12 @@ class ConfidenceRegistry:
             self._symbols[symbol] = SymbolStats(symbol=symbol)
         return self._symbols[symbol]
 
-    def record_scout_review(
-        self,
-        symbol: str,
-        scout_name: str,
-        direction: str,
-        decision: str,
-        confidence: float,
-        was_correct: bool | None = None,
-    ) -> None:
+    def record_scout_review(self, params: ScoutReviewParams) -> None:
         """Call after a scout renders its review."""
-        stats = self.get_symbol_stats(symbol)
-        if scout_name not in stats.scout_stats:
-            stats.scout_stats[scout_name] = ScoutStats()
-        stats.scout_stats[scout_name].record_call(decision, confidence, was_correct)
+        stats = self.get_symbol_stats(params.symbol)
+        if params.scout_name not in stats.scout_stats:
+            stats.scout_stats[params.scout_name] = ScoutStats()
+        stats.scout_stats[params.scout_name].record_call(params.decision, params.confidence, params.was_correct)
         self._save()
 
     def record_signal_review(
@@ -238,18 +242,22 @@ class ConfidenceRegistry:
         pnl_pct: float,
         rr: float,
         win: bool,
+        auto_save: bool = True,
     ) -> None:
         """Call when a trade closes to update direction stats."""
         stats = self.get_symbol_stats(symbol)
         dstats = stats.get_direction_stats(direction)
         dstats.record_trade(pnl_pct, rr, win)
-        self._save()
+        if auto_save:
+            self._save()
 
     def mark_scout_outcome(
         self,
         symbol: str,
         scout_names: list[str],
         was_correct: bool,
+        details: dict[str, Any] | None = None,
+        auto_save: bool = True,
     ) -> None:
         """
         Mark already-recorded scout calls as correct after a paper/live outcome is known.
@@ -279,6 +287,7 @@ class ConfidenceRegistry:
                 scout_name=scout_name,
                 event_type="prediction_result",
                 details={
+                    **(details or {}),
                     "symbol": symbol,
                     "is_correct": was_correct,
                     "accuracy": sstats.accuracy,
@@ -290,8 +299,12 @@ class ConfidenceRegistry:
                 loop.create_task(agent_registry.log_career_event(career_entry))
             except RuntimeError:
                 asyncio.run(agent_registry.log_career_event(career_entry))
-        if changed:
+        if changed and auto_save:
             self._save()
+
+    def save(self) -> None:
+        """Public method to manually trigger save (useful for batching)."""
+        self._save()
 
     def get_symbol_context(self, symbol: str, direction: str) -> str:
         """
@@ -311,7 +324,7 @@ class ConfidenceRegistry:
                 f"({d.wins}W/{d.losses}L), avg RR: {d.avg_rr:.2f}, avg PnL: {d.avg_pnl_pct:+.2f}%"
             )
 
-        for scout_name in self.SCOUT_NAMES:
+        for scout_name in self._context_scout_names(stats):
             sstats = stats.scout_stats.get(scout_name)
             if sstats and sstats.calls > 0:
                 spec_label = ""
@@ -336,6 +349,13 @@ class ConfidenceRegistry:
             )
 
         return "\n".join(lines)
+
+    def _context_scout_names(self, stats: SymbolStats) -> list[str]:
+        names = list(self.SCOUT_NAMES)
+        for scout_name in stats.scout_stats:
+            if scout_name not in names:
+                names.append(scout_name)
+        return names
 
     def get_scout_weight(self, symbol: str, scout_name: str) -> float:
         """
@@ -377,6 +397,77 @@ class ConfidenceRegistry:
 
     def dump(self) -> dict[str, Any]:
         return {sym: self._serialize_symbol(stats) for sym, stats in self._symbols.items()}
+
+    def get_aggregate_stats(self) -> dict[str, Any]:
+        """
+        Aggregate performance metrics across all tracked symbols.
+        Returns totals, weighted averages, and recency info.
+        """
+        import math
+
+        total_signals = 0
+        total_wins = 0
+        total_losses = 0
+        total_pnl_pct = 0.0
+        total_trades = 0
+        last_updated_ts: float | None = None
+
+        for stats in self._symbols.values():
+            total_signals += stats.total_signals
+            for d in (stats.long_stats, stats.short_stats):
+                total_wins += d.wins
+                total_losses += d.losses
+                total_pnl_pct += d.total_pnl_pct
+                total_trades += d.total
+            if stats.last_updated:
+                try:
+                    ts = datetime.fromisoformat(stats.last_updated).timestamp()
+                    if last_updated_ts is None or ts > last_updated_ts:
+                        last_updated_ts = ts
+                except (ValueError, TypeError):
+                    pass
+
+        win_rate = total_wins / total_trades if total_trades > 0 else 0.0
+        avg_pnl_pct = total_pnl_pct / total_trades if total_trades > 0 else 0.0
+
+        # Profit factor proxy using avg pnl per win/loss
+        gross_wins = max(avg_pnl_pct * total_wins, 0.01) if total_wins > 0 else 0.0
+        gross_losses = max(abs(avg_pnl_pct) * total_losses, 0.01) if total_losses > 0 else 0.0
+        profit_factor = gross_wins / gross_losses if gross_losses > 0 else 0.0
+
+        # Max drawdown proxy: worst total_pnl_pct among symbols
+        max_dd = 0.0
+        for stats in self._symbols.values():
+            for d in (stats.long_stats, stats.short_stats):
+                if d.total > 0 and d.total_pnl_pct < max_dd:
+                    max_dd = d.total_pnl_pct
+
+        now = datetime.now(timezone.utc).timestamp()
+        last_signal_age_seconds = now - last_updated_ts if last_updated_ts else None
+
+        # Composite health score (0-100)
+        # 40% win_rate, 20% profit_factor, 20% recency, 20% volume
+        score = 0.0
+        if total_trades > 0:
+            score += min(win_rate * 100, 40)  # win_rate * 100, capped at 40
+            score += min(profit_factor * 20, 20)  # pf * 20, capped at 20
+            if last_signal_age_seconds is not None:
+                recency_score = max(0, 20 - (last_signal_age_seconds / 3600))  # decays over 20h
+                score += recency_score
+            volume_score = min(total_trades / 10, 20)  # 20 trades = full score
+            score += volume_score
+        score = round(max(0.0, min(100.0, score)), 1)
+
+        return {
+            "total_signals": total_signals,
+            "total_trades": total_trades,
+            "win_rate": round(win_rate, 4),
+            "profit_factor": round(profit_factor, 2),
+            "avg_pnl_pct": round(avg_pnl_pct, 4),
+            "max_drawdown_pct": round(abs(max_dd), 4),
+            "last_signal_age_seconds": last_signal_age_seconds,
+            "health_score": score,
+        }
 
 
 # Singleton instance

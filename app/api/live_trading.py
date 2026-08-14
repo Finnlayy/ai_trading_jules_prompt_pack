@@ -201,15 +201,36 @@ async def get_trades(limit: int = 50, offset: int = 0):
     """Return recent completed trades from the journal."""
     entries = journal_logger_instance.get_entries(limit=limit + offset)
     trades = entries[offset:offset + limit]
+
+    def _fmt_ts(ts: str) -> str:
+        """Format ISO timestamp to dd:mm:yy : hh:mm"""
+        try:
+            if not ts:
+                return ts
+            dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+            return dt.strftime("%d:%m:%y : %H:%M")
+        except Exception:
+            return ts
+
     return {
         "trades": [
             {
-                "trade_id": t.trade_id,
-                "symbol": t.symbol,
-                "direction": t.direction,
-                "decision": t.final_decision,
-                "result": t.result,
-                "timestamp": t.timestamp,
+                "trade_id": t.get("trade_id") if isinstance(t, dict) else getattr(t, "trade_id", None),
+                "symbol": t.get("symbol") if isinstance(t, dict) else getattr(t, "symbol", None),
+                "direction": t.get("direction") if isinstance(t, dict) else getattr(t, "direction", None),
+                "decision": (t.get("final_decision") if isinstance(t, dict) else getattr(t, "final_decision", None)),
+                "result": t.get("result") if isinstance(t, dict) else getattr(t, "result", None),
+                "timestamp": _fmt_ts(t.get("timestamp") if isinstance(t, dict) else getattr(t, "timestamp", "")),
+                "execution_mode": (t.get("simulated_fill", {}).get("mode")
+                                   if isinstance(t, dict)
+                                   else getattr(getattr(t, "simulated_fill", None), "get", lambda k: None)("mode")),
+                "entry_price": t.get("entry_price") if isinstance(t, dict) else getattr(t, "entry_price", None),
+                "exit_price": (t.get("result", {}).get("exit_price")
+                               if isinstance(t, dict)
+                               else (getattr(t, "result", {}) or {}).get("exit_price")),
+                "pnl": (t.get("result", {}).get("pnl")
+                        if isinstance(t, dict)
+                        else (getattr(t, "result", {}) or {}).get("pnl")),
             }
             for t in trades
         ],
@@ -269,9 +290,10 @@ async def emergency_stop(req: EmergencyStopRequest):
 
     positions_closed = 0
     if req.close_open_positions:
-        for p in live_fill_tracker.get_open_positions():
-            live_fill_tracker.record_exit(p.trade_id, p.current_price)
-            positions_closed += 1
+        open_positions = live_fill_tracker.get_open_positions()
+        exits = [{"trade_id": p.trade_id, "exit_price": p.current_price} for p in open_positions]
+        live_fill_tracker.record_exits_batch(exits)
+        positions_closed = len(exits)
 
     autonomous_loop_instance.pause()
     dashboard_sse_manager.broadcast_alert(

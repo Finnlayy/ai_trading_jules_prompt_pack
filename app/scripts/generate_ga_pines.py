@@ -132,7 +132,7 @@ def patch_template(template: str, genes: Dict, symbol: str = "HYPEUSDT") -> str:
         )
         # If both replaced, we have duplicate _confirmed — fix by keeping only first
         result = re.sub(
-            r'(bool _confirmed = barstate\.isconfirmed\n)(.*\n)(bool _confirmed = barstate\.isconfirmed\n)',
+            r'(?s)(bool _confirmed = barstate\.isconfirmed\n)(.*?)(bool _confirmed = barstate\.isconfirmed\n)',
             r'\g<1>\g<2>',
             result,
             count=1,

@@ -149,6 +149,7 @@ class LiveFillTracker:
                 pass
         # Fallback: load open positions from SQLite (restores after server restart)
         if not self._positions:
+            db = None
             try:
                 from app.db import SessionLocal
                 from app.db.models import Position as DBPosition
@@ -170,9 +171,11 @@ class LiveFillTracker:
                         target_price=dbp.target_price or 0.0,
                     )
                     self._positions[pos.trade_id] = pos
-                db.close()
             except Exception:
                 pass
+            finally:
+                if db:
+                    db.close()
 
     def _persist(self) -> None:
         try:
@@ -255,6 +258,7 @@ class LiveFillTracker:
         })
         self._persist()
         # Also persist to SQLite
+        db = None
         try:
             from app.db import SessionLocal
             from app.db.models import Position
@@ -275,9 +279,12 @@ class LiveFillTracker:
                 opened_at=fill_data.fill_time,
             ))
             db.commit()
-            db.close()
         except Exception:
-            pass
+            if db:
+                db.rollback()
+        finally:
+            if db:
+                db.close()
 
     def record_exit(self, trade_id: str, exit_price: float,
                     exit_time: datetime | None = None) -> None:
@@ -331,6 +338,7 @@ class LiveFillTracker:
         except Exception:
             pass
         # Also update SQLite
+        db = None
         try:
             from app.db import SessionLocal
             from app.db.models import Position
@@ -342,6 +350,128 @@ class LiveFillTracker:
                 db_pos.realized_pnl = pnl
                 db_pos.closed_at = exit
                 db.commit()
+        except Exception:
+            if db:
+                db.rollback()
+        finally:
+            if db:
+                db.close()
+
+
+    def record_exits_batch(self, exits: List[Dict[str, Any]]) -> None:
+        """Close multiple positions in batch, optimizing I/O and DB operations.
+        exits should be a list of dicts: {"trade_id": str, "exit_price": float, "exit_time": Optional[datetime]}
+        """
+        if not exits:
+            return
+
+        trade_ids_to_update = []
+        updates_for_db = {}
+
+        try:
+            from app.services.confidence_registry import confidence_registry
+        except ImportError:
+            confidence_registry = None
+
+        for exit_data in exits:
+            trade_id = exit_data["trade_id"]
+            exit_price = exit_data["exit_price"]
+            exit_time = exit_data.get("exit_time")
+
+            pos = self._positions.pop(trade_id, None)
+            if pos is None:
+                continue
+
+            exit_dt = exit_time or datetime.now(timezone.utc)
+            if pos.direction == "LONG":
+                pnl = (exit_price - pos.entry_price) * pos.size
+            else:
+                pnl = (pos.entry_price - exit_price) * pos.size
+
+            pos.realized_pnl = pnl
+            pos.current_price = exit_price
+
+            self._history.append({
+                "event": "exit",
+                "trade_id": trade_id,
+                "exit_price": exit_price,
+                "realized_pnl": pnl,
+                "timestamp": exit_dt.isoformat(),
+            })
+
+            # Track for DB update
+            trade_ids_to_update.append(trade_id)
+            updates_for_db[trade_id] = {
+                "exit_price": exit_price,
+                "pnl": pnl,
+                "exit_dt": exit_dt
+            }
+
+            # Update Confidence Registry (deferred save)
+            if confidence_registry:
+                try:
+                    pnl_pct = (pnl / (pos.entry_price * pos.size)) * 100.0 if pos.entry_price and pos.size else 0.0
+                    risk = abs(pos.entry_price - pos.stop_price) if pos.stop_price else abs(pnl_pct)
+                    rr = abs(pnl_pct / risk) if risk else 0.0
+                    win = pnl > 0
+
+                    confidence_registry.record_trade_outcome(
+                        symbol=pos.symbol,
+                        direction=pos.direction,
+                        pnl_pct=pnl_pct,
+                        rr=rr,
+                        win=win,
+                        auto_save=False
+                    )
+
+                    # Record scout outcomes if ai_trace is available
+                    intent = self._intents.pop(trade_id, None)
+                    if intent and intent.ai_trace:
+                        scout_decisions = intent.ai_trace.get("scouts", {})
+                        for scout_name, scout_report in scout_decisions.items():
+                            scout_approved = isinstance(scout_report, dict) and scout_report.get("decision") == "PROCEED_TO_SIMULATION"
+                            if not scout_approved and isinstance(scout_report, str):
+                                scout_approved = "PROCEED" in scout_report.upper() or "APPROVE" in scout_report.upper()
+                            was_correct = (scout_approved and win) or (not scout_approved and not win)
+                            confidence_registry.mark_scout_outcome(
+                                symbol=pos.symbol,
+                                scout_names=[scout_name],
+                                was_correct=was_correct,
+                                auto_save=False
+                            )
+                except Exception:
+                    pass
+
+        # Persist everything once
+        self._persist()
+
+        if confidence_registry:
+            try:
+                confidence_registry.save()
+            except Exception:
+                pass
+
+        if not trade_ids_to_update:
+            return
+
+        # Batch SQLite update
+        try:
+            from app.db import SessionLocal
+            from app.db.models import Position
+            db = SessionLocal()
+
+            # Fetch all relevant positions at once
+            db_positions = db.query(Position).filter(Position.trade_id.in_(trade_ids_to_update)).all()
+
+            for db_pos in db_positions:
+                update_data = updates_for_db.get(db_pos.trade_id)
+                if update_data:
+                    db_pos.is_open = False
+                    db_pos.current_price = update_data["exit_price"]
+                    db_pos.realized_pnl = update_data["pnl"]
+                    db_pos.closed_at = update_data["exit_dt"]
+
+            db.commit()
             db.close()
         except Exception:
             pass

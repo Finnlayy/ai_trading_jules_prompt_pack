@@ -1,0 +1,5 @@
+- `[x]` Add per-scout AI provider and model configurations to `app/core/config.py`
+- `[x]` Integrate dynamic per-scout LLM routing into `app/services/ai_kimi.py`
+- `[x]` Add example settings for the new per-scout configurations to `.env`
+- `[/]` Verify with unit tests
+- `[ ]` Run end-to-end multi-instance verification using a test script

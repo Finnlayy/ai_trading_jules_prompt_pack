@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime, timezone
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 import pytest
 
 from app.services.price_poller import PricePoller
@@ -72,28 +72,37 @@ class TestPricePollerLifecycle:
 
 
 class TestPriceFetching:
-    def test_fetch_prices_empty_symbols(self):
+    @pytest.mark.asyncio
+    async def test_fetch_prices_empty_symbols(self):
         poller = PricePoller()
-        prices = poller._fetch_prices([])
+        prices = await poller._fetch_prices([])
         assert prices == {}
 
-    def test_fetch_prices_returns_dict(self):
+    @pytest.mark.asyncio
+    async def test_fetch_prices_returns_dict(self):
         poller = PricePoller()
         # Mock the Bybit API response
         mock_resp = MagicMock()
         mock_resp.json.return_value = {
             "result": {
                 "list": [
-                    {"symbol": "BTCUSDT", "markPrice": "50000.0", "lastPrice": "49999.0"},
+                    {
+                        "symbol": "BTCUSDT",
+                        "markPrice": "50000.0",
+                        "lastPrice": "49999.0",
+                    },
                     {"symbol": "ETHUSDT", "markPrice": "3000.0", "lastPrice": "2999.0"},
                 ]
             }
         }
-        with patch("requests.get", return_value=mock_resp):
-            prices = poller._fetch_prices(["BTCUSDT", "ETHUSDT"])
+        with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+            mock_get.return_value = mock_resp
+        with patch("httpx.AsyncClient.get", return_value=mock_resp):
+            prices = await poller._fetch_prices(["BTCUSDT", "ETHUSDT"])
         assert prices == {"BTCUSDT": 50000.0, "ETHUSDT": 3000.0}
 
-    def test_fetch_prices_uses_last_price_fallback(self):
+    @pytest.mark.asyncio
+    async def test_fetch_prices_uses_last_price_fallback(self):
         poller = PricePoller()
         mock_resp = MagicMock()
         mock_resp.json.return_value = {
@@ -103,21 +112,28 @@ class TestPriceFetching:
                 ]
             }
         }
-        with patch("requests.get", return_value=mock_resp):
-            prices = poller._fetch_prices(["BTCUSDT"])
+        with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+            mock_get.return_value = mock_resp
+        with patch("httpx.AsyncClient.get", return_value=mock_resp):
+            prices = await poller._fetch_prices(["BTCUSDT"])
         assert prices == {"BTCUSDT": 49999.0}
 
-    def test_fetch_prices_api_failure_graceful(self):
+    @pytest.mark.asyncio
+    async def test_fetch_prices_api_failure_graceful(self):
         poller = PricePoller()
-        with patch("requests.get", side_effect=Exception("network error")):
-            prices = poller._fetch_prices(["BTCUSDT"])
+        with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+            mock_get.side_effect = Exception("network error")
+        with patch("httpx.AsyncClient.get", side_effect=Exception("network error")):
+            prices = await poller._fetch_prices(["BTCUSDT"])
         assert prices == {}
 
 
 class TestPollingLoop:
     @pytest.mark.asyncio
     async def test_poll_loop_updates_prices_and_exits(self):
-        _create_position("tp1", "BTCUSDT", "LONG", entry=50000, stop=49000, target=52000, size=1.0)
+        _create_position(
+            "tp1", "BTCUSDT", "LONG", entry=50000, stop=49000, target=52000, size=1.0
+        )
         poller = PricePoller()
         poller.stop()
         poller._task = None
@@ -128,7 +144,9 @@ class TestPollingLoop:
             "result": {"list": [{"symbol": "BTCUSDT", "markPrice": "52100.0"}]}
         }
 
-        with patch("requests.get", return_value=mock_resp):
+        with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+            mock_get.return_value = mock_resp
+        with patch("httpx.AsyncClient.get", return_value=mock_resp):
             poller.start()
             # Wait for multiple poll cycles
             await asyncio.sleep(0.25)
