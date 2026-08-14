@@ -8,8 +8,7 @@ import json
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from sqlalchemy import func, cast, Integer
-from sqlalchemy.sql.expression import case
+from sqlalchemy import func, case
 
 from app.db import get_db
 from app.db.models import AgentLearningEvent, AgentReviewEvent, PaperOutcome, SignalCandidate
@@ -36,18 +35,17 @@ def lifecycle_summary(db: Session = Depends(get_db)) -> dict[str, Any]:
         .count()
     )
     stats = db.query(
-        func.count().label('total'),
-        func.sum(cast(PaperOutcome.win, Integer)).label('wins'),
-        func.sum(PaperOutcome.pnl).label('total_pnl'),
-        func.avg(PaperOutcome.r_multiple).label('avg_r')
+        func.count(PaperOutcome.id),
+        func.sum(case((PaperOutcome.win == True, 1), else_=0)),
+        func.sum(PaperOutcome.pnl),
+        func.avg(PaperOutcome.r_multiple)
     ).first()
 
-    total_outcomes = stats.total or 0
-    wins = stats.wins or 0
+    total_outcomes = stats[0] or 0 if stats else 0
+    wins = int(stats[1] or 0) if stats else 0
     losses = total_outcomes - wins
-    total_pnl = float(stats.total_pnl or 0.0)
-    avg_r = float(stats.avg_r or 0.0)
-
+    total_pnl = float(stats[2] or 0.0) if stats else 0.0
+    avg_r = float(stats[3] or 0.0) if stats else 0.0
     learning_events = db.query(AgentLearningEvent).count()
     scout_accuracy: dict[str, dict[str, Any]] = {}
 
@@ -76,7 +74,7 @@ def lifecycle_summary(db: Session = Depends(get_db)) -> dict[str, Any]:
             "total": total_outcomes,
             "wins": wins,
             "losses": losses,
-            "win_rate": wins / total_outcomes if total_outcomes else 0.0,
+            "win_rate": wins / total_outcomes if total_outcomes > 0 else 0.0,
             "total_pnl": round(total_pnl, 8),
             "avg_r_multiple": round(avg_r, 4),
         },
