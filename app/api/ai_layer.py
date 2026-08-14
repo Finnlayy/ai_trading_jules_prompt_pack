@@ -5,7 +5,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request, HTTPException
 
 from app.core.config import AI_PROVIDER
 from app.schemas.ai_layer import AIBehaviorProfile, AIChatRequest, AIChatResponse
@@ -621,9 +621,12 @@ async def update_ai_profile(profile: AIBehaviorProfile):
 
 
 @router.post("/chat", response_model=AIChatResponse)
-async def chat_with_ai_layer(request: AIChatRequest):
+async def chat_with_ai_layer(request: AIChatRequest, raw_req: Request):
+    content_length = raw_req.headers.get("content-length")
+    if content_length and int(content_length) > 25000:
+        raise HTTPException(status_code=413, detail="Payload too large")
+
     if len(request.message) > 20000:
-        from fastapi import HTTPException
         raise HTTPException(status_code=413, detail="Payload too large")
     ai_layer_memory_instance.append_message("user", request.message)
     profile = ai_layer_memory_instance.get_profile()

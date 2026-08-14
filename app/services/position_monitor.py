@@ -270,7 +270,7 @@ class PaperPositionMonitor:
     """Monitors open paper positions and triggers SL/TP closes."""
 
     def __init__(self, broker: KrakenPaperBroker | None = None) -> None:
-        self.broker = broker or KrakenPaperBroker()
+        self.broker = broker
         self.is_running = False
         self._task: asyncio.Task | None = None
         self.check_interval_seconds = 5.0
@@ -278,6 +278,8 @@ class PaperPositionMonitor:
     def start(self) -> None:
         if self.is_running:
             return
+        if self.broker is None:
+            self.broker = KrakenPaperBroker()
         self.is_running = True
         self._task = asyncio.create_task(self._monitor_loop())
         logger.info("PaperPositionMonitor started")
