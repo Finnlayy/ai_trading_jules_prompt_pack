@@ -41,9 +41,12 @@ def test_ai_review_proceed():
     assert review.audit_trace["provider"] == "mock"
     # 4-scout swarm
     scouts = review.audit_trace["scouts"]
-    assert set(scouts.keys()) == {"technical", "sentiment", "risk", "macro", "execution", "correlation"}
+    assert set(scouts.keys()) == {"macro_sentinel", "market_dna", "structural_architect", "harmony_coordinator", "indicator_fusion", "risk_kernel", "pine_core", "payload_qa", "execution_watchdog", "evolution_optimizer"}
     assert "symbol_context" in review.audit_trace
     assert "scout_weights" in review.audit_trace
+    assert "weighted_scout_vote" in review.audit_trace
+    assert review.audit_trace["confidence_recorded"] is True
+    assert review.audit_trace["weighted_scout_vote"]["decision_hint"] == DecisionEnum.PROCEED_TO_SIMULATION.value
 
 
 def test_ai_review_weak_confluence_warning():
@@ -80,3 +83,18 @@ def test_ai_review_updates_confidence_registry():
     for scout_name in layer.SCOUT_NAMES:
         assert scout_name in stats.scout_stats
         assert stats.scout_stats[scout_name].calls == 1
+
+
+def test_ai_review_uses_weighted_scout_rejection():
+    layer = MockAIReviewLayer()
+    payload = create_valid_payload()
+    payload.confluence_score = 60.0
+    payload.market_regime = "RED"
+    payload.macro_event_risk = True
+    payload.spread = 80.0
+
+    review = layer.review_signal(payload)
+
+    assert review.decision == DecisionEnum.REJECT
+    assert "WEIGHTED_SCOUT_REJECT" in review.reason_codes
+    assert review.audit_trace["weighted_scout_vote"]["rejection_score"] > review.audit_trace["weighted_scout_vote"]["approval_score"]

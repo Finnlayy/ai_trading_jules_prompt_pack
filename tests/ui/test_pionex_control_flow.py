@@ -13,6 +13,7 @@ app.include_router(router, prefix="/webhook")
 app.include_router(broker_router, prefix="/broker")
 client = TestClient(app)
 
+
 def test_ui_live_smoke_placeholder():
     """
     Simulate frontend sending signal payload.
@@ -41,14 +42,48 @@ def test_ui_live_smoke_placeholder():
         "confluence_score": 95.0,
         "crisis_score": 5.0,
         "mc_dispersion": 0.5,
-        "spread": 0.1
+        "spread": 0.1,
     }
 
     # Needs to bypass actual Pionex/AI calls if not mocked here,
     # but the point is testing the structure is intact.
     # Because we're not mocking we should expect a rejection if disabled or simulation if enabled.
 
-    resp = client.post("/webhook/m8", json=payload)
+    import app.core.config as config_module
+
+    import app.api.endpoints as endpoints
+
+    import json, hashlib, hmac
+
+    original_secret = config_module.WEBHOOK_SECRET
+
+    config_module.WEBHOOK_SECRET = "test-secret-123"
+
+    endpoints.WEBHOOK_SECRET = "test-secret-123"
+
+    try:
+
+        body_bytes = json.dumps(payload).encode("utf-8")
+
+        valid_sig = hmac.new(
+            "test-secret-123".encode("utf-8"), body_bytes, hashlib.sha256
+        ).hexdigest()
+
+        resp = client.post(
+            "/webhook/m8", content=body_bytes, headers={"x-m8-signature": valid_sig}
+        )
+
+    except Exception as e:
+
+        config_module.WEBHOOK_SECRET = original_secret
+
+        endpoints.WEBHOOK_SECRET = original_secret
+
+        raise e
+
+    config_module.WEBHOOK_SECRET = original_secret
+
+    endpoints.WEBHOOK_SECRET = original_secret
     assert resp.status_code == 200
     resp_data = resp.json()
 
