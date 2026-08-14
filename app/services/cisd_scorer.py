@@ -9,7 +9,7 @@ import math
 from dataclasses import dataclass
 from typing import List, Sequence, Tuple, Optional, Dict
 
-import numpy as np
+
 
 
 @dataclass(frozen=True)
@@ -44,12 +44,22 @@ def sma(values: Sequence[float], period: int) -> List[float]:
 
 
 def atr(candles: Sequence[Candle], period: int = 14) -> List[float]:
-    trs: List[float] = []
-    prev = candles[0].c
-    for c in candles:
-        trs.append(max(c.h - c.l, abs(c.h - prev), abs(c.l - prev)))
-        prev = c.c
-    return ema(trs, period)
+    if not candles:
+        return []
+
+    alpha = 2.0 / (period + 1.0)
+
+    out = [candles[0].h - candles[0].l]
+    prev_c = candles[0].c
+
+    for i in range(1, len(candles)):
+        c = candles[i]
+        h, l = c.h, c.l
+        tr = max(h - l, abs(h - prev_c), abs(l - prev_c))
+        out.append(out[-1] * (1.0 - alpha) + tr * alpha)
+        prev_c = c.c
+
+    return out
 
 
 def rsi(closes: Sequence[float], length: int) -> List[float]:
@@ -106,36 +116,50 @@ def cisd_sequence(candles: Sequence[Candle]) -> Tuple[List[int], List[bool], Lis
 
 
 def aggregate(candles: Sequence[Candle], tf_minutes: int) -> List[Candle]:
+    if not candles:
+        return []
+
     bucket_ms = tf_minutes * 60_000
     grouped: List[Candle] = []
-    current: Optional[int] = None
-    rows: List[Candle] = []
+
+    c0 = candles[0]
+    current = (c0.ts // bucket_ms) * bucket_ms
+    o = c0.o
+    h = c0.h
+    l = c0.l
+    v_sum = 0.0
+    last_c = c0.c
+
     for c in candles:
         bucket = (c.ts // bucket_ms) * bucket_ms
-        if current is None:
-            current = bucket
         if bucket != current:
-            if rows:
-                grouped.append(Candle(
-                    ts=current,
-                    o=rows[0].o,
-                    h=max(x.h for x in rows),
-                    l=min(x.l for x in rows),
-                    c=rows[-1].c,
-                    v=sum(x.v for x in rows),
-                ))
+            grouped.append(Candle(
+                ts=current,
+                o=o,
+                h=h,
+                l=l,
+                c=last_c,
+                v=v_sum,
+            ))
             current = bucket
-            rows = []
-        rows.append(c)
-    if rows:
-        grouped.append(Candle(
-            ts=current if current is not None else rows[0].ts,
-            o=rows[0].o,
-            h=max(x.h for x in rows),
-            l=min(x.l for x in rows),
-            c=rows[-1].c,
-            v=sum(x.v for x in rows),
-        ))
+            o = c.o
+            h = c.h
+            l = c.l
+            v_sum = c.v
+        else:
+            if c.h > h: h = c.h
+            if c.l < l: l = c.l
+            v_sum += c.v
+        last_c = c.c
+
+    grouped.append(Candle(
+        ts=current,
+        o=o,
+        h=h,
+        l=l,
+        c=last_c,
+        v=v_sum,
+    ))
     return grouped
 
 
@@ -183,21 +207,36 @@ def compute_ob_fvg_touches(
             piv = i - ob_pivot
             left = piv - ob_pivot
             right = piv + ob_pivot
-            if left >= 0 and right <= i:
-                if lows[piv] == min(lows[left:right + 1]):
-                    ob_top = highs[piv]
-                    ob_bot = lows[piv]
-                    if (ob_top - ob_bot) <= atr14[i] * ob_atr_mul:
-                        bull_ob.append((ob_top, ob_bot))
-                        if len(bull_ob) > max_ob_boxes:
-                            bull_ob.pop(0)
-                if highs[piv] == max(highs[left:right + 1]):
-                    ob_top = highs[piv]
-                    ob_bot = lows[piv]
-                    if (ob_top - ob_bot) <= atr14[i] * ob_atr_mul:
-                        bear_ob.append((ob_top, ob_bot))
-                        if len(bear_ob) > max_ob_boxes:
-                            bear_ob.pop(0)
+
+            piv_low = lows[piv]
+            is_min = True
+            for j in range(left, right + 1):
+                if lows[j] < piv_low:
+                    is_min = False
+                    break
+
+            if is_min:
+                ob_top = highs[piv]
+                ob_bot = piv_low
+                if (ob_top - ob_bot) <= atr14[i] * ob_atr_mul:
+                    bull_ob.append((ob_top, ob_bot))
+                    if len(bull_ob) > max_ob_boxes:
+                        bull_ob.pop(0)
+
+            piv_high = highs[piv]
+            is_max = True
+            for j in range(left, right + 1):
+                if highs[j] > piv_high:
+                    is_max = False
+                    break
+
+            if is_max:
+                ob_top = piv_high
+                ob_bot = lows[piv]
+                if (ob_top - ob_bot) <= atr14[i] * ob_atr_mul:
+                    bear_ob.append((ob_top, ob_bot))
+                    if len(bear_ob) > max_ob_boxes:
+                        bear_ob.pop(0)
 
         # FVG creation
         if i >= 2:
@@ -214,42 +253,63 @@ def compute_ob_fvg_touches(
 
         # Touches on current bar
         c = candles[i]
+        cl, ch = c.l, c.h
 
         # Bull OB
-        if bull_ob:
-            found = False
-            for top, bot in bull_ob[-5:]:
-                if c.l <= top and c.h >= bot:
-                    found = True
+        m = len(bull_ob)
+        if m >= 5:
+            if cl <= bull_ob[-1][0] and ch >= bull_ob[-1][1]: bull_ob_touch[i] = True
+            elif cl <= bull_ob[-2][0] and ch >= bull_ob[-2][1]: bull_ob_touch[i] = True
+            elif cl <= bull_ob[-3][0] and ch >= bull_ob[-3][1]: bull_ob_touch[i] = True
+            elif cl <= bull_ob[-4][0] and ch >= bull_ob[-4][1]: bull_ob_touch[i] = True
+            elif cl <= bull_ob[-5][0] and ch >= bull_ob[-5][1]: bull_ob_touch[i] = True
+        elif m > 0:
+            for j in range(1, m + 1):
+                if cl <= bull_ob[-j][0] and ch >= bull_ob[-j][1]:
+                    bull_ob_touch[i] = True
                     break
-            bull_ob_touch[i] = found
 
         # Bear OB
-        if bear_ob:
-            found = False
-            for top, bot in bear_ob[-5:]:
-                if c.h >= bot and c.l <= top:
-                    found = True
+        m = len(bear_ob)
+        if m >= 5:
+            if ch >= bear_ob[-1][1] and cl <= bear_ob[-1][0]: bear_ob_touch[i] = True
+            elif ch >= bear_ob[-2][1] and cl <= bear_ob[-2][0]: bear_ob_touch[i] = True
+            elif ch >= bear_ob[-3][1] and cl <= bear_ob[-3][0]: bear_ob_touch[i] = True
+            elif ch >= bear_ob[-4][1] and cl <= bear_ob[-4][0]: bear_ob_touch[i] = True
+            elif ch >= bear_ob[-5][1] and cl <= bear_ob[-5][0]: bear_ob_touch[i] = True
+        elif m > 0:
+            for j in range(1, m + 1):
+                if ch >= bear_ob[-j][1] and cl <= bear_ob[-j][0]:
+                    bear_ob_touch[i] = True
                     break
-            bear_ob_touch[i] = found
 
         # Bull FVG
-        if bull_fvg:
-            found = False
-            for top, bot in bull_fvg[-5:]:
-                if c.l <= top and c.h >= bot:
-                    found = True
+        m = len(bull_fvg)
+        if m >= 5:
+            if cl <= bull_fvg[-1][0] and ch >= bull_fvg[-1][1]: bull_fvg_touch[i] = True
+            elif cl <= bull_fvg[-2][0] and ch >= bull_fvg[-2][1]: bull_fvg_touch[i] = True
+            elif cl <= bull_fvg[-3][0] and ch >= bull_fvg[-3][1]: bull_fvg_touch[i] = True
+            elif cl <= bull_fvg[-4][0] and ch >= bull_fvg[-4][1]: bull_fvg_touch[i] = True
+            elif cl <= bull_fvg[-5][0] and ch >= bull_fvg[-5][1]: bull_fvg_touch[i] = True
+        elif m > 0:
+            for j in range(1, m + 1):
+                if cl <= bull_fvg[-j][0] and ch >= bull_fvg[-j][1]:
+                    bull_fvg_touch[i] = True
                     break
-            bull_fvg_touch[i] = found
 
         # Bear FVG
-        if bear_fvg:
-            found = False
-            for top, bot in bear_fvg[-5:]:
-                if c.h >= bot and c.l <= top:
-                    found = True
+        m = len(bear_fvg)
+        if m >= 5:
+            if ch >= bear_fvg[-1][1] and cl <= bear_fvg[-1][0]: bear_fvg_touch[i] = True
+            elif ch >= bear_fvg[-2][1] and cl <= bear_fvg[-2][0]: bear_fvg_touch[i] = True
+            elif ch >= bear_fvg[-3][1] and cl <= bear_fvg[-3][0]: bear_fvg_touch[i] = True
+            elif ch >= bear_fvg[-4][1] and cl <= bear_fvg[-4][0]: bear_fvg_touch[i] = True
+            elif ch >= bear_fvg[-5][1] and cl <= bear_fvg[-5][0]: bear_fvg_touch[i] = True
+        elif m > 0:
+            for j in range(1, m + 1):
+                if ch >= bear_fvg[-j][1] and cl <= bear_fvg[-j][0]:
+                    bear_fvg_touch[i] = True
                     break
-            bear_fvg_touch[i] = found
 
     return bull_ob_touch, bear_ob_touch, bull_fvg_touch, bear_fvg_touch
 

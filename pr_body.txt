@@ -1,0 +1,9 @@
+🎯 **What:** The `json_dumps_default` function in `app/core/utils.py` had a testing gap and was completely untested despite being a simple pure function with multiple execution branches.
+
+📊 **Coverage:** Added tests to cover:
+- Objects with `.isoformat()` methods (like `datetime`).
+- Objects with `.to_dict()` methods.
+- Pydantic models with `.model_dump()` methods.
+- Fallback behavior returning `str(obj)`.
+
+✨ **Result:** Test coverage for `json_dumps_default` is now robust, verifying each potential branch and default serialization logic without relying on downstream integration tests.

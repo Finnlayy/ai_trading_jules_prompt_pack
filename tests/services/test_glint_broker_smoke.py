@@ -272,3 +272,113 @@ class TestGlintBrokerHealth:
         assert health["mode"] == "dry-run"
         assert health["ready"] is True
         assert health["live_capable"] is False
+
+    def test_rejected_trade_records_reason(self, glint_broker_dry_run):
+        payload = _payload(symbol="ETHUSDT", direction="SHORT", intent="ENTRY")
+        entry = glint_broker_dry_run.execute_trade(
+            payload=payload,
+            decision=DecisionEnum.REJECT,
+            reject_reason="AI_CONFIDENCE_LOW",
+            ai_decision=AIDecisionEnum.REJECT,
+        )
+
+        assert entry.final_decision == FinalDecisionEnum.REJECTED
+        assert entry.result["status"] == "REJECTED"
+        assert "AI_CONFIDENCE_LOW" in entry.result["reject_reason"]
+        assert any("REJECT: ETHUSDT AI_CONFIDENCE_LOW" in msg for msg in glint_broker_dry_run.notifier.messages)
+
+class TestGlintBrokerMissingCoverage:
+    def test_get_broker_mode_simulation(self):
+        broker = GlintBroker(
+            config=GlintConfig(enabled=False, live_trading_enabled=False),
+            journal_path="/tmp/test_glint_journal.jsonl",
+        )
+        assert broker.get_broker_mode() == "simulation"
+
+    def test_get_wallet_balances_when_not_ready(self):
+        broker = GlintBroker(
+            config=GlintConfig(enabled=True, telegram_chat_id=""),
+            journal_path="/tmp/test_glint_journal.jsonl",
+        )
+        result = broker.get_wallet_balances()
+        assert result["error"] == "not_ready"
+
+    def test_get_wallet_balances_when_ready(self, glint_broker_dry_run):
+        result = glint_broker_dry_run.get_wallet_balances()
+        assert result["raw_response"] == "[MOCK: GLINT response]"
+        assert "queried_at" in result
+
+    def test_wait_for_glint_response_no_bot_username(self):
+        broker = GlintBroker(
+            config=GlintConfig(enabled=True, telegram_chat_id="-1", bot_username=""),
+            journal_path="/tmp/test_glint_journal.jsonl",
+        )
+        broker = _patch_broker(broker)
+        # remove the mock to test the real method
+        del broker._wait_for_glint_response
+        result = broker._wait_for_glint_response()
+        assert "No GLINT bot_username configured" in result
+
+    def test_wait_for_glint_response_timeout(self):
+        broker = GlintBroker(
+            config=GlintConfig(enabled=True, telegram_chat_id="-1", bot_username="GlintTradeBot"),
+            journal_path="/tmp/test_glint_journal.jsonl",
+        )
+        broker = _patch_broker(broker)
+        # remove the mock to test the real method
+        del broker._wait_for_glint_response
+        # It's going to wait for the timeout, so let's mock time.time or sleep to make it fast
+        import time
+        broker.receiver.poll_sync = lambda limit=10: []
+        result = broker._wait_for_glint_response(timeout_seconds=0.1)
+        assert "Timeout after" in result
+
+    def test_wait_for_glint_response_success(self):
+        broker = GlintBroker(
+            config=GlintConfig(enabled=True, telegram_chat_id="-1", bot_username="GlintTradeBot"),
+            journal_path="/tmp/test_glint_journal.jsonl",
+        )
+        broker = _patch_broker(broker)
+        # remove the mock to test the real method
+        del broker._wait_for_glint_response
+
+        class FakeMessage:
+            def __init__(self, sender, text):
+                self.sender = sender
+                self.text = text
+
+        # Send one correct and one incorrect
+        broker.receiver.poll_sync = lambda limit=10: [
+            FakeMessage(sender="someone_else", text="wrong msg"),
+            FakeMessage(sender="@GlintTradeBot", text="CORRECT MSG")
+        ]
+
+        result = broker._wait_for_glint_response(timeout_seconds=1)
+        assert result == "CORRECT MSG"
+
+    def test_compute_size_with_size_usdt(self):
+        broker = GlintBroker()
+        payload = _payload()
+        object.__setattr__(payload, 'size_usdt', 100.0)
+        assert broker._compute_size(payload) == 100.0
+
+    def test_compute_size_with_size(self):
+        broker = GlintBroker()
+        payload = _payload()
+        # Mock size to ensure size logic fallback works
+        object.__setattr__(payload, 'size_usdt', None)
+        object.__setattr__(payload, 'size', 120.0)
+        assert broker._compute_size(payload) == 120.0
+
+    def test_build_entry_short(self, glint_broker_dry_run):
+        # We need a SHORT direction payload to hit lines 256
+        payload = _payload(symbol="ETHUSDT", direction="SHORT", intent="ENTRY", entry_price=100.0, stop_price=110.0, target_price=80.0)
+        entry = glint_broker_dry_run.execute_trade(
+            payload=payload,
+            decision=DecisionEnum.PROCEED_TO_SIMULATION,
+            ai_decision=AIDecisionEnum.PROCEED_TO_SIMULATION,
+        )
+        # Reward: entry - target = 100 - 80 = 20
+        # Risk: stop - entry = 110 - 100 = 10
+        # RR = 2.0
+        assert entry.risk_reward == 2.0
