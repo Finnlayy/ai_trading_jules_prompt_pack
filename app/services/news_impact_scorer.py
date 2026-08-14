@@ -15,6 +15,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from collections import Counter
 from typing import List, Sequence
 
 from app.services.news_aggregator import NewsItem
@@ -216,13 +217,13 @@ class NewsImpactScorer:
         ) / total_weight
 
         # Dominant topics = most frequent pattern keywords in titles
-        topic_counts: dict[str, int] = {}
+        topic_counts = Counter()
         for s in scored_items:
             title_lower = s.item.title.lower()
             for topic in ("hack", "regulation", "etf", "futures", "sec", "fed", "cpi", "war", "ban", "partnership", "upgrade"):
                 if topic in title_lower:
-                    topic_counts[topic] = topic_counts.get(topic, 0) + 1
-        dominant = sorted(topic_counts, key=topic_counts.get, reverse=True)[:3]
+                    topic_counts[topic] += 1
+        dominant = [topic for topic, _ in topic_counts.most_common(3)]
 
         summary = NewsImpactSummary(
             symbol="",
