@@ -3,6 +3,9 @@
   "last_switch": null,
   "available": [
     "default",
-    "pattern_enhanced"
+    "pattern_enhanced",
+    "Top2_HYPEUSDT_GA_CrossAlgo_Optimized",
+    "Top1_HYPEUSDT_GA_CrossAlgo_Optimized",
+    "Top3_HYPEUSDT_GA_CrossAlgo_Optimized"
   ]
 }

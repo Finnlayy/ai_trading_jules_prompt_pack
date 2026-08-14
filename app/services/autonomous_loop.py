@@ -21,6 +21,7 @@ from app.core.config import (
     BROKER_MODE,
 )
 from app.schemas.m8_payload import M8Payload
+from app.services.last_processed_bar_store import LastProcessedBarStore, last_processed_bar_store
 from app.services.signal_generator import BybitDataFeed, SignalGenerator
 from app.services.strategy_engine import strategy_registry
 from app.services.watchlist_manager import WatchlistManager, WatchlistItem, watchlist_manager
@@ -41,8 +42,8 @@ class StrategyRotationLog:
 class AutonomousTradingLoop:
     """
     Asyncio-based background trading loop.
-    Polls symbols from the watchlist, generates signals, and executes
-    them through the existing process_signal pipeline.
+    Polls symbols from the watchlist, generates candidates, and executes
+    them through the paper-training pipeline.
     """
 
     def __init__(self) -> None:
@@ -53,6 +54,7 @@ class AutonomousTradingLoop:
         self._watchlist = watchlist_manager
         self._health = LoopHealthMonitor()
         self._generator = SignalGenerator()
+        self._processed_bars: LastProcessedBarStore = last_processed_bar_store
         self._last_poll_times: dict[str, datetime] = {}
         self._rotation_log: List[StrategyRotationLog] = []
         self._error_timestamps: List[float] = []
@@ -97,6 +99,8 @@ class AutonomousTradingLoop:
                 self.is_running and not self.is_paused
             ).__dict__,
             "current_strategy_id": strategy_registry.active_strategy_id,
+            "last_generation_summary": getattr(self._generator, "last_generation_summary", {}),
+            "last_processed_bars": self._processed_bars.dump(),
         }
 
     def get_rotation_log(self) -> List[dict]:
@@ -147,33 +151,42 @@ class AutonomousTradingLoop:
                 if AUTONOMOUS_LOOP_STRATEGY_ROTATION_ENABLED:
                     await self._check_strategy_rotation(item)
 
-                # Generate payloads
+                # Generate at most one live-paper candidate from the latest
+                # closed candle. Historical replay belongs in backtests.
                 try:
-                    payloads = self._generator.generate_payloads(
+                    last_processed_ts = self._processed_bars.get(item.symbol, tf)
+                    payload = self._generator.generate_latest_candidate(
                         symbol=item.symbol,
                         timeframe=tf,
                         bars=200,
                         min_confluence=item.min_confluence,
+                        last_processed_ts=last_processed_ts,
                     )
                 except Exception as exc:
                     self._health.stats.record_error(f"Signal generation failed for {item.symbol}: {exc}")
                     continue
 
-                if payloads:
+                summary = getattr(self._generator, "last_generation_summary", {}) or {}
+                latest_ts = summary.get("last_closed_bar_ts")
+
+                if payload:
                     self._health.stats.record_signal()
-                    await self._execute_payloads(payloads)
+                    await self._execute_payloads([payload])
+
+                if self._processed_bars.should_process(item.symbol, tf, latest_ts):
+                    self._processed_bars.mark_processed(item.symbol, tf, int(latest_ts))
 
                 self._last_poll_times[f"{item.symbol}:{tf}"] = datetime.now(timezone.utc)
 
     async def _execute_payloads(self, payloads: list[M8Payload]) -> None:
-        from app.api.orchestrator import process_signal
+        from app.services.paper_training_pipeline import paper_training_pipeline
 
         for payload in payloads:
             if not self.is_running or self.is_paused:
                 break
             try:
-                result = await process_signal(payload)
-                if result.get("final_decision") == "EXECUTED_SIM":
+                result = await paper_training_pipeline.process_candidate(payload)
+                if result.get("final_decision") == "PAPER_EXECUTED":
                     self._health.stats.record_trade()
             except Exception as exc:
                 self._health.stats.record_error(f"Execution failed for {payload.signal_id}: {exc}")

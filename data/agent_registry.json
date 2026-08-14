@@ -1,9 +1,9 @@
 [
   {
-    "scout_id": "859a312f-b79a-443e-a9f2-26744100a3ab",
-    "name": "technical",
-    "archetype": "Analyst",
-    "created_at": "2026-05-26T22:01:25.908945",
+    "scout_id": "db825c14-0908-4e0c-8093-eca617def859",
+    "name": "macro_sentinel",
+    "archetype": "Stratege",
+    "created_at": "2026-07-04T00:15:36.513441+00:00",
     "born_from": "v1_base",
     "generation": 1,
     "specialization_symbols": [],
@@ -12,25 +12,47 @@
         "name": "Apprentice",
         "description": "10+ Calls",
         "icon": "\ud83e\udd49",
-        "awarded_at": "2026-05-27T01:43:28.776285"
+        "awarded_at": "2026-08-06T23:14:55.871110+00:00"
       },
       {
         "name": "Streak",
         "description": "10 correct calls in a row",
         "icon": "\u26a1",
-        "awarded_at": "2026-05-27T01:43:28.776296"
+        "awarded_at": "2026-08-06T23:14:55.871117+00:00"
+      }
+    ],
+    "personality_vector": {
+      "analytical": 0.7,
+      "cautious": 0.7,
+      "momentum_driven": 0.3
+    },
+    "total_calls": 42,
+    "correct_calls": 42,
+    "accuracy": 1.0,
+    "current_streak": 42,
+    "confidence_level": 0.5,
+    "experience_level": "Novice"
+  },
+  {
+    "scout_id": "31b23979-9f5d-414e-93a0-75481f38d36d",
+    "name": "market_dna",
+    "archetype": "Analyst",
+    "created_at": "2026-07-04T00:15:36.513493+00:00",
+    "born_from": "v1_base",
+    "generation": 1,
+    "specialization_symbols": [],
+    "badges": [
+      {
+        "name": "Apprentice",
+        "description": "10+ Calls",
+        "icon": "\ud83e\udd49",
+        "awarded_at": "2026-08-06T23:14:55.871315+00:00"
       },
       {
-        "name": "Adept",
-        "description": "50+ Calls, 60%+ Accuracy",
-        "icon": "\ud83e\udd48",
-        "awarded_at": "2026-05-27T16:00:19.119927+00:00"
-      },
-      {
-        "name": "Expert",
-        "description": "100+ Calls, 70%+ Accuracy",
-        "icon": "\ud83e\udd47",
-        "awarded_at": "2026-05-28T16:43:52.633253+00:00"
+        "name": "Streak",
+        "description": "10 correct calls in a row",
+        "icon": "\u26a1",
+        "awarded_at": "2026-08-06T23:14:55.871323+00:00"
       }
     ],
     "personality_vector": {
@@ -38,60 +60,46 @@
       "cautious": 0.4,
       "momentum_driven": 0.8
     },
-    "total_calls": 364,
-    "correct_calls": 311,
-    "accuracy": 0.8543956043956044,
-    "current_streak": 0
+    "total_calls": 42,
+    "correct_calls": 42,
+    "accuracy": 1.0,
+    "current_streak": 42,
+    "confidence_level": 0.5,
+    "experience_level": "Novice"
   },
   {
-    "scout_id": "8589bbb2-ddcc-410e-8bb9-45717a852987",
-    "name": "sentiment",
-    "archetype": "Diplomat",
-    "created_at": "2026-05-26T22:01:25.909119",
+    "scout_id": "9b8545d0-c156-444f-b2cf-0f05df3eabd2",
+    "name": "structural_architect",
+    "archetype": "Architekt",
+    "created_at": "2026-07-04T00:15:36.513513+00:00",
     "born_from": "v1_base",
-    "generation": 1,
+    "generation": 2,
     "specialization_symbols": [],
     "badges": [
       {
         "name": "Apprentice",
         "description": "10+ Calls",
         "icon": "\ud83e\udd49",
-        "awarded_at": "2026-05-27T01:43:28.780273"
-      },
-      {
-        "name": "Streak",
-        "description": "10 correct calls in a row",
-        "icon": "\u26a1",
-        "awarded_at": "2026-05-27T01:43:28.780282"
-      },
-      {
-        "name": "Adept",
-        "description": "50+ Calls, 60%+ Accuracy",
-        "icon": "\ud83e\udd48",
-        "awarded_at": "2026-05-27T16:00:19.122788+00:00"
-      },
-      {
-        "name": "Expert",
-        "description": "100+ Calls, 70%+ Accuracy",
-        "icon": "\ud83e\udd47",
-        "awarded_at": "2026-05-28T16:43:52.636034+00:00"
+        "awarded_at": "2026-08-06T23:14:55.871455+00:00"
       }
     ],
     "personality_vector": {
-      "analytical": 0.3,
-      "cautious": 0.5,
-      "momentum_driven": 0.9
+      "analytical": 0.8,
+      "cautious": 0.6,
+      "momentum_driven": 0.2
     },
-    "total_calls": 358,
-    "correct_calls": 312,
-    "accuracy": 0.8715083798882681,
-    "current_streak": 19
+    "total_calls": 42,
+    "correct_calls": 10,
+    "accuracy": 0.23809523809523808,
+    "current_streak": 0,
+    "confidence_level": 0.5,
+    "experience_level": "Novice"
   },
   {
-    "scout_id": "0d4342f0-4031-4334-9b90-0013bf190452",
-    "name": "risk",
-    "archetype": "W\u00e4chter",
-    "created_at": "2026-05-26T22:01:25.909147",
+    "scout_id": "1372631b-48b0-4935-a817-b7d09e77c45e",
+    "name": "harmony_coordinator",
+    "archetype": "Diplomat",
+    "created_at": "2026-07-04T00:15:36.513530+00:00",
     "born_from": "v1_base",
     "generation": 1,
     "specialization_symbols": [],
@@ -100,25 +108,75 @@
         "name": "Apprentice",
         "description": "10+ Calls",
         "icon": "\ud83e\udd49",
-        "awarded_at": "2026-05-27T01:43:28.784745"
+        "awarded_at": "2026-08-06T23:14:55.871560+00:00"
       },
       {
         "name": "Streak",
         "description": "10 correct calls in a row",
         "icon": "\u26a1",
-        "awarded_at": "2026-05-27T01:43:28.784761"
+        "awarded_at": "2026-08-06T23:14:55.871567+00:00"
+      }
+    ],
+    "personality_vector": {
+      "analytical": 0.5,
+      "cautious": 0.5,
+      "momentum_driven": 0.5
+    },
+    "total_calls": 42,
+    "correct_calls": 42,
+    "accuracy": 1.0,
+    "current_streak": 42,
+    "confidence_level": 0.5,
+    "experience_level": "Novice"
+  },
+  {
+    "scout_id": "f3118d25-ef01-4d2c-8921-25e620d67c17",
+    "name": "indicator_fusion",
+    "archetype": "Analyst",
+    "created_at": "2026-07-04T00:15:36.513546+00:00",
+    "born_from": "v1_base",
+    "generation": 1,
+    "specialization_symbols": [],
+    "badges": [
+      {
+        "name": "Apprentice",
+        "description": "10+ Calls",
+        "icon": "\ud83e\udd49",
+        "awarded_at": "2026-08-06T23:14:55.871691+00:00"
+      }
+    ],
+    "personality_vector": {
+      "analytical": 0.9,
+      "cautious": 0.4,
+      "momentum_driven": 0.8
+    },
+    "total_calls": 42,
+    "correct_calls": 25,
+    "accuracy": 0.5952380952380952,
+    "current_streak": 3,
+    "confidence_level": 0.5,
+    "experience_level": "Novice"
+  },
+  {
+    "scout_id": "ccd8bc9e-0b8e-4b6e-a54a-bdd4db7cf5b4",
+    "name": "risk_kernel",
+    "archetype": "W\u00e4chter",
+    "created_at": "2026-07-04T00:15:36.513561+00:00",
+    "born_from": "v1_base",
+    "generation": 1,
+    "specialization_symbols": [],
+    "badges": [
+      {
+        "name": "Apprentice",
+        "description": "10+ Calls",
+        "icon": "\ud83e\udd49",
+        "awarded_at": "2026-08-06T23:14:55.871830+00:00"
       },
       {
-        "name": "Adept",
-        "description": "50+ Calls, 60%+ Accuracy",
-        "icon": "\ud83e\udd48",
-        "awarded_at": "2026-05-27T16:00:19.125884+00:00"
-      },
-      {
-        "name": "Expert",
-        "description": "100+ Calls, 70%+ Accuracy",
-        "icon": "\ud83e\udd47",
-        "awarded_at": "2026-05-28T16:43:52.640077+00:00"
+        "name": "Streak",
+        "description": "10 correct calls in a row",
+        "icon": "\u26a1",
+        "awarded_at": "2026-08-06T23:14:55.871837+00:00"
       }
     ],
     "personality_vector": {
@@ -126,16 +184,18 @@
       "cautious": 0.95,
       "momentum_driven": 0.1
     },
-    "total_calls": 358,
-    "correct_calls": 298,
-    "accuracy": 0.8324022346368715,
-    "current_streak": 10
+    "total_calls": 42,
+    "correct_calls": 42,
+    "accuracy": 1.0,
+    "current_streak": 42,
+    "confidence_level": 0.5,
+    "experience_level": "Novice"
   },
   {
-    "scout_id": "34059d23-47bf-4280-ba75-dea7348866eb",
-    "name": "macro",
-    "archetype": "Stratege",
-    "created_at": "2026-05-26T22:01:25.909169",
+    "scout_id": "19de6a05-54b9-431a-a379-6f93ab37aa3b",
+    "name": "pine_core",
+    "archetype": "Entwickler",
+    "created_at": "2026-07-04T00:15:36.513576+00:00",
     "born_from": "v1_base",
     "generation": 1,
     "specialization_symbols": [],
@@ -144,42 +204,54 @@
         "name": "Apprentice",
         "description": "10+ Calls",
         "icon": "\ud83e\udd49",
-        "awarded_at": "2026-05-27T01:43:28.788973"
-      },
-      {
-        "name": "Streak",
-        "description": "10 correct calls in a row",
-        "icon": "\u26a1",
-        "awarded_at": "2026-05-27T01:43:28.788982"
-      },
-      {
-        "name": "Adept",
-        "description": "50+ Calls, 60%+ Accuracy",
-        "icon": "\ud83e\udd48",
-        "awarded_at": "2026-05-27T16:00:19.128440+00:00"
-      },
-      {
-        "name": "Expert",
-        "description": "100+ Calls, 70%+ Accuracy",
-        "icon": "\ud83e\udd47",
-        "awarded_at": "2026-05-28T16:43:52.644648+00:00"
+        "awarded_at": "2026-08-06T23:14:55.871977+00:00"
       }
     ],
     "personality_vector": {
-      "analytical": 0.7,
-      "cautious": 0.7,
-      "momentum_driven": 0.5
+      "analytical": 0.9,
+      "cautious": 0.6,
+      "momentum_driven": 0.3
     },
-    "total_calls": 358,
-    "correct_calls": 304,
-    "accuracy": 0.8491620111731844,
-    "current_streak": 1
+    "total_calls": 42,
+    "correct_calls": 9,
+    "accuracy": 0.21428571428571427,
+    "current_streak": 0,
+    "confidence_level": 0.5,
+    "experience_level": "Novice"
   },
   {
-    "scout_id": "cc5331fa-28cd-479e-acfc-da0c9c3cc521",
-    "name": "execution",
-    "archetype": "Operateur",
-    "created_at": "2026-05-26T23:57:21.898060",
+    "scout_id": "83b67d19-fd9c-45c4-aeaf-c114a9f5a552",
+    "name": "payload_qa",
+    "archetype": "Pr\u00fcfer",
+    "created_at": "2026-07-04T00:15:36.513591+00:00",
+    "born_from": "v1_base",
+    "generation": 3,
+    "specialization_symbols": [],
+    "badges": [
+      {
+        "name": "Apprentice",
+        "description": "10+ Calls",
+        "icon": "\ud83e\udd49",
+        "awarded_at": "2026-08-06T23:14:55.872102+00:00"
+      }
+    ],
+    "personality_vector": {
+      "analytical": 0.9,
+      "cautious": 0.9,
+      "momentum_driven": 0.1
+    },
+    "total_calls": 42,
+    "correct_calls": 24,
+    "accuracy": 0.5714285714285714,
+    "current_streak": 0,
+    "confidence_level": 0.5,
+    "experience_level": "Novice"
+  },
+  {
+    "scout_id": "ea53cc14-a8f2-44f3-b555-c8a7ceedf477",
+    "name": "execution_watchdog",
+    "archetype": "Operator",
+    "created_at": "2026-07-04T00:15:36.513606+00:00",
     "born_from": "v1_base",
     "generation": 1,
     "specialization_symbols": [],
@@ -188,25 +260,13 @@
         "name": "Apprentice",
         "description": "10+ Calls",
         "icon": "\ud83e\udd49",
-        "awarded_at": "2026-05-27T01:43:28.840178"
+        "awarded_at": "2026-08-06T23:14:55.872268+00:00"
       },
       {
         "name": "Streak",
         "description": "10 correct calls in a row",
         "icon": "\u26a1",
-        "awarded_at": "2026-05-27T01:43:28.840191"
-      },
-      {
-        "name": "Adept",
-        "description": "50+ Calls, 60%+ Accuracy",
-        "icon": "\ud83e\udd48",
-        "awarded_at": "2026-05-27T16:00:19.178913+00:00"
-      },
-      {
-        "name": "Expert",
-        "description": "100+ Calls, 70%+ Accuracy",
-        "icon": "\ud83e\udd47",
-        "awarded_at": "2026-05-28T16:43:52.721622+00:00"
+        "awarded_at": "2026-08-06T23:14:55.872275+00:00"
       }
     ],
     "personality_vector": {
@@ -214,16 +274,46 @@
       "cautious": 0.8,
       "momentum_driven": 0.2
     },
-    "total_calls": 354,
-    "correct_calls": 294,
-    "accuracy": 0.8305084745762712,
-    "current_streak": 1
+    "total_calls": 42,
+    "correct_calls": 42,
+    "accuracy": 1.0,
+    "current_streak": 42,
+    "confidence_level": 0.5,
+    "experience_level": "Novice"
   },
   {
-    "scout_id": "c5d87a22-e700-4f06-a2a8-5b3a4190327d",
-    "name": "correlation",
-    "archetype": "Architekt",
-    "created_at": "2026-05-26T23:57:21.898143",
+    "scout_id": "5a1e8c31-a698-42eb-9698-e85972ef5f77",
+    "name": "evolution_optimizer",
+    "archetype": "Forscher",
+    "created_at": "2026-07-04T00:15:36.513622+00:00",
+    "born_from": "v1_base",
+    "generation": 3,
+    "specialization_symbols": [],
+    "badges": [
+      {
+        "name": "Apprentice",
+        "description": "10+ Calls",
+        "icon": "\ud83e\udd49",
+        "awarded_at": "2026-08-06T23:14:55.872410+00:00"
+      }
+    ],
+    "personality_vector": {
+      "analytical": 0.8,
+      "cautious": 0.4,
+      "momentum_driven": 0.6
+    },
+    "total_calls": 42,
+    "correct_calls": 2,
+    "accuracy": 0.047619047619047616,
+    "current_streak": 0,
+    "confidence_level": 0.5,
+    "experience_level": "Novice"
+  },
+  {
+    "scout_id": "f99d00f8-0cd9-419e-9bae-9722b7d7862a",
+    "name": "technical",
+    "archetype": "Analyst",
+    "created_at": "2026-07-04T00:15:36.513637+00:00",
     "born_from": "v1_base",
     "generation": 1,
     "specialization_symbols": [],
@@ -232,25 +322,165 @@
         "name": "Apprentice",
         "description": "10+ Calls",
         "icon": "\ud83e\udd49",
-        "awarded_at": "2026-05-27T01:43:28.844577"
+        "awarded_at": "2026-08-06T23:14:55.870193+00:00"
       },
       {
         "name": "Streak",
         "description": "10 correct calls in a row",
         "icon": "\u26a1",
-        "awarded_at": "2026-05-27T01:43:28.844586"
+        "awarded_at": "2026-08-06T23:14:55.870211+00:00"
+      }
+    ],
+    "personality_vector": {
+      "analytical": 0.9,
+      "cautious": 0.4,
+      "momentum_driven": 0.8
+    },
+    "total_calls": 42,
+    "correct_calls": 42,
+    "accuracy": 1.0,
+    "current_streak": 42,
+    "confidence_level": 0.5,
+    "experience_level": "Novice"
+  },
+  {
+    "scout_id": "210906c4-8051-49e7-91e7-4036807fac62",
+    "name": "sentiment",
+    "archetype": "Diplomat",
+    "created_at": "2026-07-04T00:15:36.513652+00:00",
+    "born_from": "v1_base",
+    "generation": 4,
+    "specialization_symbols": [],
+    "badges": [
+      {
+        "name": "Apprentice",
+        "description": "10+ Calls",
+        "icon": "\ud83e\udd49",
+        "awarded_at": "2026-08-06T23:14:55.870423+00:00"
+      }
+    ],
+    "personality_vector": {
+      "analytical": 0.3,
+      "cautious": 0.5,
+      "momentum_driven": 0.9
+    },
+    "total_calls": 42,
+    "correct_calls": 26,
+    "accuracy": 0.6190476190476191,
+    "current_streak": 0,
+    "confidence_level": 0.5,
+    "experience_level": "Novice"
+  },
+  {
+    "scout_id": "5a48241f-8151-4a64-b6dd-e435118026cc",
+    "name": "risk",
+    "archetype": "Guardian",
+    "created_at": "2026-07-04T00:15:36.513666+00:00",
+    "born_from": "v1_base",
+    "generation": 2,
+    "specialization_symbols": [],
+    "badges": [
+      {
+        "name": "Apprentice",
+        "description": "10+ Calls",
+        "icon": "\ud83e\udd49",
+        "awarded_at": "2026-08-06T23:14:55.870563+00:00"
+      }
+    ],
+    "personality_vector": {
+      "analytical": 0.8,
+      "cautious": 0.95,
+      "momentum_driven": 0.1
+    },
+    "total_calls": 42,
+    "correct_calls": 10,
+    "accuracy": 0.23809523809523808,
+    "current_streak": 0,
+    "confidence_level": 0.5,
+    "experience_level": "Novice"
+  },
+  {
+    "scout_id": "034bdecd-be92-40a3-95c9-64b02e2c182d",
+    "name": "macro",
+    "archetype": "Strategist",
+    "created_at": "2026-07-04T00:15:36.513682+00:00",
+    "born_from": "v1_base",
+    "generation": 2,
+    "specialization_symbols": [],
+    "badges": [
+      {
+        "name": "Apprentice",
+        "description": "10+ Calls",
+        "icon": "\ud83e\udd49",
+        "awarded_at": "2026-08-06T23:14:55.870684+00:00"
+      }
+    ],
+    "personality_vector": {
+      "analytical": 0.7,
+      "cautious": 0.7,
+      "momentum_driven": 0.5
+    },
+    "total_calls": 42,
+    "correct_calls": 25,
+    "accuracy": 0.5952380952380952,
+    "current_streak": 0,
+    "confidence_level": 0.5,
+    "experience_level": "Novice"
+  },
+  {
+    "scout_id": "f859146b-8499-4f05-b317-5a1bddc7b994",
+    "name": "execution",
+    "archetype": "Operator",
+    "created_at": "2026-07-04T00:15:36.513696+00:00",
+    "born_from": "v1_base",
+    "generation": 1,
+    "specialization_symbols": [],
+    "badges": [
+      {
+        "name": "Apprentice",
+        "description": "10+ Calls",
+        "icon": "\ud83e\udd49",
+        "awarded_at": "2026-08-06T23:14:55.870817+00:00"
       },
       {
-        "name": "Adept",
-        "description": "50+ Calls, 60%+ Accuracy",
-        "icon": "\ud83e\udd48",
-        "awarded_at": "2026-05-27T16:00:19.182211+00:00"
+        "name": "Streak",
+        "description": "10 correct calls in a row",
+        "icon": "\u26a1",
+        "awarded_at": "2026-08-06T23:14:55.870825+00:00"
+      }
+    ],
+    "personality_vector": {
+      "analytical": 0.9,
+      "cautious": 0.8,
+      "momentum_driven": 0.2
+    },
+    "total_calls": 42,
+    "correct_calls": 42,
+    "accuracy": 1.0,
+    "current_streak": 42,
+    "confidence_level": 0.5,
+    "experience_level": "Novice"
+  },
+  {
+    "scout_id": "ce942ba7-360a-44f4-a1f9-eb2d51c836d1",
+    "name": "correlation",
+    "archetype": "Architect",
+    "created_at": "2026-07-04T00:15:36.513710+00:00",
+    "born_from": "v1_base",
+    "generation": 1,
+    "specialization_symbols": [],
+    "badges": [
+      {
+        "name": "Apprentice",
+        "description": "10+ Calls",
+        "icon": "\ud83e\udd49",
+        "awarded_at": "2026-08-06T23:14:55.870968+00:00"
       },
       {
-        "name": "Expert",
-        "description": "100+ Calls, 70%+ Accuracy",
-        "icon": "\ud83e\udd47",
-        "awarded_at": "2026-05-28T16:43:52.725294+00:00"
+        "name": "Streak",
+        "description": "10 correct calls in a row",
+        "icon": "\u26a1",
+        "awarded_at": "2026-08-06T23:14:55.870974+00:00"
       }
     ],
     "personality_vector": {
@@ -258,9 +488,28 @@
       "cautious": 0.85,
       "momentum_driven": 0.1
     },
-    "total_calls": 354,
-    "correct_calls": 310,
-    "accuracy": 0.8757062146892656,
-    "current_streak": 20
+    "total_calls": 42,
+    "correct_calls": 42,
+    "accuracy": 1.0,
+    "current_streak": 42,
+    "confidence_level": 0.5,
+    "experience_level": "Novice"
+  },
+  {
+    "scout_id": "5753e706-d0d2-46e6-ae47-8ae536bf2b1d",
+    "name": "test-agent",
+    "archetype": "Analyst",
+    "created_at": "2026-07-04T00:17:09.700857+00:00",
+    "born_from": "ui_deploy",
+    "generation": 1,
+    "specialization_symbols": [],
+    "badges": [],
+    "personality_vector": {},
+    "total_calls": 0,
+    "correct_calls": 0,
+    "accuracy": 0.0,
+    "current_streak": 0,
+    "confidence_level": 0.5,
+    "experience_level": "Novice"
   }
 ]
