@@ -130,9 +130,6 @@ class TrainingLoopService:
             if policy_action.drill_profile != "default":
                 drill = drill.model_copy(update={"drill_type": policy_action.drill_profile})
 
-            # 2. Simulate AI decision (for MVP, we use simple random/weighted logic instead of full LLM call)
-            # In a real impl, we would call `ai_kimi.py` or similar
-            # We mock it based on their accuracy to keep it somewhat realistic
             identity = agent_registry.get_identity(scout)
             acc = identity.accuracy if identity and identity.accuracy > 0 else 0.5
 

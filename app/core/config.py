@@ -341,7 +341,7 @@ PIONEX_DIRECT_MAX_BASE_SIZE = _as_float(os.getenv("PIONEX_DIRECT_MAX_BASE_SIZE")
 PIONEX_DIRECT_MIN_BASE_SIZE = _as_float(os.getenv("PIONEX_DIRECT_MIN_BASE_SIZE"), 0.0001)
 
 # AI availability policy for live-capable modes
-AI_FAILURE_POLICY = os.getenv("AI_FAILURE_POLICY", "reject_live").strip().lower()  # reject_live|allow_live
+AI_FAILURE_POLICY = os.getenv("AI_FAILURE_POLICY", "reject_live").strip().lower()
 AI_TELEGRAM_ADVISORS_ENABLED = _as_bool(os.getenv("AI_TELEGRAM_ADVISORS_ENABLED"), False)
 AI_TELEGRAM_ADVISOR_TIMEOUT_SECONDS = _as_float(os.getenv("AI_TELEGRAM_ADVISOR_TIMEOUT_SECONDS"), 20.0)
 
@@ -450,4 +450,4 @@ PAPER_TRADING_RELAX_RISK = _as_bool(os.getenv("PAPER_TRADING_RELAX_RISK"), True)
 
 
 # CORS configuration
-CORS_ORIGINS = _as_csv_list(os.getenv("CORS_ORIGINS", "*"))
+CORS_ORIGINS = _as_csv_list(os.getenv("CORS_ORIGINS", ""))

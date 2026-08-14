@@ -10,11 +10,9 @@ logger = logging.getLogger(__name__)
 from pathlib import Path
 
 from fastapi import FastAPI, Depends
-from fastapi import FastAPI
-from fastapi.responses import RedirectResponse, Response
+from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import CORS_ORIGINS
-from fastapi.responses import FileResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from app.api.auth import router as auth_router, get_current_user
 from fastapi import Depends
@@ -47,6 +45,10 @@ from app.api.agentic import router as agentic_router
 from app.api.simulator import router as simulator_router
 from app.services.webhook_consumer import webhook_consumer_instance
 from app.services.position_monitor import paper_position_monitor_instance
+
+logger = logging.getLogger(__name__)
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Agent-Reflex Hybrid Trader API",
@@ -216,6 +218,7 @@ async def _shadow_queue_loop():
 
 @app.on_event("startup")
 def startup_event():
+    global _heartbeat_task, _news_poll_task, _autostart_task, _training_autostart_task, _shadow_queue_task
     # Create DB tables
     from app.db import Base, engine
     Base.metadata.create_all(bind=engine)

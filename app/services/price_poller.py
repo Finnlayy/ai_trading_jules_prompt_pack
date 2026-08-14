@@ -103,9 +103,6 @@ class PricePoller:
                 if positions:
                     # Normalize symbols for ticker lookup
                     normalized_symbols = list({normalize_symbol(p.symbol) for p in positions})
-                    normalized_symbols = list(
-                        {normalize_symbol(p.symbol) for p in positions}
-                    )
                     prices = await self._fetch_prices(normalized_symbols)
                     self._last_prices.update(prices)
 

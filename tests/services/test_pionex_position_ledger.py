@@ -1,18 +1,18 @@
 import json
 
-from app.services.pionex_position_ledger import PositionLedger
+from app.services.pionex_position_ledger import PositionLedger, LedgerEntry
 
 
 def test_position_ledger_entry_and_close_flow():
     ledger = PositionLedger()
-    state = ledger.apply_entry(
+    state = ledger.apply_entry(LedgerEntry(
         symbol="BTC_USDT",
         account_mode="SPOT",
         direction="LONG",
         size_base=0.5,
         entry_price=100.0,
         risk_amount=20.0,
-    )
+    ))
     assert state.size_base == 0.5
     assert ledger.get("BTC_USDT", "SPOT") is not None
 
