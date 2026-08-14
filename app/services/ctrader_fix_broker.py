@@ -347,38 +347,46 @@ class CTraderFixClient:
                 if msg_type == "1":  # TestRequest
                     self._send_heartbeat()
                     continue
-                if msg_type == "8":  # ExecutionReport
-                    exec_type = msg.get("150")
-                    ord_status = msg.get("39")
-                    report_cl_ord_id = msg.get("11", "")
-                    if report_cl_ord_id == cl_ord_id or not report_cl_ord_id:
-                        result["order_id"] = msg.get("37")
-                        result["exec_id"] = msg.get("17")
-                        result["exec_type"] = exec_type
-                        result["ord_status"] = ord_status
-                        result["symbol"] = msg.get("55")
-                        result["side"] = msg.get("54")
-                        result["qty"] = msg.get("38")
-                        result["price"] = msg.get("44")
-                        result["last_qty"] = msg.get("32")
-                        result["last_price"] = msg.get("31")
-                        result["text"] = msg.get("58")
 
-                        if exec_type == "F" and ord_status == "2":  # Fill
-                            result["status"] = "FILLED"
-                            return result
-                        elif exec_type == "F" and ord_status == "1":  # Partial fill
-                            result["status"] = "PARTIAL"
-                        elif ord_status == "0":  # New
-                            result["status"] = "NEW"
-                        elif ord_status in {"4", "C"}:  # Canceled / Expired
-                            result["status"] = "REJECTED"
-                            result["error"] = msg.get("58", "Order rejected")
-                            return result
-                elif msg_type == "3":  # Reject
+                if msg_type == "3":  # Reject
                     result["status"] = "REJECTED"
                     result["error"] = msg.get("58", "Session reject")
                     return result
+
+                if msg_type != "8":  # ExecutionReport
+                    continue
+
+                report_cl_ord_id = msg.get("11", "")
+                if report_cl_ord_id and report_cl_ord_id != cl_ord_id:
+                    continue
+
+                exec_type = msg.get("150")
+                ord_status = msg.get("39")
+
+                result["order_id"] = msg.get("37")
+                result["exec_id"] = msg.get("17")
+                result["exec_type"] = exec_type
+                result["ord_status"] = ord_status
+                result["symbol"] = msg.get("55")
+                result["side"] = msg.get("54")
+                result["qty"] = msg.get("38")
+                result["price"] = msg.get("44")
+                result["last_qty"] = msg.get("32")
+                result["last_price"] = msg.get("31")
+                result["text"] = msg.get("58")
+
+                if exec_type == "F" and ord_status == "2":  # Fill
+                    result["status"] = "FILLED"
+                    return result
+                elif exec_type == "F" and ord_status == "1":  # Partial fill
+                    result["status"] = "PARTIAL"
+                elif ord_status == "0":  # New
+                    result["status"] = "NEW"
+                elif ord_status in {"4", "C"}:  # Canceled / Expired
+                    result["status"] = "REJECTED"
+                    result["error"] = msg.get("58", "Order rejected")
+                    return result
+
         return result
 
     def _send_heartbeat(self) -> None:
