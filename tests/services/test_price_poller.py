@@ -10,7 +10,7 @@ from unittest.mock import patch, MagicMock, AsyncMock
 import pytest
 
 from app.services.price_poller import PricePoller
-from app.services.live_fill_tracker import live_fill_tracker, FillData
+from app.services.live_fill_tracker import live_fill_tracker, FillData, PositionIntent
 
 
 @pytest.fixture(autouse=True)
@@ -25,25 +25,20 @@ def reset_tracker_and_poller():
     poller.stop()
 
 
-def _create_position(
-    trade_id: str,
-    symbol: str,
-    direction: str,
-    entry: float,
-    stop: float,
-    target: float,
-    size: float = 1.0,
-):
-    live_fill_tracker.record_intent(
+def _create_position(trade_id: str, symbol: str, direction: str,
+                     entry: float, stop: float, target: float, size: float = 1.0):
+    intent = PositionIntent(
         trade_id=trade_id,
         symbol=symbol,
         direction=direction,
         entry_price=entry,
         stop_price=stop,
         target_price=target,
-        decision="PROCEED_TO_SIMULATION",
         size=size,
+        strategy_id=None,
+        decision="PROCEED_TO_SIMULATION",
     )
+    live_fill_tracker.record_intent(intent)
     live_fill_tracker.record_fill(
         trade_id,
         FillData(

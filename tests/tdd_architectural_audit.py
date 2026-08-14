@@ -143,20 +143,23 @@ async def test_event_bus_captures_events_without_connected_clients():
 # ---------------------------------------------------------------------------
 def test_db_close_syncs_to_live_fill_tracker():
     """RED: Closing a position in DB must invalidate the in-memory cache."""
-    from app.services.live_fill_tracker import live_fill_tracker, FillData
+    from app.services.live_fill_tracker import live_fill_tracker, FillData, PositionIntent
     from app.db import SessionLocal
     from app.db.repository import PositionRepository
 
     # 1. Create an open position via the tracker (memory + DB)
-    live_fill_tracker.record_intent(
+    intent = PositionIntent(
         trade_id="audit-pos-001",
         symbol="BTCUSDT",
         direction="LONG",
         entry_price=50000.0,
         stop_price=48000.0,
         target_price=54000.0,
+        size=None,
+        strategy_id=None,
         decision="PROCEED_TO_SIMULATION",
     )
+    live_fill_tracker.record_intent(intent)
     live_fill_tracker.record_fill(
         trade_id="audit-pos-001",
         fill_data=FillData(

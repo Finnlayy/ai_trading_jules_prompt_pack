@@ -240,18 +240,22 @@ async def process_signal(payload: M8Payload):
     journal_entry = await _execute_trade_with_broker(payload, decision_result, ai_review.decision)
 
     # 4. Live Fill Tracking
-    from app.services.live_fill_tracker import live_fill_tracker
-    live_fill_tracker.record_intent(
+    from app.services.live_fill_tracker import live_fill_tracker, FillData, PositionIntent
+    from app.services.dashboard_sse import dashboard_sse_manager
+
+    intent = PositionIntent(
         trade_id=journal_entry.trade_id,
         symbol=payload.symbol,
         direction=payload.direction,
         entry_price=payload.entry_price,
         stop_price=payload.stop_price,
         target_price=payload.target_price,
-        decision=decision_result["decision"],
+        size=None,
         strategy_id=payload.strategy_id,
+        decision=decision_result["decision"],
         ai_trace=ai_review.audit_trace,
     )
+    live_fill_tracker.record_intent(intent)
     
     # 5. Journaling
     # ⚡ Bolt Optimization: Offload synchronous I/O to worker thread pool
@@ -363,18 +367,22 @@ async def process_manual_signal(payload: M8Payload):
     journal_entry = await _execute_trade_with_broker(payload, decision_result, ai_review.decision)
 
     # 4. Live Fill Tracking
-    from app.services.live_fill_tracker import live_fill_tracker
-    live_fill_tracker.record_intent(
+    from app.services.live_fill_tracker import live_fill_tracker, FillData, PositionIntent
+    from app.services.dashboard_sse import dashboard_sse_manager
+
+    intent = PositionIntent(
         trade_id=journal_entry.trade_id,
         symbol=payload.symbol,
         direction=payload.direction,
         entry_price=payload.entry_price,
         stop_price=payload.stop_price,
         target_price=payload.target_price,
-        decision=decision_result["decision"],
+        size=None,
         strategy_id=payload.strategy_id,
+        decision=decision_result["decision"],
         ai_trace=ai_review.audit_trace,
     )
+    live_fill_tracker.record_intent(intent)
 
     # 5. Journaling
     # ⚡ Bolt Optimization: Offload synchronous I/O to worker thread pool

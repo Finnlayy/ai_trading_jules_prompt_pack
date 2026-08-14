@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from app.services.live_fill_tracker import LiveFillTracker, FillData, live_fill_tracker
+from app.services.live_fill_tracker import LiveFillTracker, FillData, live_fill_tracker, PositionIntent
 from app.services.performance_calculator import PerformanceCalculator
 from app.services.dashboard_sse import DashboardSSEManager, SSEEvent
 
@@ -25,16 +25,18 @@ def test_record_intent_and_fill():
     tracker = LiveFillTracker()
     tracker.reset()
 
-    tracker.record_intent(
+    intent = PositionIntent(
         trade_id="test-001",
         symbol="BTCUSDT",
         direction="LONG",
         entry_price=100000.0,
         stop_price=99000.0,
         target_price=102000.0,
-        decision="PROCEED_TO_SIMULATION",
+        size=None,
         strategy_id="default",
+        decision="PROCEED_TO_SIMULATION",
     )
+    tracker.record_intent(intent)
 
     fill = FillData(
         entry_price=100000.0,
@@ -57,11 +59,13 @@ def test_record_exit_updates_realized_pnl():
     tracker = LiveFillTracker()
     tracker.reset()
 
-    tracker.record_intent(
+    intent = PositionIntent(
         trade_id="test-002", symbol="ETHUSDT", direction="LONG",
         entry_price=3000.0, stop_price=2900.0, target_price=3200.0,
+        size=None, strategy_id=None,
         decision="PROCEED_TO_SIMULATION",
     )
+    tracker.record_intent(intent)
     tracker.record_fill("test-002", FillData(
         entry_price=3000.0, fill_time=datetime.now(timezone.utc),
         size=1.0, side="LONG", fees=3.0, slippage=1.0,
@@ -75,11 +79,13 @@ def test_update_price_changes_unrealized_pnl():
     tracker = LiveFillTracker()
     tracker.reset()
 
-    tracker.record_intent(
+    intent = PositionIntent(
         trade_id="test-003", symbol="SOLUSDT", direction="LONG",
         entry_price=100.0, stop_price=90.0, target_price=120.0,
+        size=None, strategy_id=None,
         decision="PROCEED_TO_SIMULATION",
     )
+    tracker.record_intent(intent)
     tracker.record_fill("test-003", FillData(
         entry_price=100.0, fill_time=datetime.now(timezone.utc),
         size=10.0, side="LONG", fees=1.0, slippage=0.5,
@@ -94,11 +100,13 @@ def test_sync_with_broker_detects_divergence():
     tracker = LiveFillTracker()
     tracker.reset()
 
-    tracker.record_intent(
+    intent = PositionIntent(
         trade_id="test-004", symbol="BTCUSDT", direction="LONG",
         entry_price=50000.0, stop_price=49000.0, target_price=52000.0,
+        size=None, strategy_id=None,
         decision="PROCEED_TO_SIMULATION",
     )
+    tracker.record_intent(intent)
     tracker.record_fill("test-004", FillData(
         entry_price=50000.0, fill_time=datetime.now(timezone.utc),
         size=0.5, side="LONG", fees=2.0, slippage=1.0,
