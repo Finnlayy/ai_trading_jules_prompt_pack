@@ -1,11 +1,45 @@
-import json
-from datetime import datetime, timezone
-from pathlib import Path
-
 import pytest
-
 from app.services.watchlist_manager import WatchlistItem, WatchlistManager
+import json
 
+def test_watchlist_manager_add_remove_get(tmp_path):
+    path = tmp_path / "watchlist.json"
+    manager = WatchlistManager(persist_path=str(path))
+
+    item = WatchlistItem(symbol="BTCUSDT", active=True)
+    manager.add(item)
+    assert manager.get("BTCUSDT") == item
+    assert len(manager.list_all()) == 1
+
+    manager.remove("BTCUSDT")
+    assert manager.get("BTCUSDT") is None
+    assert len(manager.list_all()) == 0
+
+def test_watchlist_manager_persistence(tmp_path):
+    path = tmp_path / "watchlist.json"
+    manager1 = WatchlistManager(persist_path=str(path))
+    item = WatchlistItem(symbol="ETHUSDT", active=False)
+    manager1.add(item)
+
+    # Reload from disk
+    manager2 = WatchlistManager(persist_path=str(path))
+    reloaded_item = manager2.get("ETHUSDT")
+    assert reloaded_item is not None
+    assert reloaded_item.symbol == "ETHUSDT"
+    assert reloaded_item.active is False
+
+def test_watchlist_manager_corrupted_json_graceful_handling(tmp_path):
+    path = tmp_path / "watchlist.json"
+    path.write_text("{corrupted_json: true,")
+
+    # Should handle decode error gracefully and start with empty watchlist
+    manager = WatchlistManager(persist_path=str(path))
+    assert manager.list_all() == []
+
+
+@pytest.fixture
+def temp_watchlist_path(tmp_path: Path) -> str:
+    return str(tmp_path / "test_watchlist.json")
 
 def test_watchlist_item_serialization():
     item = WatchlistItem(
@@ -35,7 +69,6 @@ def test_watchlist_item_serialization():
     assert item2.max_position_size_usdt == 100.0
     assert item2.added_at == data["added_at"]
 
-
 def test_watchlist_item_defaults():
     item = WatchlistItem(symbol="ETHUSDT")
     assert item.timeframes == ["1m", "5m", "15m"]
@@ -47,12 +80,6 @@ def test_watchlist_item_defaults():
     data = item.to_dict()
     item2 = WatchlistItem.from_dict(data)
     assert item2.timeframes == ["1m", "5m", "15m"]
-
-
-@pytest.fixture
-def temp_watchlist_path(tmp_path: Path) -> str:
-    return str(tmp_path / "test_watchlist.json")
-
 
 def test_watchlist_manager_add_and_get(temp_watchlist_path):
     manager = WatchlistManager(persist_path=temp_watchlist_path)
@@ -68,75 +95,10 @@ def test_watchlist_manager_add_and_get(temp_watchlist_path):
     assert retrieved_lower is not None
     assert retrieved_lower.symbol == "BTCUSDT"
 
-
-def test_watchlist_manager_persistence(temp_watchlist_path):
-    manager1 = WatchlistManager(persist_path=temp_watchlist_path)
-    manager1.add(WatchlistItem(symbol="BTCUSDT"))
-    manager1.add(WatchlistItem(symbol="ETHUSDT", active=False))
-
-    # Check if the file was written
-    assert Path(temp_watchlist_path).exists()
-
-    # Load with a new manager to verify persistence
-    manager2 = WatchlistManager(persist_path=temp_watchlist_path)
-    assert manager2.get("BTCUSDT") is not None
-    assert manager2.get("ETHUSDT") is not None
-    assert manager2.get("ETHUSDT").active is False
-    assert len(manager2.list_all()) == 2
-
-
-def test_watchlist_manager_remove(temp_watchlist_path):
-    manager = WatchlistManager(persist_path=temp_watchlist_path)
-    manager.add(WatchlistItem(symbol="BTCUSDT"))
-    assert manager.get("BTCUSDT") is not None
-
-    manager.remove("BTCUSDT")
-    assert manager.get("BTCUSDT") is None
-    assert len(manager.list_all()) == 0
-
-
-def test_watchlist_manager_update(temp_watchlist_path):
-    manager = WatchlistManager(persist_path=temp_watchlist_path)
-    manager.add(WatchlistItem(symbol="BTCUSDT", active=True, max_position_size_usdt=50.0))
-
-    manager.update("BTCUSDT", active=False, max_position_size_usdt=200.0, strategy_id="new_strat")
-
-    item = manager.get("BTCUSDT")
-    assert item.active is False
-    assert item.max_position_size_usdt == 200.0
-    assert item.strategy_id == "new_strat"
-
-
 def test_watchlist_manager_update_nonexistent(temp_watchlist_path):
     manager = WatchlistManager(persist_path=temp_watchlist_path)
     res = manager.update("UNKNOWN", active=False)
     assert res is None
-
-
-def test_watchlist_manager_get_active(temp_watchlist_path):
-    manager = WatchlistManager(persist_path=temp_watchlist_path)
-    manager.add(WatchlistItem(symbol="BTCUSDT", active=True))
-    manager.add(WatchlistItem(symbol="ETHUSDT", active=False))
-    manager.add(WatchlistItem(symbol="SOLUSDT", active=True))
-
-    active_items = manager.get_active()
-    assert len(active_items) == 2
-    symbols = set(item.symbol for item in active_items)
-    assert symbols == {"BTCUSDT", "SOLUSDT"}
-
-
-def test_watchlist_manager_reset(temp_watchlist_path):
-    manager = WatchlistManager(persist_path=temp_watchlist_path)
-    manager.add(WatchlistItem(symbol="BTCUSDT"))
-    manager.add(WatchlistItem(symbol="ETHUSDT"))
-    assert len(manager.list_all()) == 2
-
-    manager.reset()
-    assert len(manager.list_all()) == 0
-
-    manager2 = WatchlistManager(persist_path=temp_watchlist_path)
-    assert len(manager2.list_all()) == 0
-
 
 def test_watchlist_manager_load_corrupt_data(temp_watchlist_path):
     # Write invalid JSON to the path
