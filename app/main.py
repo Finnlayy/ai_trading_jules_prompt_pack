@@ -48,6 +48,8 @@ from app.api.simulator import router as simulator_router
 from app.services.webhook_consumer import webhook_consumer_instance
 from app.services.position_monitor import paper_position_monitor_instance
 
+logger = logging.getLogger(__name__)
+
 app = FastAPI(
     title="Agent-Reflex Hybrid Trader API",
     description="Simulation-first trading API. Open this UI to inspect health, backtest, and M8 webhook routes.",
