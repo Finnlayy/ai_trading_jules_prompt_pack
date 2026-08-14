@@ -43,6 +43,8 @@ class PaperTrainingPipeline:
         self.recorder = recorder or lifecycle_recorder
 
     async def process_candidate(self, payload: M8Payload) -> dict[str, Any]:
+        if self.paper_broker is None:
+            self.paper_broker = KrakenPaperBroker()
         candidate_id = candidate_id_for_signal(payload.signal_id)
         self.recorder.record_candidate(payload, candidate_id=candidate_id)
 

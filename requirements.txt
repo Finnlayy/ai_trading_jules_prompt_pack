@@ -1,6 +1,10 @@
+# Requires Python >= 3.11 (scipy>=1.16 needs 3.11+)
 fastapi
 uvicorn
 pydantic
+sqlalchemy
+polars
+langgraph
 pytest
 httpx
 backtrader==1.9.78.123
@@ -12,6 +16,7 @@ numpy==2.4.6
 pandas==2.3.3
 openai
 pytest-asyncio
+pytest-mock
 python-dotenv
 requests
 ctrader-open-api

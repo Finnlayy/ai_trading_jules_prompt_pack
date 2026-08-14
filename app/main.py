@@ -1,9 +1,18 @@
+import logging
+
+logger = logging.getLogger(__name__)
+
 import asyncio
+import logging
 from datetime import datetime, timezone
+
+logger = logging.getLogger(__name__)
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.responses import Response
+from fastapi.middleware.cors import CORSMiddleware
+from app.core.config import CORS_ORIGINS
 from fastapi.staticfiles import StaticFiles
 from app.api.auth import router as auth_router, get_current_user
 from fastapi import Depends
@@ -37,10 +46,22 @@ from app.api.simulator import router as simulator_router
 from app.services.webhook_consumer import webhook_consumer_instance
 from app.services.position_monitor import paper_position_monitor_instance
 
+logger = logging.getLogger(__name__)
+
+logger = logging.getLogger(__name__)
+
 app = FastAPI(
     title="Agent-Reflex Hybrid Trader API",
     description="Simulation-first trading API. Open this UI to inspect health, backtest, and M8 webhook routes.",
 )
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 app.mount("/static", StaticFiles(directory=ROOT_DIR / "app" / "static"), name="static")
@@ -88,14 +109,15 @@ except ImportError:
     pass
 
 
-app.mount("/", StaticFiles(directory=ROOT_DIR / "frontend" / "dist", html=True), name="vite_spa")
 
 @app.get("/favicon.ico", include_in_schema=False)
 def favicon():
     return Response(status_code=204)
 
+from app.api.auth import get_api_key
+
 @app.get("/health")
-def health_check():
+def health_check(api_key: str | None = Depends(get_api_key)):
     return {"status": "ok"}
 
 
@@ -127,7 +149,7 @@ async def _heartbeat_loop():
                     circuit,
                 )
         except Exception:
-            pass
+            logger.exception("Error in heartbeat loop")
         await asyncio.sleep(3600)  # every hour
 
 
@@ -196,7 +218,7 @@ async def _shadow_queue_loop():
 
 @app.on_event("startup")
 def startup_event():
-    global _heartbeat_task, _news_poll_task, _autostart_task, _training_autostart_task, _price_poller_task, _shadow_queue_task
+    global _heartbeat_task, _news_poll_task, _autostart_task, _training_autostart_task, _shadow_queue_task
     # Create DB tables
     from app.db import Base, engine
     Base.metadata.create_all(bind=engine)
@@ -217,7 +239,6 @@ def startup_event():
 
 @app.on_event("shutdown")
 def shutdown_event():
-    global _heartbeat_task, _news_poll_task, _autostart_task, _training_autostart_task, _price_poller_task, _shadow_queue_task
     from app.services.autonomous_loop import autonomous_loop_instance
     from app.services.price_poller import price_poller
     from app.services.training_loop import training_loop
@@ -236,3 +257,5 @@ def shutdown_event():
         _training_autostart_task.cancel()
     if _shadow_queue_task:
         _shadow_queue_task.cancel()
+
+app.mount("/", StaticFiles(directory=ROOT_DIR / "frontend" / "dist", html=True), name="vite_spa")

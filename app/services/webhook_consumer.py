@@ -24,13 +24,15 @@ class WebhookConsumer:
     """Consumes signals from the webhook queue and executes paper orders."""
 
     def __init__(self, broker: KrakenPaperBroker | None = None) -> None:
-        self.broker = broker or KrakenPaperBroker()
+        self.broker = broker
         self.is_running = False
         self._task: asyncio.Task | None = None
 
     def start(self) -> None:
         if self.is_running:
             return
+        if self.broker is None:
+            self.broker = KrakenPaperBroker()
         self.is_running = True
         self._task = asyncio.create_task(self._consume_loop())
         logger.info("WebhookConsumer started")

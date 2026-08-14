@@ -4,43 +4,83 @@ from pathlib import Path
 from datetime import datetime, timezone
 from sqlalchemy import func
 from app.db import SessionLocal
-from app.db.models import Trade, PaperTrade, PaperPosition, PaperOutcome
+from app.db.models import Trade, PaperTrade, PaperPosition
 from app.services.agent_registry import agent_registry
 
 WIKI_DIR = Path("wiki")
 SECOND_BRAIN_FILE = WIKI_DIR / "second_brain.md"
+
+def _get_live_stats(db):
+    total_trades = db.query(func.count(Trade.id)).scalar() or 0
+    pnl_sum = db.query(func.sum(Trade.pnl)).scalar() or 0.0
+    winning_trades = db.query(func.count(Trade.id)).filter(Trade.pnl > 0).scalar() or 0
+    losing_trades = db.query(func.count(Trade.id)).filter(Trade.pnl <= 0).scalar() or 0
+    winrate = (winning_trades / total_trades) * 100 if total_trades > 0 else 0.0
+    return total_trades, pnl_sum, winrate
+
+def _get_paper_stats(db):
+    total_paper_trades = db.query(func.count(PaperTrade.id)).scalar() or 0
+    paper_pnl_sum = db.query(func.sum(PaperTrade.pnl)).scalar() or 0.0
+    paper_winning = db.query(func.count(PaperTrade.id)).filter(PaperTrade.pnl > 0).scalar() or 0
+    paper_winrate = (paper_winning / total_paper_trades) * 100 if total_paper_trades > 0 else 0.0
+    return total_paper_trades, paper_pnl_sum, paper_winrate
+
+def _get_open_positions(db):
+    return db.query(PaperPosition).filter(PaperPosition.status == "open").all()
+
+def _get_agent_leaderboard():
+    agents = agent_registry.get_all_identities()
+    agent_rows = []
+    for agent in agents:
+        badges_str = ", ".join(f"{b.icon} {b.name}" for b in agent.badges) if agent.badges else "None"
+        agent_rows.append(
+            f"| `{agent.name}` | {agent.archetype} | {agent.total_calls} | {agent.correct_calls} | {agent.accuracy:.2%} | {agent.current_streak} | {badges_str} |"
+        )
+    return agent_rows
+
+def _scan_docs():
+    md_index_rows = []
+    try:
+        import os
+        for p in sorted(Path(".").glob("*.md")):
+            if p.is_file():
+                stat = p.stat()
+                size_kb = stat.st_size / 1024.0
+                modified_time = datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+                md_index_rows.append(f"| `{p.name}` | {size_kb:.2f} KB | {modified_time} UTC |")
+    except Exception as scan_err:
+        md_index_rows = [f"| Error scanning docs | {scan_err} | - |"]
+    return md_index_rows
+
+def _run_compressor():
+    try:
+        from app.services.brain_compressor import BrainCompressor
+        import asyncio
+
+        compressor = BrainCompressor()
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop and loop.is_running():
+            loop.create_task(compressor.run_sync_and_compile())
+        else:
+            asyncio.run(compressor.run_sync_and_compile())
+    except Exception as compress_err:
+        print(f"Error executing brain compressor: {compress_err}")
 
 def update_second_brain():
     """Compiles statistics and learning registry from DB & registry into wiki/second_brain.md."""
     WIKI_DIR.mkdir(exist_ok=True)
     db = SessionLocal()
     try:
-        # 1. Gather trade statistics
-        total_trades = db.query(func.count(Trade.id)).scalar() or 0
-        pnl_sum = db.query(func.sum(Trade.pnl)).scalar() or 0.0
-        winning_trades = db.query(func.count(Trade.id)).filter(Trade.pnl > 0).scalar() or 0
-        losing_trades = db.query(func.count(Trade.id)).filter(Trade.pnl <= 0).scalar() or 0
-        winrate = (winning_trades / total_trades) * 100 if total_trades > 0 else 0.0
+        total_trades, pnl_sum, winrate = _get_live_stats(db)
+        total_paper_trades, paper_pnl_sum, paper_winrate = _get_paper_stats(db)
+        open_paper_positions = _get_open_positions(db)
+        agent_rows = _get_agent_leaderboard()
+        md_index_rows = _scan_docs()
 
-        # 2. Gather paper trading stats
-        total_paper_trades = db.query(func.count(PaperTrade.id)).scalar() or 0
-        paper_pnl_sum = db.query(func.sum(PaperTrade.pnl)).scalar() or 0.0
-        paper_winning = db.query(func.count(PaperTrade.id)).filter(PaperTrade.pnl > 0).scalar() or 0
-        paper_winrate = (paper_winning / total_paper_trades) * 100 if total_paper_trades > 0 else 0.0
-
-        # 3. Open positions
-        open_paper_positions = db.query(PaperPosition).filter(PaperPosition.status == "open").all()
-
-        # 4. Scout identities and leaderboard
-        agents = agent_registry.get_all_identities()
-        agent_rows = []
-        for agent in agents:
-            badges_str = ", ".join(f"{b.icon} {b.name}" for b in agent.badges) if agent.badges else "None"
-            agent_rows.append(
-                f"| `{agent.name}` | {agent.archetype} | {agent.total_calls} | {agent.correct_calls} | {agent.accuracy:.2%} | {agent.current_streak} | {badges_str} |"
-            )
-
-        # 5. Compile Markdown content
         now_str = datetime.now(timezone.utc).isoformat()
         md = f"""# Project Wiki & Second Brain (Swarm Memory)
 
@@ -98,22 +138,7 @@ When processing trade signals, strategy updates, or configuration inputs:
 ---
 """
 
-        # 6. Scan project documentation files in root
-        md_index_rows = []
-        try:
-            import os
-            for p in sorted(Path(".").glob("*.md")):
-                if p.is_file():
-                    stat = p.stat()
-                    size_kb = stat.st_size / 1024.0
-                    modified_time = datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
-                    md_index_rows.append(f"| `{p.name}` | {size_kb:.2f} KB | {modified_time} UTC |")
-        except Exception as scan_err:
-            md_index_rows = [f"| Error scanning docs | {scan_err} | - |"]
-
         md += """
----
-
 ## 🛠️ System Library & Code Repository (Strategies & Models)
 To maintain structural integrity of custom strategies and models:
 1. **Custom PineScript Strategies**: Uploaded scripts via the AI Chat or frontend are physically saved as `.pine` files in `app/scripts/generated_pines/`. The system scans this folder on startup to register them dynamically. Strategy IDs can contain alphanumeric characters, underscores, and hyphens (regex `^[a-zA-Z0-9_-]+$`), and support `pine_placeholder` models.
@@ -139,30 +164,12 @@ This section lists all prompt pack instructions and design assets stored in the 
         else:
             md += "\n".join(md_index_rows) + "\n"
 
-        # Write to wiki/second_brain.md
         with open(SECOND_BRAIN_FILE, "w", encoding="utf-8") as f:
             f.write(md)
 
-        # Print success
         print("Second brain (wiki/second_brain.md) successfully updated!")
 
-        # 7. Run Brain Compressor to summarize chats and plans asynchronously
-        try:
-            from app.services.brain_compressor import BrainCompressor
-            import asyncio
-            
-            compressor = BrainCompressor()
-            try:
-                loop = asyncio.get_running_loop()
-            except RuntimeError:
-                loop = None
-                
-            if loop and loop.is_running():
-                loop.create_task(compressor.run_sync_and_compile())
-            else:
-                asyncio.run(compressor.run_sync_and_compile())
-        except Exception as compress_err:
-            print(f"Error executing brain compressor: {compress_err}")
+        _run_compressor()
 
     except Exception as exc:
         print(f"Error updating second brain: {exc}")

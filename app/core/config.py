@@ -431,8 +431,23 @@ MIN_CONFLUENCE_SCORE = _as_float(os.getenv("MIN_CONFLUENCE_SCORE"), 70.0)
 MAX_CRISIS_SCORE = _as_float(os.getenv("MAX_CRISIS_SCORE"), 30.0)
 MAX_MC_DISPERSION = _as_float(os.getenv("MAX_MC_DISPERSION"), 5.0)
 MAX_DAILY_DRAWDOWN = _as_float(os.getenv("MAX_DAILY_DRAWDOWN"), 5.0)
+MAX_TRADES_PER_DAY = 5
+COOLDOWN_BARS = 3
+
+# Validate webhook security if a live broker mode is active
+if not WEBHOOK_SECRET:
+    if PIONEX_RELAY_ENABLED or PIONEX_DIRECT_ENABLED or CTRADER_ENABLED or GLINT_ENABLED:
+        raise ValueError(
+            "SECURITY RISK: WEBHOOK_SECRET must be set when a live broker mode is enabled. "
+            "Refusing to start to prevent unauthenticated webhook requests from placing live orders."
+        )
+    import warnings
+    warnings.warn("WEBHOOK_SECRET is not set. Webhook endpoint will accept unauthenticated requests.")
 MAX_TRADES_PER_DAY = _as_int(os.getenv("MAX_TRADES_PER_DAY"), 5)
 COOLDOWN_BARS = _as_int(os.getenv("COOLDOWN_BARS"), 1)
 REGIME_ALLOW_RW1_SIGNALS = _as_bool(os.getenv("REGIME_ALLOW_RW1_SIGNALS"), False)
 PAPER_TRADING_RELAX_RISK = _as_bool(os.getenv("PAPER_TRADING_RELAX_RISK"), True)
 
+
+# CORS configuration
+CORS_ORIGINS = _as_csv_list(os.getenv("CORS_ORIGINS", ""))

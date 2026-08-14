@@ -35,7 +35,7 @@ class AIChatMessage(BaseModel):
 
 
 class AIChatRequest(BaseModel):
-    message: str = Field(min_length=1, max_length=4000)
+    message: str = Field(min_length=1, max_length=25000)
     apply_to_profile: bool = True
     chart_context: dict[str, Any] | None = Field(default=None, description="Optional market data snapshot (symbol, timeframe, recent candles, indicators) for AI analysis.")
     bars_count: int = Field(default=50, ge=10, le=300, description="Number of recent bars to include in chart_context.")
