@@ -2,6 +2,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Virtual environments
+.venv*/
+app/.venv/
+
 # Pytest
 .pytest_cache/
 trade_journal.jsonl
@@ -11,3 +15,16 @@ logs/
 .env*
 !.env.example
 ctrader_symbols.json
+
+# Node / Playwright (root-level only; the frontend Vite app is tracked)
+node_modules/
+/package-lock.json
+/package.json
+playwright.config.js
+!frontend/package.json
+
+# Runtime data
+app/data/trading.db
+data/*.json
+data/*.jsonl
+data/runtime_archive/

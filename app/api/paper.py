@@ -9,6 +9,7 @@ from fastapi import APIRouter, HTTPException
 
 from app.api.orchestrator import _get_broker
 from app.core.config import BROKER_MODE
+from app.schemas.paper import PaperReplayRequest, PaperSessionStartRequest
 from app.services.shadow_paper_engine import shadow_paper_engine
 
 router = APIRouter()
@@ -98,7 +99,9 @@ class PaperSessionStore:
                     seen.add(signal_id)
                     fresh.append(row)
                 session["results"] = [*fresh, *session["results"]][:250]
-                session["last_replay"] = {key: value for key, value in replay.items() if key != "results"}
+                session["last_replay"] = {
+                    key: value for key, value in replay.items() if key != "results"
+                }
                 session["updated_at"] = datetime.now(timezone.utc).isoformat()
                 session["error"] = None
                 if session["run_once"]:
@@ -123,7 +126,9 @@ def _pionex_context() -> dict[str, Any]:
     broker = _get_broker()
     context: dict[str, Any] = {
         "broker_mode": BROKER_MODE,
-        "broker_type": getattr(broker, "get_broker_type", lambda: type(broker).__name__)(),
+        "broker_type": getattr(
+            broker, "get_broker_type", lambda: type(broker).__name__
+        )(),
         "display_mode": getattr(broker, "get_broker_mode", lambda: "unknown")(),
         "connected": getattr(broker, "is_ready", lambda: False)(),
         "live_capable": getattr(broker, "is_live_capable", lambda: False)(),
@@ -146,24 +151,16 @@ def _pionex_context() -> dict[str, Any]:
 
 
 @router.post("/replay")
-async def replay_paper(
-    symbol: str = "HYPEUSDT",
-    timeframe: str = "1m",
-    bars: int = 500,
-    max_signals: Optional[int] = 20,
-    min_confluence: Optional[float] = None,
-    max_holding_bars: int = 50,
-    use_ai: bool = True,
-) -> dict[str, Any]:
+async def replay_paper(req: PaperReplayRequest) -> dict[str, Any]:
     try:
         replay = await shadow_paper_engine.replay(
-            symbol=symbol,
-            timeframe=timeframe,
-            bars=bars,
-            max_signals=max_signals,
-            min_confluence=min_confluence,
-            max_holding_bars=max_holding_bars,
-            use_ai=use_ai,
+            symbol=req.symbol,
+            timeframe=req.timeframe,
+            bars=req.bars,
+            max_signals=req.max_signals,
+            min_confluence=req.min_confluence,
+            max_holding_bars=req.max_holding_bars,
+            use_ai=req.use_ai,
         )
         replay["pionex_context"] = _pionex_context()
         return replay
@@ -172,29 +169,21 @@ async def replay_paper(
 
 
 @router.post("/session/start")
-async def start_paper_session(
-    symbol: str = "HYPEUSDT",
-    timeframe: str = "1m",
-    bars: int = 500,
-    max_signals: Optional[int] = 20,
-    min_confluence: Optional[float] = None,
-    max_holding_bars: int = 50,
-    use_ai: bool = True,
-    poll_interval_seconds: float = 60.0,
-    run_once: bool = True,
-) -> dict[str, Any]:
-    if poll_interval_seconds < 5:
-        raise HTTPException(status_code=422, detail="poll_interval_seconds must be >= 5")
+async def start_paper_session(req: PaperSessionStartRequest) -> dict[str, Any]:
+    if req.poll_interval_seconds < 5:
+        raise HTTPException(
+            status_code=422, detail="poll_interval_seconds must be >= 5"
+        )
     return await paper_sessions.start(
-        symbol=symbol,
-        timeframe=timeframe,
-        bars=bars,
-        max_signals=max_signals,
-        min_confluence=min_confluence,
-        max_holding_bars=max_holding_bars,
-        use_ai=use_ai,
-        poll_interval_seconds=poll_interval_seconds,
-        run_once=run_once,
+        symbol=req.symbol,
+        timeframe=req.timeframe,
+        bars=req.bars,
+        max_signals=req.max_signals,
+        min_confluence=req.min_confluence,
+        max_holding_bars=req.max_holding_bars,
+        use_ai=req.use_ai,
+        poll_interval_seconds=req.poll_interval_seconds,
+        run_once=req.run_once,
     )
 
 
@@ -219,3 +208,86 @@ async def stop_paper_session(session_id: str) -> dict[str, Any]:
         return await paper_sessions.stop(session_id)
     except KeyError:
         raise HTTPException(status_code=404, detail="Paper session not found")
+
+
+@router.get("/config")
+def get_paper_config():
+    """Fetch paper trading and regime engine settings."""
+    import app.core.config as config
+    from app.services.regime_engine import regime_engine_instance
+    return {
+        "PAPER_TRADING_RELAX_RISK": config.PAPER_TRADING_RELAX_RISK,
+        "REGIME_ALLOW_RW1_SIGNALS": regime_engine_instance.allow_rw1_signals,
+    }
+
+
+@router.post("/config")
+def update_paper_config(settings: dict):
+    """Update paper trading and regime engine settings in-memory."""
+    import app.core.config as config
+    from app.services.regime_engine import regime_engine_instance
+    
+    if "PAPER_TRADING_RELAX_RISK" in settings:
+        config.PAPER_TRADING_RELAX_RISK = bool(settings["PAPER_TRADING_RELAX_RISK"])
+    if "REGIME_ALLOW_RW1_SIGNALS" in settings:
+        val = bool(settings["REGIME_ALLOW_RW1_SIGNALS"])
+        config.REGIME_ALLOW_RW1_SIGNALS = val
+        regime_engine_instance.allow_rw1_signals = val
+        
+    return {
+        "status": "success",
+        "PAPER_TRADING_RELAX_RISK": config.PAPER_TRADING_RELAX_RISK,
+        "REGIME_ALLOW_RW1_SIGNALS": regime_engine_instance.allow_rw1_signals,
+    }
+
+
+@router.get("/shadow-queue")
+def get_shadow_queue_entries(limit: int = 100):
+    """Fetch rejected signal entries tracked in the shadow queue."""
+    from app.services.shadow_queue import shadow_queue
+    entries = shadow_queue._load()
+    result = []
+    for e in reversed(entries):
+        result.append({
+            "signal_id": e.signal_id,
+            "timestamp": e.timestamp,
+            "symbol": e.symbol,
+            "timeframe": e.timeframe,
+            "direction": e.direction,
+            "entry_price": e.entry_price,
+            "stop_price": e.stop_price,
+            "target_price": e.target_price,
+            "scout_decisions": e.scout_decisions,
+            "added_at": e.added_at,
+            "evaluated": e.evaluated,
+        })
+    return {
+        "status": "ok",
+        "entries": result[:limit],
+        "count": len(entries),
+        "pending_count": sum(1 for e in entries if not e.evaluated),
+        "evaluated_count": sum(1 for e in entries if e.evaluated),
+    }
+
+
+@router.get("/workers/status")
+def get_workers_status():
+    """Fetch active background task worker statuses."""
+    from app.services.webhook_consumer import webhook_consumer_instance
+    from app.services.position_monitor import paper_position_monitor_instance
+    from app.services.training_loop import training_loop
+    
+    return {
+        "webhook_consumer": {
+            "is_running": getattr(webhook_consumer_instance, "is_running", True),
+            "queue_size": webhook_consumer_instance.queue.qsize() if hasattr(webhook_consumer_instance, "queue") else 0,
+        },
+        "position_monitor": {
+            "is_running": getattr(paper_position_monitor_instance, "is_running", True),
+        },
+        "training_loop": {
+            "is_running": getattr(training_loop, "is_running", False),
+            "interval_seconds": getattr(training_loop, "interval_seconds", None),
+        }
+    }
+
