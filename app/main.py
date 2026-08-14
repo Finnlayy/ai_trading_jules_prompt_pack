@@ -9,7 +9,14 @@ from datetime import datetime, timezone
 logger = logging.getLogger(__name__)
 from pathlib import Path
 
+<<<<<<< HEAD
+import logging
+
+logger = logging.getLogger(__name__)
+
+=======
 from fastapi import FastAPI, Depends
+>>>>>>> main
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
