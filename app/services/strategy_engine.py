@@ -166,21 +166,22 @@ class PatternEnhancedStrategy(BaseStrategy):
 
     def __init__(
         self,
-        strategy_id: str = "pattern_enhanced",
-        name: str = "Pattern Enhanced",
-        description: str = "CISD + classical chart patterns (H&S, Double Top/Bottom, Flags, Triangles, Wedges).",
         cisd_weight: float = 0.6,
         pattern_weight: float = 0.4,
         scorer: CISDScorer | None = None,
+        **kwargs: Any,
     ) -> None:
-        super().__init__(strategy_id, name, description)
+        kwargs.setdefault("strategy_id", "pattern_enhanced")
+        kwargs.setdefault("name", "Pattern Enhanced")
+        kwargs.setdefault("description", "CISD + classical chart patterns (H&S, Double Top/Bottom, Flags, Triangles, Wedges).")
+        super().__init__(**kwargs)
         if not (0.0 <= cisd_weight <= 1.0 and 0.0 <= pattern_weight <= 1.0):
             raise ValueError("Weights must be between 0 and 1")
         total = cisd_weight + pattern_weight
         self.cisd_weight = cisd_weight / total
         self.pattern_weight = pattern_weight / total
         self.cisd_strategy = CISDStrategy(
-            strategy_id=f"{strategy_id}_cisd",
+            strategy_id=f"{kwargs['strategy_id']}_cisd",
             scorer=scorer,
         )
 
