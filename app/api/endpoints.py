@@ -33,7 +33,9 @@ async def receive_m8_payload(request: Request):
     signature = request.headers.get("x-m8-signature")
 
     if not _verify_webhook_signature(body, signature):
-        raise HTTPException(status_code=401, detail="Invalid or missing webhook signature")
+        raise HTTPException(
+            status_code=401, detail="Invalid or missing webhook signature"
+        )
 
     try:
         data = json.loads(body)
