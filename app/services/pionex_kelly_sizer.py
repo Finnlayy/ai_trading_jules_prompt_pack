@@ -49,6 +49,10 @@ class KellySizer:
         realized_r: list[float] = []
         with self.journal_path.open("r", encoding="utf-8") as handle:
             for raw_line in handle:
+                # ⚡ Bolt Optimization: Fast string match to skip JSON parsing for irrelevant lines
+                if "EXECUTED_SIM" not in raw_line or "CLOSED" not in raw_line:
+                    continue
+
                 line = raw_line.strip()
                 if not line:
                     continue

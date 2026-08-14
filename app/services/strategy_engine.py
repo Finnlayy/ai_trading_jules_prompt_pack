@@ -166,21 +166,22 @@ class PatternEnhancedStrategy(BaseStrategy):
 
     def __init__(
         self,
-        strategy_id: str = "pattern_enhanced",
-        name: str = "Pattern Enhanced",
-        description: str = "CISD + classical chart patterns (H&S, Double Top/Bottom, Flags, Triangles, Wedges).",
         cisd_weight: float = 0.6,
         pattern_weight: float = 0.4,
         scorer: CISDScorer | None = None,
+        **kwargs: Any,
     ) -> None:
-        super().__init__(strategy_id, name, description)
+        kwargs.setdefault("strategy_id", "pattern_enhanced")
+        kwargs.setdefault("name", "Pattern Enhanced")
+        kwargs.setdefault("description", "CISD + classical chart patterns (H&S, Double Top/Bottom, Flags, Triangles, Wedges).")
+        super().__init__(**kwargs)
         if not (0.0 <= cisd_weight <= 1.0 and 0.0 <= pattern_weight <= 1.0):
             raise ValueError("Weights must be between 0 and 1")
         total = cisd_weight + pattern_weight
         self.cisd_weight = cisd_weight / total
         self.pattern_weight = pattern_weight / total
         self.cisd_strategy = CISDStrategy(
-            strategy_id=f"{strategy_id}_cisd",
+            strategy_id=f"{kwargs['strategy_id']}_cisd",
             scorer=scorer,
         )
 
@@ -246,6 +247,28 @@ class PatternEnhancedStrategy(BaseStrategy):
         return meta
 
 
+class PineScriptPlaceholderStrategy(BaseStrategy):
+    """Placeholder strategy representing an uploaded TradingView/Pionex Pine Script."""
+
+    def __init__(self, strategy_id: str, name: str, description: str = "", code: str = "") -> None:
+        super().__init__(strategy_id, name, description)
+        self.code = code
+
+    def score_bars(self, bars: Sequence) -> list[StrategyScore]:
+        # Fallback to default CISD strategy scoring
+        from app.services.strategy_engine import CISDStrategy
+        fallback = CISDStrategy()
+        return fallback.score_bars(bars)
+
+    def required_timeframes(self) -> list[str]:
+        return ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
+
+    def get_metadata(self) -> StrategyMetadata:
+        meta = super().get_metadata()
+        meta.strategy_type = "pine_placeholder"
+        return meta
+
+
 # ---------------------------------------------------------------------------
 # Strategy Registry
 # ---------------------------------------------------------------------------
@@ -279,6 +302,25 @@ class StrategyRegistry:
         """Register built-in strategies."""
         self.register(CISDStrategy())
         self.register(PatternEnhancedStrategy())
+
+        # Scan and register uploaded pine strategies
+        try:
+            base = Path(__file__).resolve().parents[2] / "app" / "scripts" / "generated_pines"
+            if base.exists():
+                for f in base.glob("*.pine"):
+                    strategy_id = f.stem
+                    name = f.stem.replace("_", " ")
+                    code = f.read_text(encoding="utf-8")
+                    self.register(
+                        PineScriptPlaceholderStrategy(
+                            strategy_id,
+                            name,
+                            f"Uploaded Pine Script: {name}",
+                            code
+                        )
+                    )
+        except Exception:
+            pass
 
     def _load_persisted(self) -> None:
         """Load any custom strategy configs from disk."""
