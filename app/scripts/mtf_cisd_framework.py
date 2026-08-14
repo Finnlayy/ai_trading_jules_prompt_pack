@@ -114,7 +114,7 @@ class BinanceDataLoader:
         if start_time: params['startTime'] = start_time
         if end_time: params['endTime'] = end_time
 
-        response = requests.get(url, params=params)
+        response = requests.get(url, params=params, timeout=30)
         data = response.json()
 
         df = pd.DataFrame(data, columns=[
