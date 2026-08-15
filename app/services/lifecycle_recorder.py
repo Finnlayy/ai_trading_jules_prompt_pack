@@ -21,6 +21,7 @@ from app.db.models import (
 )
 from app.schemas.ai_review import SignalReview
 from app.schemas.m8_payload import M8Payload
+from app.services.confidence_registry import ScoutReviewParams
 
 
 def _json_default(value: Any) -> str:
@@ -411,17 +412,19 @@ class LifecycleRecorder:
         )
         for event in events:
             confidence_registry.record_scout_review(
-                symbol=payload.symbol,
-                scout_name=str(event.get("scout_name") or ""),
-                direction=payload.direction,
-                decision=str(event.get("decision") or ""),
-                confidence=float(event.get("confidence") or ai_review.confidence),
-                was_correct=None,
+                    ScoutReviewParams(
+                        symbol=payload.symbol,
+                        scout_name=str(event.get("scout_name") or ""),
+                        direction=payload.direction,
+                        decision=str(event.get("decision") or ""),
+                        confidence=float(event.get("confidence") or ai_review.confidence),
+                        was_correct=None,
+                    )
             )
 
     def _get_confidence_registry(self) -> Any:
         if self._confidence_registry is None:
-            from app.services.confidence_registry import confidence_registry
+            from app.services.confidence_registry import confidence_registry, ScoutReviewParams
 
             self._confidence_registry = confidence_registry
         return self._confidence_registry

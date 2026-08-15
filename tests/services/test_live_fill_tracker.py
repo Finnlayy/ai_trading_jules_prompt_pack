@@ -34,15 +34,15 @@ def mock_db_and_registry(monkeypatch):
     # Mock app.db and app.db.models
     mock_app_db = MagicMock()
     mock_app_db.SessionLocal = mock_session_local
-    sys.modules["app.db"] = mock_app_db
+    monkeypatch.setitem(sys.modules, "app.db", mock_app_db)
 
     mock_app_db_models = MagicMock()
     mock_app_db_models.Position = mock_position
-    sys.modules["app.db.models"] = mock_app_db_models
+    monkeypatch.setitem(sys.modules, "app.db.models", mock_app_db_models)
 
     mock_app_services_confidence_registry = MagicMock()
     mock_app_services_confidence_registry.confidence_registry = mock_registry
-    sys.modules["app.services.confidence_registry"] = mock_app_services_confidence_registry
+    monkeypatch.setitem(sys.modules, "app.services.confidence_registry", mock_app_services_confidence_registry)
 
     return {
         "db": mock_db,
@@ -98,16 +98,19 @@ def test_singleton_instance():
 def test_record_intent(tracker):
     """Test recording an intent stores it properly."""
     tracker.record_intent(
+        PositionIntent(
         trade_id="t1",
-        symbol="BTCUSD",
-        direction="LONG",
-        entry_price=50000.0,
-        stop_price=49000.0,
-        target_price=52000.0,
-        decision="PROCEED",
-        strategy_id="s1",
-        size=0.5,
-        ai_trace={"scouts": {"test": "APPROVE"}}
+            symbol="BTCUSD",
+            direction="LONG",
+            entry_price=50000.0,
+            stop_price=49000.0,
+            target_price=52000.0,
+            decision="PROCEED",
+            strategy_id="s1",
+            size=0.5,
+            ai_trace={"scouts": {"test": "APPROVE"}}
+
+        )
     )
 
     assert "t1" in tracker._intents
@@ -121,14 +124,17 @@ def test_record_intent(tracker):
 def test_record_fill(tracker, mock_db_and_registry):
     """Test recording a fill creates a position and logs to history."""
     tracker.record_intent(
+        PositionIntent(
         trade_id="t2",
-        symbol="ETHUSD",
-        direction="SHORT",
-        entry_price=3000.0,
-        stop_price=3100.0,
-        target_price=2800.0,
-        decision="PROCEED",
-        strategy_id="s2",
+            symbol="ETHUSD",
+            direction="SHORT",
+            entry_price=3000.0,
+            stop_price=3100.0,
+            target_price=2800.0,
+            decision="PROCEED",
+            strategy_id="s2",
+
+        )
     )
 
     fill_time = datetime.now(timezone.utc)
@@ -166,9 +172,12 @@ def test_record_fill(tracker, mock_db_and_registry):
 def test_record_exit_long(tracker, mock_db_and_registry):
     """Test record exit for LONG positions."""
     tracker.record_intent(
+        PositionIntent(
         trade_id="t3", symbol="BTCUSDT", direction="LONG",
-        entry_price=40000.0, stop_price=39000.0, target_price=42000.0,
-        decision="PROCEED", strategy_id="s3", size=1.0
+            entry_price=40000.0, stop_price=39000.0, target_price=42000.0,
+            decision="PROCEED", strategy_id="s3", size=1.0
+
+        )
     )
     tracker.record_fill("t3", FillData(
         entry_price=40000.0, fill_time=datetime.now(timezone.utc),
@@ -189,9 +198,12 @@ def test_record_exit_long(tracker, mock_db_and_registry):
 def test_record_exit_short(tracker, mock_db_and_registry):
     """Test record exit for SHORT positions."""
     tracker.record_intent(
+        PositionIntent(
         trade_id="t4", symbol="BTCUSDT", direction="SHORT",
-        entry_price=40000.0, stop_price=41000.0, target_price=38000.0,
-        decision="PROCEED", strategy_id="s4", size=0.5
+            entry_price=40000.0, stop_price=41000.0, target_price=38000.0,
+            decision="PROCEED", strategy_id="s4", size=0.5
+
+        )
     )
     tracker.record_fill("t4", FillData(
         entry_price=40000.0, fill_time=datetime.now(timezone.utc),
@@ -213,9 +225,12 @@ def test_update_price(tracker):
     """Test unrealized PnL updates properly."""
     # LONG
     tracker.record_intent(
+        PositionIntent(
         trade_id="t5", symbol="BTCUSDT", direction="LONG",
-        entry_price=10000.0, stop_price=9000.0, target_price=12000.0,
-        decision="PROCEED", size=2.0
+            entry_price=10000.0, stop_price=9000.0, target_price=12000.0,
+            decision="PROCEED", size=2.0
+
+        )
     )
     tracker.record_fill("t5", FillData(
         entry_price=10000.0, fill_time=datetime.now(timezone.utc),
@@ -229,9 +244,12 @@ def test_update_price(tracker):
 
     # SHORT
     tracker.record_intent(
+        PositionIntent(
         trade_id="t6", symbol="ETHUSDT", direction="SHORT",
-        entry_price=2000.0, stop_price=2100.0, target_price=1800.0,
-        decision="PROCEED", size=10.0
+            entry_price=2000.0, stop_price=2100.0, target_price=1800.0,
+            decision="PROCEED", size=10.0
+
+        )
     )
     tracker.record_fill("t6", FillData(
         entry_price=2000.0, fill_time=datetime.now(timezone.utc),
@@ -251,9 +269,12 @@ def test_sync_with_broker(tracker):
     """Test divergence detection logic."""
     # Add local position
     tracker.record_intent(
+        PositionIntent(
         trade_id="local_t1", symbol="BTCUSDT", direction="LONG",
-        entry_price=100.0, stop_price=90.0, target_price=110.0,
-        decision="PROCEED", size=1.0
+            entry_price=100.0, stop_price=90.0, target_price=110.0,
+            decision="PROCEED", size=1.0
+
+        )
     )
     tracker.record_fill("local_t1", FillData(
         entry_price=100.0, fill_time=datetime.now(timezone.utc),
@@ -275,9 +296,12 @@ def test_sync_with_broker(tracker):
 def test_get_daily_pnl(tracker, mock_db_and_registry):
     """Test daily PnL calculation sums properly."""
     tracker.record_intent(
+        PositionIntent(
         trade_id="t7", symbol="BTCUSDT", direction="LONG",
-        entry_price=1000.0, stop_price=900.0, target_price=1100.0,
-        decision="PROCEED", size=1.0
+            entry_price=1000.0, stop_price=900.0, target_price=1100.0,
+            decision="PROCEED", size=1.0
+
+        )
     )
     tracker.record_fill("t7", FillData(
         entry_price=1000.0, fill_time=datetime.now(timezone.utc),
@@ -285,9 +309,12 @@ def test_get_daily_pnl(tracker, mock_db_and_registry):
     ))
 
     tracker.record_intent(
+        PositionIntent(
         trade_id="t8", symbol="ETHUSDT", direction="SHORT",
-        entry_price=2000.0, stop_price=2100.0, target_price=1900.0,
-        decision="PROCEED", size=1.0
+            entry_price=2000.0, stop_price=2100.0, target_price=1900.0,
+            decision="PROCEED", size=1.0
+
+        )
     )
     tracker.record_fill("t8", FillData(
         entry_price=2000.0, fill_time=datetime.now(timezone.utc),
@@ -303,9 +330,12 @@ def test_get_daily_pnl(tracker, mock_db_and_registry):
 def test_get_open_positions(tracker):
     """Test that all open positions are returned properly."""
     tracker.record_intent(
+        PositionIntent(
         trade_id="t9", symbol="SOLUSDT", direction="LONG",
-        entry_price=100.0, stop_price=90.0, target_price=110.0,
-        decision="PROCEED", size=1.0
+            entry_price=100.0, stop_price=90.0, target_price=110.0,
+            decision="PROCEED", size=1.0
+
+        )
     )
     tracker.record_fill("t9", FillData(
         entry_price=100.0, fill_time=datetime.now(timezone.utc),

@@ -10,15 +10,19 @@ app.dependency_overrides[get_current_user] = lambda: {'email': 'test@example.com
 client = TestClient(app)
 
 def test_open_onnx_folder(mocker):
-    # Mock os.startfile for Windows, and subprocess.run for Posix/Mac
-    mocker.patch('os.name', 'posix')
-    mocker.patch('sys.platform', 'linux')
-    mock_run = mocker.patch('subprocess.run')
+    # Mocking os.name breaks pathlib on Windows (PosixPath instantiation);
+    # branch on the real platform instead.
+    import sys
 
-    response = client.post("/academy/policy/onnx/open-folder")
+    response = None
+    if sys.platform == 'win32':
+        mock_start = mocker.patch('os.startfile', create=True)
+        response = client.post("/academy/policy/onnx/open-folder")
+        mock_start.assert_called_once()
+    else:
+        mock_run = mocker.patch('subprocess.run')
+        response = client.post("/academy/policy/onnx/open-folder")
+        mock_run.assert_called_once()
 
     assert response.status_code == 200
     assert response.json()["status"] == "success"
-
-    # Check that subprocess.run was called
-    mock_run.assert_called_once()

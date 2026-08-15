@@ -74,9 +74,9 @@ class PositionIntent:
     entry_price: float
     stop_price: float
     target_price: float
-    size: float | None
-    strategy_id: str | None
-    decision: str
+    size: float | None = None
+    strategy_id: str | None = None
+    decision: str = ""
     ai_trace: dict | None = None
     timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 

@@ -21,8 +21,8 @@ class FakeConfidenceRegistry:
     def record_signal_review(self, **kwargs) -> None:
         self.signal_reviews.append(kwargs)
 
-    def record_scout_review(self, **kwargs) -> None:
-        self.scout_reviews.append(kwargs)
+    def record_scout_review(self, params) -> None:
+        self.scout_reviews.append(vars(params) if not isinstance(params, dict) else params)
 
     def record_trade_outcome(self, **kwargs) -> None:
         self.trade_outcomes.append(kwargs)

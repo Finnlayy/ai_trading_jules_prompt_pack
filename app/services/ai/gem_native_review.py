@@ -21,7 +21,7 @@ from app.services.ai.gem_pipeline import (
 )
 from app.services.ai_kimi import KimiSwarmService
 from app.services.ai_layer_memory import ai_layer_memory_instance
-from app.services.confidence_registry import confidence_registry
+from app.services.confidence_registry import confidence_registry, ScoutReviewParams
 
 
 def _json_default(value: Any) -> str:
@@ -643,12 +643,14 @@ class GemNativeReviewService(KimiSwarmService):
     def _record_confidence(self, payload: M8Payload, scout_reports: dict[str, dict[str, Any]]) -> None:
         for name, report in scout_reports.items():
             confidence_registry.record_scout_review(
-                symbol=payload.symbol,
-                scout_name=name,
-                direction=payload.direction,
-                decision=str(report.get("decision") or DecisionEnum.HUMAN_REVIEW.value),
-                confidence=float(report.get("confidence") or 0.5),
-                was_correct=None,
+                    ScoutReviewParams(
+                        symbol=payload.symbol,
+                        scout_name=name,
+                        direction=payload.direction,
+                        decision=str(report.get("decision") or DecisionEnum.HUMAN_REVIEW.value),
+                        confidence=float(report.get("confidence") or 0.5),
+                        was_correct=None,
+                    )
             )
         confidence_registry.record_signal_review(
             symbol=payload.symbol,
@@ -667,12 +669,14 @@ class GemNativeReviewService(KimiSwarmService):
             return
         for name, report in gem_reports.items():
             confidence_registry.record_scout_review(
-                symbol=symbol,
-                scout_name=name,
-                direction=direction,
-                decision=str(report.get("decision") or DecisionEnum.HUMAN_REVIEW.value),
-                confidence=float(report.get("confidence") or 0.5),
-                was_correct=None,
+                    ScoutReviewParams(
+                        symbol=symbol,
+                        scout_name=name,
+                        direction=direction,
+                        decision=str(report.get("decision") or DecisionEnum.HUMAN_REVIEW.value),
+                        confidence=float(report.get("confidence") or 0.5),
+                        was_correct=None,
+                    )
             )
 
     def _fatal_fallback(self, payload: M8Payload, exc: Exception) -> SignalReview:

@@ -89,7 +89,7 @@ def test_ai_chat_request_validation():
         AIChatRequest(message="") # min 1
 
     with pytest.raises(ValidationError):
-        AIChatRequest(message="A" * 4001) # max 4000
+        AIChatRequest(message="A" * 25001) # max 25000 (raised in #158 payload crash fix)
 
     # Bars count bounds (10 <= x <= 300)
     with pytest.raises(ValidationError):

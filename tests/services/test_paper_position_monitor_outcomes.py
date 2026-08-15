@@ -8,7 +8,7 @@ from app.db import SessionLocal
 from app.db.models import AgentLearningEvent, AgentReviewEvent, PaperOutcome, PaperPosition, SignalCandidate
 from app.schemas.ai_review import DecisionEnum as AIDecisionEnum, SignalReview
 from app.schemas.m8_payload import M8Payload
-from app.services.confidence_registry import confidence_registry
+from app.services.confidence_registry import confidence_registry, ScoutReviewParams
 from app.services.kraken_paper_broker import KrakenPaperBroker
 from app.services.lifecycle_recorder import lifecycle_recorder, candidate_id_for_signal
 from app.services.position_monitor import PaperPositionMonitor
@@ -82,8 +82,8 @@ def test_paper_position_monitor_writes_outcome_and_learning_on_tp(monkeypatch):
             },
         ),
     )
-    confidence_registry.record_scout_review("SOLUSD", "technical", "LONG", "PROCEED_TO_SIMULATION", 0.8)
-    confidence_registry.record_scout_review("SOLUSD", "risk", "LONG", "REJECT", 0.7)
+    confidence_registry.record_scout_review(ScoutReviewParams("SOLUSD", "technical", "LONG", "PROCEED_TO_SIMULATION", 0.8))
+    confidence_registry.record_scout_review(ScoutReviewParams("SOLUSD", "risk", "LONG", "REJECT", 0.7))
 
     result = broker.place_paper_order(
         "SOLUSD",

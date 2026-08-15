@@ -36,10 +36,18 @@ def test_m8_payload_exception_hiding(monkeypatch):
         "spread": 0.1
     }
 
-    # Needs valid signature if secret is set, or bypass
-    monkeypatch.setattr("app.api.endpoints.WEBHOOK_SECRET", None)
+    # Endpoint fails closed without a signature; set a secret and sign the body
+    import json as _json
 
-    response = client.post("/m8", json=payload)
+    monkeypatch.setattr("app.core.config.WEBHOOK_SECRET", "test-webhook-secret")
+    body = _json.dumps(payload).encode("utf-8")
+    signature = hmac.new(b"test-webhook-secret", body, hashlib.sha256).hexdigest()
+
+    response = client.post(
+        "/m8",
+        content=body,
+        headers={"x-m8-signature": signature, "Content-Type": "application/json"},
+    )
 
     # After the fix, the endpoint should return 500 and a generic error
     assert response.status_code == 500

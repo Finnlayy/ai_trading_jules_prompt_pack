@@ -5,6 +5,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from app.services.bybit_api import (
+    BybitOrderRequest,
     BybitAPIClient,
     BybitCredentials,
     BybitAPIError,
@@ -72,7 +73,7 @@ def test_request_api_error(mock_get, client):
 
 @patch.object(BybitAPIClient, "_request")
 def test_place_order(mock_request, client):
-    client.place_order("BTCUSDT", "Buy")
+    client.place_order(BybitOrderRequest(symbol="BTCUSDT", side="Buy"))
 
     mock_request.assert_called_once_with(
         "POST",
