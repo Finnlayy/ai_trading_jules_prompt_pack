@@ -35,7 +35,7 @@ class AIChatMessage(BaseModel):
 
 
 class AIChatRequest(BaseModel):
-    message: str = Field(min_length=1, max_length=25000)
+    message: str = Field(min_length=1, max_length=100000)
     apply_to_profile: bool = True
     chart_context: dict[str, Any] | None = Field(default=None, description="Optional market data snapshot (symbol, timeframe, recent candles, indicators) for AI analysis.")
     bars_count: int = Field(default=50, ge=10, le=300, description="Number of recent bars to include in chart_context.")
@@ -49,6 +49,7 @@ class AIChatResponse(BaseModel):
     used_llm: bool
     profile: AIBehaviorProfile
     memory: list[AIChatMessage]
+    truncated: bool | None = Field(default=None, description="True if the user message was truncated due to length limits.")
     raw_profile_patch: dict[str, Any] = Field(default_factory=dict)
     recommended_action: dict[str, Any] | None = Field(default=None, description="Action recommended by the assistant (e.g., run_backtest, trigger_drill, etc.)")
     generated_prompt: str | None = Field(default=None, description="The full prompt that was sent to the LLM.")

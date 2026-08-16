@@ -106,3 +106,6 @@
 ## 2025-02-23 - Database query inside loop
 **Learning:** Found an N+1 query vulnerability in `lifecycle.py` where `db.query(AgentLearningEvent).all()` was executed in memory, causing O(N) operations inside a python for-loop and taking ~4.7s for 10k rows.
 **Action:** Replaced the loop with a single SQLAlchemy group by query: `func.count()` and `func.sum(case(...))`, which executed >15x faster (~0.28s) entirely on the DB side.
+## 2024-06-25 - Prevent 500 crashes on AI chat payloads by shifting from strict size block to graceful truncation
+**Learning:** Checking headers manually like `int(content_length)` can throw `ValueError` and cause a 500 internal server error.
+**Action:** When handling user inputs that might exceed token limits, rely on Pydantic `max_length` and graceful truncation instead of explicitly reading `content-length` headers and blocking.
