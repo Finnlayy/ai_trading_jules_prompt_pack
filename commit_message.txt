@@ -1,0 +1,7 @@
+fix(ai_layer): gracefully truncate massive payloads to avoid 500s
+
+- Removed explicit headers lookup that can cause ValueErrors and internal server errors.
+- Increased Pydantic `max_length` limits up to 100,000 for `message` payloads in `AIChatRequest` to allow large requests to be gracefully processed rather than returning HTTP 422 immediately.
+- Implemented robust logical truncation to `20000` chars inside `chat_with_ai_layer` endpoint to prevent overwhelming downstream LLM inference or vector stores.
+- Appended `... [truncated]` onto cropped string.
+- Attached boolean flag `truncated` properly to response models.

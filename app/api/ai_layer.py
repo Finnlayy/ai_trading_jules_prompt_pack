@@ -622,12 +622,11 @@ async def update_ai_profile(profile: AIBehaviorProfile):
 
 @router.post("/chat", response_model=AIChatResponse)
 async def chat_with_ai_layer(request: AIChatRequest, raw_req: Request):
-    content_length = raw_req.headers.get("content-length")
-    if content_length and int(content_length) > 25000:
-        raise HTTPException(status_code=413, detail="Payload too large")
-
+    is_truncated = False
     if len(request.message) > 20000:
-        raise HTTPException(status_code=413, detail="Payload too large")
+        request.message = request.message[:20000] + "... [truncated]"
+        is_truncated = True
+
     ai_layer_memory_instance.append_message("user", request.message)
     profile = ai_layer_memory_instance.get_profile()
 
@@ -643,6 +642,7 @@ async def chat_with_ai_layer(request: AIChatRequest, raw_req: Request):
             raw_profile_patch={},
             generated_prompt=user_prompt,
             system_prompt=system,
+            truncated=is_truncated,
         )
 
     used_llm = False
@@ -704,6 +704,7 @@ async def chat_with_ai_layer(request: AIChatRequest, raw_req: Request):
         recommended_action=recommended_action,
         generated_prompt=user_prompt,
         system_prompt=system,
+        truncated=is_truncated,
     )
 
 
