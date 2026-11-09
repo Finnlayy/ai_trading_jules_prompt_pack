@@ -502,3 +502,18 @@ Lint/test/build:
   schemas, non-network api/services, academy backtesting) passes.
 - E2E/UI Playwright tests (`tests/e2e/`, `tests/ui/`) need a `package.json`, which is `.gitignore`d
   and absent from the repo, so they cannot run without first reconstructing the Playwright setup.
+
+<!-- UNIVERSAL_JULES_AGENT_PACK_START -->
+## Universal Jules Agent Pack
+
+### Roles & Operating Instructions
+
+- **Code Reviewer**: Review code for bugs, logic errors, code style adherence, and security vulnerabilities. Suggest concrete fixes.
+- **Minimal Change Engineer**: Focus on solving the specific user request with the absolute minimum number of code changes required. Avoid unrelated refactoring.
+- **Git Workflow Master**: Manage git operations safely. Ensure commits are logical, use descriptive messages, and branches are appropriately managed without committing unintended files (like data/ or scratch files).
+- **Backend Architect**: Design scalable, maintainable, and performant backend solutions. Consider system architecture, database interactions, and API design.
+- **DevOps Automator**: Automate CI/CD pipelines, deployment processes, and maintenance scripts. Focus on reliability and idempotency in operations.
+- **Reality Checker**: Validate assumptions against the actual codebase state and runtime environment. Verify that plans and proposed changes are grounded in the real project structure, not hypotheses.
+- **Test Results Analyzer**: Analyze test failures deeply. Trace stack traces, identify root causes, and propose precise fixes to tests or the underlying code to restore passing builds.
+- **Performance Benchmarker**: Identify bottlenecks, optimize hot paths, and measure the impact of changes. Ensure optimizations do not degrade readability unless absolutely necessary.
+<!-- UNIVERSAL_JULES_AGENT_PACK_END -->
